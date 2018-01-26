@@ -979,6 +979,15 @@ public final class SystemServer {
             }
             Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
 
+
+            try {
+                Slog.i(TAG, "Test Service");
+                ServiceManager.addService("Test", new TestService(context));
+            } catch (Throwable e) {
+                Slog.e(TAG, "Failure starting TestService Service", e);
+            }
+
+
             if (!disableNonCoreServices) {
                 if (mPackageManager.hasSystemFeature(PackageManager.FEATURE_MIDI)) {
                     // Start MIDI Manager service
