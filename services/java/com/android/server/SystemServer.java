@@ -71,6 +71,7 @@ import com.android.server.fingerprint.FingerprintService;
 import com.android.server.hdmi.HdmiControlService;
 import com.android.server.input.InputManagerService;
 import com.android.server.job.JobSchedulerService;
+import com.android.server.lease.TestService;
 import com.android.server.lights.LightsService;
 import com.android.server.media.MediaResourceMonitorService;
 import com.android.server.media.MediaRouterService;
@@ -539,6 +540,7 @@ public final class SystemServer {
         ConsumerIrService consumerIr = null;
         MmsServiceBroker mmsService = null;
         HardwarePropertiesManagerService hardwarePropertiesService = null;
+        TestService test = null;
 
         boolean disableStorage = SystemProperties.getBoolean("config.disable_storage", false);
         boolean disableBluetooth = SystemProperties.getBoolean("config.disable_bluetooth", false);
@@ -979,10 +981,11 @@ public final class SystemServer {
             }
             Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
 
-
             try {
+                traceBeginAndSlog("StartTestService");
                 Slog.i(TAG, "Test Service");
-                ServiceManager.addService("Test", new TestService(context));
+                test = new TestService(context);
+                ServiceManager.addService("Test", test);
             } catch (Throwable e) {
                 Slog.e(TAG, "Failure starting TestService Service", e);
             }
@@ -1058,6 +1061,9 @@ public final class SystemServer {
                 mSystemServiceManager.startService(SensorNotificationService.class);
                 mSystemServiceManager.startService(ContextHubSystemService.class);
             }
+
+
+
 
             traceBeginAndSlog("StartDiskStatsService");
             try {

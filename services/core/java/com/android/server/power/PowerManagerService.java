@@ -1458,6 +1458,7 @@ public final class PowerManagerService extends SystemService
                 }
             }
 
+
             // Phase 2: Update display power state.
             boolean displayBecameReady = updateDisplayPowerStateLocked(dirtyPhase2);
 
