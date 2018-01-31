@@ -1,7 +1,7 @@
 /*
- *  @author Ryan Huang <huang@cs.jhu.edu>
+ *  @author Yiong Hu <hyigong1@jhu.edu>
  *
- *  The LeaseOS Project  
+ *  The LeaseOS Project
  *
  *  Copyright (c) 2018, Johns Hopkins University - Order Lab.
  *      All rights reserved.
@@ -20,9 +20,56 @@
  */
 package com.android.server.lease;
 
+import java.util.Hashtable;
+
 /**
  * The central lease manager service
  */
 public class LeaseManagerService {
+
+    Hashtable mLeaseMap = new Hashtable();
+
+    public int createlease() {
+        Lease lease = new Lease(1);
+        mLeaseMap.put(1, lease);
+        return lease.leaseid;
+    }
+
+    /**
+     *
+     * @param lid
+     * @return
+     */
+    public boolean check(int lid) {
+        return findLease(lid).isvaild();
+    }
+
+    /**
+     * Find a lease object given a UID
+     * @param lid
+     * @return
+     */
+    private Lease findLease(int lid) {
+        return (Lease) mLeaseMap.get(lid);
+    }
+
+    public boolean expire(int lid) {
+        return findLease(lid).expire();
+    }
+
+    public boolean renew(int lid) {
+        return findLease(lid).renew();
+    }
+
+    public boolean remove(int lid) {
+        findLease(lid).expire();
+        mLeaseMap.remove(lid);
+        return true;
+    }
+
+    public void setMap(Hashtable map) {
+        this.mLeaseMap = map;
+    }
+
 
 }
