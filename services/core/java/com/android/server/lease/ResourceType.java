@@ -21,36 +21,38 @@
  */
 package com.android.server.lease;
 
+
 /**
- * The status of lease
+ * which type of resource the lease is related to
  */
-public enum LeaseStatus {
-    ACTIVE("active"), // the lease is in its lease term
-    EXPIRED("expired"), // the lease is expired
-    INVALID("invalid"); // the lease is expired and can not be renewed
+public enum ResourceType {
+    Wakelock("Wakelock"), // this lease is applied to Powermanager Service
+    Location("Location"), // this lease is applied to Locationmanager Service
+    Sensor("Sensor");     // this lease is applied to Sensormanager Service
 
-    String status;
+    private String type; // type of resource
 
-    private LeaseStatus(String status) {
-        this.status = status;
+    private ResourceType(String type){
+        this.type = type;
     }
 
     /**
-     * Return the status of the lease
+     * Return the type of Resource that the lease is related to
      * @return
      */
+    @Override
     public String toString() {
-        return status;
+        return type;
     }
 
     /**
-     * Set the status of the lease
-     * @param status
+     * Set the type of Resource that the lease is related to
+     * @param type
      * @return
      */
-    public boolean setStatus(String status) {
-        if (status == "active" || status == "expired" || status == "invalid")
-            this.status = status;
+    public boolean setType(String type) {
+        if (type == "Wakelock" || type == "Location" || type == "Sensor")
+            this.type = type;
         else
             return false;
         return true;

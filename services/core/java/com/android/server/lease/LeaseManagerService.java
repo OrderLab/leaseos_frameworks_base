@@ -32,7 +32,7 @@ public class LeaseManagerService {
     public int createlease() {
         Lease lease = new Lease(1);
         mLeaseMap.put(1, lease);
-        return lease.leaseid;
+        return lease.mLeaseid;
     }
 
     /**

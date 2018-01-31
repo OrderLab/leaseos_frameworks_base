@@ -21,18 +21,18 @@
  */
 package com.android.server.lease;
 
-import com.android.server.lease.*;
-
 /**
  *
  */
 public class Lease {
-    int leaseid;
+    long mLeaseid;
+    long mOwnerid;
+    ResourceType type;
     LeaseStatus status;
     int length; // in millisecond
 
     public Lease(int id) {
-        leaseid = id;
+        mLeaseid = id;
         status = ;
         length = 5;
     }
