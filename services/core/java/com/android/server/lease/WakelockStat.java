@@ -22,38 +22,32 @@
 package com.android.server.lease;
 
 /**
- * The struct of lease
+ *
  */
-public class Lease {
-    long mLeaseid;
-    long mOwnerid;
-    ResourceType mType;
-    LeaseStatus mStatus;
-    int mLength; // in millisecond
+public class WakelockStat extends LeaseStat{
 
-    public Lease(int lid, int Oid, String type) {
-        mLeaseid = lid;
-        mOwnerid = Oid;
-        this.mType.setType(type);
-        mStatus.setStatus("active");
-        mLength = 5;
+
+    public WakelockStat(long BeginTime, long Endtime) {
+        super(BeginTime, Endtime);
     }
 
-    public boolean isvalid() {
-        int valid = LeaseStatus.ACTIVE.compareTo(mStatus);
-        if (valid == 0) {
-            return true;
-        }
-        return false;
+    @Override
+    public void setFrequency() {
+
     }
 
-    public boolean expire() {
-        return mStatus.setStatus("expired");
+    @Override
+    public void setConsumption() {
+
     }
 
-    public boolean renew() {
-        boolean success = mStatus.setStatus("active");
-        mLength = 5;
-        return true;
+    @Override
+    public void setWork() {
+
+    }
+
+    @Override
+    public void setDamage() {
+
     }
 }

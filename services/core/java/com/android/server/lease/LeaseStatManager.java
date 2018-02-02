@@ -22,38 +22,8 @@
 package com.android.server.lease;
 
 /**
- * The struct of lease
+ *
  */
-public class Lease {
-    long mLeaseid;
-    long mOwnerid;
-    ResourceType mType;
-    LeaseStatus mStatus;
-    int mLength; // in millisecond
+public class LeaseStatManager {
 
-    public Lease(int lid, int Oid, String type) {
-        mLeaseid = lid;
-        mOwnerid = Oid;
-        this.mType.setType(type);
-        mStatus.setStatus("active");
-        mLength = 5;
-    }
-
-    public boolean isvalid() {
-        int valid = LeaseStatus.ACTIVE.compareTo(mStatus);
-        if (valid == 0) {
-            return true;
-        }
-        return false;
-    }
-
-    public boolean expire() {
-        return mStatus.setStatus("expired");
-    }
-
-    public boolean renew() {
-        boolean success = mStatus.setStatus("active");
-        mLength = 5;
-        return true;
-    }
 }

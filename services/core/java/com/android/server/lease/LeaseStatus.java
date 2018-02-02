@@ -22,7 +22,7 @@
 package com.android.server.lease;
 
 /**
- * The status of lease
+ * The mStatus of lease
  */
 public enum LeaseStatus {
     ACTIVE("active"), // the lease is in its lease term
@@ -36,7 +36,7 @@ public enum LeaseStatus {
     }
 
     /**
-     * Return the status of the lease
+     * Return the mStatus of the lease
      * @return
      */
     public String toString() {
@@ -44,7 +44,7 @@ public enum LeaseStatus {
     }
 
     /**
-     * Set the status of the lease
+     * Set the mStatus of the lease
      * @param status
      * @return
      */

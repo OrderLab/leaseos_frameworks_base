@@ -23,21 +23,21 @@ package com.android.server.lease;
 
 
 /**
- * which type of resource the lease is related to
+ * which mType of resource the lease is related to
  */
 public enum ResourceType {
     Wakelock("Wakelock"), // this lease is applied to Powermanager Service
     Location("Location"), // this lease is applied to Locationmanager Service
     Sensor("Sensor");     // this lease is applied to Sensormanager Service
 
-    private String type; // type of resource
+    private String type; // mType of resource
 
     private ResourceType(String type){
         this.type = type;
     }
 
     /**
-     * Return the type of Resource that the lease is related to
+     * Return the mType of Resource that the lease is related to
      * @return
      */
     @Override
@@ -46,7 +46,7 @@ public enum ResourceType {
     }
 
     /**
-     * Set the type of Resource that the lease is related to
+     * Set the mType of Resource that the lease is related to
      * @param type
      * @return
      */
