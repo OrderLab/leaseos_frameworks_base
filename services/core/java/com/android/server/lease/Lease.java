@@ -21,39 +21,62 @@
  */
 package com.android.server.lease;
 
+import android.os.IBinder;
+
 /**
  * The struct of lease
  */
 public class Lease {
-    long mLeaseid;
-    long mOwnerid;
-    ResourceType mType;
-    LeaseStatus mStatus;
-    int mLength; // in millisecond
+    protected long mLeaseid;
+    protected long mOwnerid;
+    protected IBinder mToken;
+    protected ResourceType mType;
+    protected LeaseStatus mStatus;
+    protected int mLength; // in millisecond
 
-    public Lease(int lid, int Oid, String type) {
+    public Lease(long lid, long Oid, String type) {
         mLeaseid = lid;
         mOwnerid = Oid;
-        this.mType.setType(type);
+        mType.setType(type);
         mStatus.setStatus("active");
         mLength = 5;
     }
 
     public boolean isvalid() {
-        int valid = LeaseStatus.ACTIVE.compareTo(mStatus);
-        if (valid == 0) {
-            return true;
+        for (LeaseStatus status : LeaseStatus.values()) {
+            if (mStatus == status) {
+                return true;
+            }
         }
         return false;
     }
 
+    public long getLength() {
+        return mLength;
+    }
+
+    public long getLease() {
+        return mLeaseid;
+    }
+
+    public long getOwner() {
+        return mOwnerid;
+    }
+
+    public String getLeaseType() {
+        return mType.toString();
+    }
+
+    public String getLeaseStatus() {
+        return mStatus.toString();
+    }
+
+
     public boolean expire() {
-        return mStatus.setStatus("expired");
+        return false;
     }
 
     public boolean renew() {
-        boolean success = mStatus.setStatus("active");
-        mLength = 5;
-        return true;
+        return false;
     }
 }

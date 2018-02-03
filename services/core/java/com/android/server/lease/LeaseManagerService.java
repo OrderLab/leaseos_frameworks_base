@@ -20,56 +20,127 @@
  */
 package com.android.server.lease;
 
-import java.util.Hashtable;
+import java.util.ArrayList;
+
+import com.android.server.lease.*;
+
 
 /**
  * The central lease manager service
  */
 public class LeaseManagerService {
 
-    Hashtable mLeaseMap = new Hashtable();
+    //Operation failed
+    public static final int FAILED = -1;
 
-    public int createlease() {
-        Lease lease = new Lease(1);
-        mLeaseMap.put(1, lease);
+    // Table of all leases acquired by services.
+    private final ArrayList<Lease> mLeases = new ArrayList<Lease>();
+
+    //The identifier of lease
+    private long mleaseid = 0;
+
+    /**
+     * Create a new lease
+     */
+    public long newLease(String RType, int uid) {
+        if (!validateTypeParameters(RType)) {
+            return FAILED;
+        }
+        mleaseid++;
+        Lease lease = new Lease(mleaseid, uid, RType);
+        mLeases.add(lease);
         return lease.mLeaseid;
     }
 
     /**
-     *
-     * @param lid
-     * @return
+     * Verify the type parameter is vaild
      */
-    public boolean check(int lid) {
-        return findLease(lid).isvaild();
+    public static boolean validateTypeParameters(String RType) {
+        for (ResourceType type : ResourceType.values()) {
+            if (type.toString() == RType) {
+                return true;
+            }
+        }
+        return false;
     }
 
     /**
-     * Find a lease object given a UID
-     * @param lid
+     * Find the lease index by the Leaseid
+     */
+    private int findLeaseIndex(int Leaseid) {
+        final int count = mLeases.size();
+        for (int i = 0; i < count; i++) {
+            if (mLeases.get(i).mLeaseid == Leaseid) {
+                return i;
+            }
+        }
+        return FAILED;
+    }
+
+    /**
+     * Check the validation of the lease
+     * @param Leaseid
      * @return
      */
-    private Lease findLease(int lid) {
-        return (Lease) mLeaseMap.get(lid);
+    public boolean check(int Leaseid) throws Exception {
+        int index = findLeaseIndex(Leaseid);
+        if (index >= 0) {
+            Lease lease = mLeases.get(index);
+            return lease.isvalid();
+        } else {
+            throw new Exception("No lease");
+        }
     }
 
-    public boolean expire(int lid) {
-        return findLease(lid).expire();
+
+    /**
+     * Expire the lease
+     * @param Leaseid The identifier of lease
+     * @return Ture if the lease expire
+     * @throws Exception can not find a lease by the leaseid
+     */
+    public boolean expire(int Leaseid) throws Exception {
+        int index = findLeaseIndex(Leaseid);
+        if (index >= 0) {
+            Lease lease = mLeases.get(index);
+            return lease.expire();
+        } else {
+            throw new Exception("No lease");
+        }
     }
 
-    public boolean renew(int lid) {
-        return findLease(lid).renew();
+    /**
+     * Renew the lease
+     * @param Leaseid The identifier of lease
+     * @return Ture if the lease is renewed
+     * @throws Exception can not find a lease by the leaseid
+     */
+    public boolean renew(int Leaseid) throws Exception {
+        int index = findLeaseIndex(Leaseid);
+        if (index >= 0) {
+            Lease lease = mLeases.get(index);
+            return lease.expire();
+        } else {
+            throw new Exception("No lease");
+        }
     }
 
-    public boolean remove(int lid) {
-        findLease(lid).expire();
-        mLeaseMap.remove(lid);
+    /**
+     * Remove the lease
+     * @param Leaseid The identifier of lease
+     * @return Ture if the lease is removed from lease table
+     * @throws Exception can not find a lease by the leaseid
+     */
+    public boolean remove(int Leaseid) throws Exception {
+        int index = findLeaseIndex(Leaseid);
+        if (index >= 0) {
+            Lease lease = mLeases.get(index);
+            lease.expire();
+            mLeases.remove(index);
+        } else {
+            throw new Exception("No lease");
+        }
         return true;
     }
-
-    public void setMap(Hashtable map) {
-        this.mLeaseMap = map;
-    }
-
 
 }

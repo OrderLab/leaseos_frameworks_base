@@ -22,38 +22,8 @@
 package com.android.server.lease;
 
 /**
- * The status of lease
+ *
  */
-public enum LeaseStatus {
-    ACTIVE("active"), // the lease is in its lease term
-    EXPIRED("expired"), // the lease is expired
-    INVALID("invalid"); // the lease is expired and can not be renewed
-
-    String status;
-
-    private LeaseStatus(String status) {
-        this.status = status;
-    }
-
-    /**
-     * Return the mStatus of the lease
-     * @return
-     */
-    public String toString() {
-        return status;
-    }
-
-    /**
-     * Set the mStatus of the lease
-     * @param status
-     * @return
-     */
-    public boolean setStatus(String status) {
-        if (status == "active" || status == "expired" || status == "invalid")
-            this.status = status;
-        else
-            return false;
-        return true;
-    }
+public class ResourceStatManager {
 
 }

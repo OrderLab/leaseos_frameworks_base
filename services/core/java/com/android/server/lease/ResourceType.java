@@ -23,7 +23,7 @@ package com.android.server.lease;
 
 
 /**
- * which mType of resource the lease is related to
+ * which type of resource the lease is related to
  */
 public enum ResourceType {
     Wakelock("Wakelock"), // this lease is applied to Powermanager Service

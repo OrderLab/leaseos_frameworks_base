@@ -24,7 +24,7 @@ package com.android.server.lease;
 /**
  *
  */
-public abstract class LeaseStat {
+abstract class LeaseStat {
     public int mStatNumber;
     protected long mBeginTime;
     protected long mEndTime;

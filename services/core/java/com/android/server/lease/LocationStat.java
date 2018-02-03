@@ -24,6 +24,5 @@ package com.android.server.lease;
 /**
  *
  */
-public class LeaseStatManager {
-
+public class LocationStat {
 }
