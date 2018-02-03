@@ -41,6 +41,10 @@ public class LeaseManagerService {
 
     /**
      * Create a new lease
+     *
+     * @param RType The resource type of the lease
+     * @param uid   the identifier of caller
+     * @return the lease id
      */
     public long newLease(String RType, int uid) {
         if (!validateTypeParameters(RType)) {
@@ -54,6 +58,9 @@ public class LeaseManagerService {
 
     /**
      * Verify the type parameter is vaild
+     *
+     * @param RType The resource type of the lease
+     * @return true if the type is valid
      */
     public static boolean validateTypeParameters(String RType) {
         for (ResourceType type : ResourceType.values()) {
@@ -66,6 +73,9 @@ public class LeaseManagerService {
 
     /**
      * Find the lease index by the Leaseid
+     *
+     * @param Leaseid The identifier of lease
+     * @return The lease index or -1 if can not find the lease
      */
     private int findLeaseIndex(int Leaseid) {
         final int count = mLeases.size();
@@ -79,8 +89,10 @@ public class LeaseManagerService {
 
     /**
      * Check the validation of the lease
-     * @param Leaseid
-     * @return
+     *
+     * @param Leaseid The identifier of lease
+     * @return True if the lease is valid
+     * @throws Exception can not find a lease by the leaseid
      */
     public boolean check(int Leaseid) throws Exception {
         int index = findLeaseIndex(Leaseid);
@@ -95,6 +107,7 @@ public class LeaseManagerService {
 
     /**
      * Expire the lease
+     *
      * @param Leaseid The identifier of lease
      * @return Ture if the lease expire
      * @throws Exception can not find a lease by the leaseid
@@ -111,6 +124,7 @@ public class LeaseManagerService {
 
     /**
      * Renew the lease
+     *
      * @param Leaseid The identifier of lease
      * @return Ture if the lease is renewed
      * @throws Exception can not find a lease by the leaseid
@@ -127,6 +141,7 @@ public class LeaseManagerService {
 
     /**
      * Remove the lease
+     *
      * @param Leaseid The identifier of lease
      * @return Ture if the lease is removed from lease table
      * @throws Exception can not find a lease by the leaseid
@@ -142,5 +157,4 @@ public class LeaseManagerService {
         }
         return true;
     }
-
 }
