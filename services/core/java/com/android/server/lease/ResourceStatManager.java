@@ -23,6 +23,7 @@ package com.android.server.lease;
 
 import java.util.ArrayList;
 
+
 /**
  *
  */
@@ -46,5 +47,6 @@ public class ResourceStatManager<T> {
     public void removeUsage() {
         mStats.clear();
     }
+
 
 }

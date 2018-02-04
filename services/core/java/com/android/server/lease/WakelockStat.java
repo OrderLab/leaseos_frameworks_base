@@ -31,6 +31,7 @@ public class WakelockStat extends ResourceStat {
     protected long mUsageTime;
     protected long mExceptionFrequency;
 
+
     public WakelockStat(long BeginTime, long Endtime, long holdingTime, long usageTime,
             long exceptionFrequency) {
         super(BeginTime, Endtime);
