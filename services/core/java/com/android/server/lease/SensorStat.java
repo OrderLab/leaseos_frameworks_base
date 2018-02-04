@@ -1,6 +1,6 @@
     
 /*
- *  @author Yigong Hu <hyigong1@jhu.edu>
+ *  @author Yigong HU <hyigong1@jhu.edu>
  *
  *  The LeaseOS Project
  *
@@ -21,42 +21,33 @@
  */
 package com.android.server.lease;
 
-import gov.nist.javax.sip.parser.SubjectParser;
-
 /**
  *
  */
-public class WakelockStat extends ResourceStat {
-    protected long mHoldingTime;
-    protected long mUsageTime;
-    protected long mExceptionFrequency;
+public class SensorStat extends ResourceStat {
 
-    public WakelockStat(long BeginTime, long Endtime, long holdingTime, long usageTime,
-            long exceptionFrequency) {
+    public SensorStat(long BeginTime, long Endtime) {
         super(BeginTime, Endtime);
-        mHoldingTime = holdingTime;
-        mUsageTime = usageTime;
-        mExceptionFrequency = exceptionFrequency;
     }
 
     @Override
     public void setFrequency() {
-        super.mFrequency = 0;
+
     }
 
     @Override
     public void setConsumption() {
-        super.mConsumption = mHoldingTime;
+
     }
 
     @Override
     public void setWork() {
-        super.mWork = mUsageTime;
+
     }
 
     @Override
     public void setRatio() {
-        super.mEfficientRatio = mExceptionFrequency;
+
     }
 
     @Override

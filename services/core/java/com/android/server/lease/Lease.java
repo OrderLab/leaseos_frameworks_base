@@ -21,7 +21,10 @@
  */
 package com.android.server.lease;
 
+import android.location.Location;
 import android.os.IBinder;
+
+import com.android.internal.os.BatteryStatsImpl;
 
 /**
  * The struct of lease
@@ -32,14 +35,40 @@ public class Lease {
     protected IBinder mToken;
     protected ResourceType mType;
     protected LeaseStatus mStatus;
+    protected ResourceStatManager mRStatManager;
     protected int mLength; // in millisecond
+    protected long mBeginTime;
+    protected long mEndTime;
+    protected int mLeaseTerm;
 
     public Lease(long lid, long Oid, String type) {
         mLeaseid = lid;
         mOwnerid = Oid;
         mType.setType(type);
+        mStatus.setStatus("invalid");
+    }
+
+    public void createLease() {
+        mLeaseTerm = 0;
         mStatus.setStatus("active");
         mLength = 5;
+        mBeginTime = System.currentTimeMillis();
+        switch (mType.toString()) {
+            case "Wakelock":
+                mRStatManager = new ResourceStatManager<WakelockStat>();
+                break;
+            case "Location":
+                mRStatManager = new ResourceStatManager<LocationStat>();
+                break;
+            case "Sensor":
+                mRStatManager = new ResourceStatManager<SensorStat>();
+                break;
+
+        }
+    }
+
+    public ResourceStatManager getRStatManager() {
+        return mRStatManager;
     }
 
     public boolean isvalid() {
@@ -73,10 +102,29 @@ public class Lease {
 
 
     public boolean expire() {
+        mEndTime = System.currentTimeMillis();
+        mStatus.setStatus("expired");
+        switch (mType.toString()) {
+            case "Wakelock":
+                WakelockStat wStat = new WakelockStat(mBeginTime, mEndTime);
+                mRStatManager.setResourceStat(wStat);
+                break;
+            case "Location":
+                LocationStat lStat = new LocationStat(mBeginTime, mEndTime);
+                mRStatManager.setResourceStat(lStat);
+                break;
+            case "Sensor":
+                SensorStat sStat = new SensorStat(mBeginTime, mEndTime);
+                mRStatManager.setResourceStat(sStat);
+                break;
+        }
+
         return false;
     }
 
     public boolean renew() {
+        mLeaseTerm++;
+        mBeginTime = System.currentTimeMillis();
         return false;
     }
 

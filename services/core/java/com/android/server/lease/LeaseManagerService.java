@@ -50,9 +50,10 @@ public class LeaseManagerService {
         if (!validateTypeParameters(RType)) {
             return FAILED;
         }
-        mleaseid++;
         Lease lease = new Lease(mleaseid, uid, RType);
         mLeases.add(lease);
+        lease.createLease();
+        mleaseid++;
         return lease.mLeaseid;
     }
 

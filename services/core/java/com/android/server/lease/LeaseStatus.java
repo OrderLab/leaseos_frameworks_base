@@ -25,9 +25,10 @@ package com.android.server.lease;
  * The status of lease
  */
 public enum LeaseStatus {
+    INVALID("invalid"), //the lease is not activated
     ACTIVE("active"), // the lease is in its lease term
     EXPIRED("expired"), // the lease is expired
-    INVALID("invalid"); // the lease is expired and can not be renewed
+    ABORTED("aborted");// the lease is expired and can not be renewed
 
     String status;
 
@@ -37,7 +38,6 @@ public enum LeaseStatus {
 
     /**
      * Return the mStatus of the lease
-     * @return
      */
     public String toString() {
         return status;
@@ -45,14 +45,14 @@ public enum LeaseStatus {
 
     /**
      * Set the mStatus of the lease
-     * @param status
-     * @return
      */
     public boolean setStatus(String status) {
-        if (status == "active" || status == "expired" || status == "invalid")
+        if (status == "active" || status == "expired" || status == "invalid"
+                || status == "aborted") {
             this.status = status;
-        else
+        } else {
             return false;
+        }
         return true;
     }
 

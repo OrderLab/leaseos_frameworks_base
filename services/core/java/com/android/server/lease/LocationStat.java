@@ -24,5 +24,35 @@ package com.android.server.lease;
 /**
  *
  */
-public class LocationStat {
+public class LocationStat extends ResourceStat{
+
+
+    public LocationStat(long BeginTime, long Endtime) {
+        super(BeginTime, Endtime);
+    }
+
+    @Override
+    public void setFrequency() {
+
+    }
+
+    @Override
+    public void setConsumption() {
+
+    }
+
+    @Override
+    public void setWork() {
+
+    }
+
+    @Override
+    public void setRatio() {
+
+    }
+
+    @Override
+    public void setDamage() {
+
+    }
 }

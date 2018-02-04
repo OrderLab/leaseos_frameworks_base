@@ -24,19 +24,19 @@ package com.android.server.lease;
 /**
  *
  */
-abstract class LeaseStat {
+abstract class ResourceStat {
     public int mStatNumber;
     protected long mBeginTime;
     protected long mEndTime;
     protected long mConsumption;
     protected long mWork;
     protected long mFrequency;
-    protected long mRatio;
+    protected long mEfficientRatio;
     protected long mSystemdamage;
 
-    public LeaseStat(long BeginTime, long Endtime) {
-          mBeginTime = BeginTime;
-          mEndTime = Endtime;
+    public ResourceStat(long BeginTime, long Endtime) {
+        mBeginTime = BeginTime;
+        mEndTime = Endtime;
     }
 
     public long getBeginTime() {
@@ -56,11 +56,11 @@ abstract class LeaseStat {
     }
 
     public long getEfficiency() {
-        return mWork/mConsumption;
+        return mWork / mConsumption;
     }
 
     public long getUtility() {
-        return (mWork*mRatio)/mConsumption;
+        return mWork / (mConsumption * mEfficientRatio);
     }
 
     public long getDamage() {
@@ -73,9 +73,9 @@ abstract class LeaseStat {
 
     public abstract void setWork();
 
+    public abstract void setRatio();
+
     public abstract void setDamage();
-
-
 
 
 }

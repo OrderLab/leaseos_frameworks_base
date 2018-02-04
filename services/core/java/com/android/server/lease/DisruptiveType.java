@@ -1,6 +1,6 @@
     
 /*
- *  @author Yigong Hu <hyigong1@jhu.edu>
+ *  @author Yigong HU <hyigong1@jhu.edu>
  *
  *  The LeaseOS Project
  *
@@ -21,30 +21,15 @@
  */
 package com.android.server.lease;
 
-import java.util.ArrayList;
-
 /**
  *
  */
-public class ResourceStatManager<T> {
+public enum DisruptiveType {
+    FrequencyAsking,
+    LongHolding,
+    LowUtility,
+    HighDamage,
+    Normal;
 
-    protected ArrayList<T> mStats;
-
-
-    ResourceStatManager() {
-        mStats = new ArrayList<T>();
-    }
-
-    public void setResourceStat(T resourceStat) {
-        mStats.add(resourceStat);
-    }
-
-    public DisruptiveType isDisruptive() {
-        return DisruptiveType.FrequencyAsking;
-    }
-
-    public void removeUsage() {
-        mStats.clear();
-    }
 
 }

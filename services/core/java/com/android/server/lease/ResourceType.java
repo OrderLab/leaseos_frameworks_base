@@ -32,13 +32,12 @@ public enum ResourceType {
 
     private String type; // mType of resource
 
-    private ResourceType(String type){
+    private ResourceType(String type) {
         this.type = type;
     }
 
     /**
      * Return the mType of Resource that the lease is related to
-     * @return
      */
     @Override
     public String toString() {
@@ -47,14 +46,13 @@ public enum ResourceType {
 
     /**
      * Set the mType of Resource that the lease is related to
-     * @param type
-     * @return
      */
     public boolean setType(String type) {
-        if (type == "Wakelock" || type == "Location" || type == "Sensor")
+        if (type == "Wakelock" || type == "Location" || type == "Sensor") {
             this.type = type;
-        else
+        } else {
             return false;
+        }
         return true;
     }
 
