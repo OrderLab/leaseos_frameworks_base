@@ -37,7 +37,7 @@ public class LeaseManagerService {
     private final ArrayList<Lease> mLeases = new ArrayList<Lease>();
 
     //The identifier of lease
-    private long mleaseid = 0;
+    private long mleaseid = 1000;
 
     /**
      * Create a new lease

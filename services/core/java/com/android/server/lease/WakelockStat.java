@@ -27,6 +27,7 @@ package com.android.server.lease;
 public class WakelockStat extends ResourceStat{
 
 
+
     public WakelockStat(long BeginTime, long Endtime) {
         super(BeginTime, Endtime);
     }

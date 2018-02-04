@@ -21,9 +21,15 @@
  */
 package com.android.server.lease;
 
+import java.util.Map;
+
 /**
  *
  */
-public class ResourceStatManager {
+public class ResourceStatManager<T> {
+    private Map<Lease, T> mStats;
+
+
+
 
 }

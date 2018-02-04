@@ -24,17 +24,34 @@ package com.android.server.lease;
 /**
  *
  */
-abstract class LeaseStat {
+abstract class ResourceStat {
+
+
     public int mStatNumber;
+
+    // Timestamp of when the lease term  was created.
     protected long mBeginTime;
+
+    // Timestamp of when the lease term was ended.
     protected long mEndTime;
+
+    //The number of resource consumed in this lease term
     protected long mConsumption;
+
+    //The number of work made in this lease term
     protected long mWork;
+
+    //The asking frequency
     protected long mFrequency;
+
+    //The ratio of useful work and useless work
     protected long mRatio;
+
+    //The number of system damage caused by this lease term
     protected long mSystemdamage;
 
-    public LeaseStat(long BeginTime, long Endtime) {
+
+    public ResourceStat(long BeginTime, long Endtime) {
           mBeginTime = BeginTime;
           mEndTime = Endtime;
     }
