@@ -30,15 +30,35 @@ import com.android.internal.os.BatteryStatsImpl;
  * The struct of lease
  */
 public class Lease {
+
+    //The identifier of lease
     protected long mLeaseid;
+
+    //The identifier of the owner of lease. This variable usually means the UID
     protected long mOwnerid;
+
+    //The token of the request from user process
     protected IBinder mToken;
+
+    //The type of resource the lease is assigned
     protected ResourceType mType;
+
+    //The status of the lease
     protected LeaseStatus mStatus;
+
+    //The record of the history lease term for this lease
     protected ResourceStatManager mRStatManager;
+
+    //The length of this lease term
     protected int mLength; // in millisecond
+
+    //The BeginTime of this lease term
     protected long mBeginTime;
+
+    //The EndTime of this lease term
     protected long mEndTime;
+
+    //The number of current lease term
     protected int mLeaseTerm;
 
     public Lease(long lid, long Oid, String type) {
@@ -48,6 +68,10 @@ public class Lease {
         mStatus.setStatus("invalid");
     }
 
+
+    /**
+     * Create a new lease and the corresponding resource manager
+     */
     public void createLease() {
         mLeaseTerm = 0;
         mStatus.setStatus("active");
@@ -67,10 +91,18 @@ public class Lease {
         }
     }
 
+    /**
+     * Get the history information of past lease term
+     * @return ResourceManager, the manager of history information
+     */
     public ResourceStatManager getRStatManager() {
         return mRStatManager;
     }
 
+    /**
+     * Check the validation of lease
+     * @return true if the lease is valid
+     */
     public boolean isvalid() {
         for (LeaseStatus status : LeaseStatus.values()) {
             if (mStatus == status) {
@@ -80,27 +112,50 @@ public class Lease {
         return false;
     }
 
+    /**
+     * Get the length of this lease term
+     * @return The length of lease term
+     */
     public long getLength() {
         return mLength;
     }
 
+    /**
+     * Get the lease id
+     * @return Lease id
+     */
     public long getLease() {
         return mLeaseid;
     }
 
+    /**
+     * Get the Owner of the lease
+     * @return Owner id
+     */
     public long getOwner() {
         return mOwnerid;
     }
 
+    /**
+     * Get the type of lease
+     * @return lease type
+     */
     public String getLeaseType() {
         return mType.toString();
     }
 
+    /**
+     * Get the status of lease
+     * @return the status of lease
+     */
     public String getLeaseStatus() {
         return mStatus.toString();
     }
 
-
+    /**
+     * Expire the lease
+     * @return true if the lease is successfully expired
+     */
     public boolean expire() {
         mEndTime = System.currentTimeMillis();
         mStatus.setStatus("expired");
@@ -122,6 +177,10 @@ public class Lease {
         return false;
     }
 
+    /**
+     * Renew a new lease term for the lease
+     * @return true if the lease is renewed
+     */
     public boolean renew() {
         mLeaseTerm++;
         mBeginTime = System.currentTimeMillis();
