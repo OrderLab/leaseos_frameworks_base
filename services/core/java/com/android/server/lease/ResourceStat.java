@@ -73,7 +73,7 @@ abstract class ResourceStat {
     }
 
     public long getEfficiency() {
-        return mWork / mConsumption;
+        return mWork / getConsumption();
     }
 
     public long getUtility() {

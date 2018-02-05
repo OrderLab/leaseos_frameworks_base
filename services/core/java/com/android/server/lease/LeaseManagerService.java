@@ -22,8 +22,6 @@ package com.android.server.lease;
 
 import java.util.ArrayList;
 
-import com.android.server.lease.*;
-
 
 /**
  * The central lease manager service
@@ -34,10 +32,11 @@ public class LeaseManagerService {
     public static final int FAILED = -1;
 
     // Table of all leases acquired by services.
+    //TODO: change the hash table
     private final ArrayList<Lease> mLeases = new ArrayList<Lease>();
 
-    //The identifier of lease
-    private long mleaseid = 1000;
+    //The identifier of the last lease
+    private long mLastLeaseId = 1000;
 
     /**
      * Create a new lease
@@ -46,14 +45,15 @@ public class LeaseManagerService {
      * @param uid   the identifier of caller
      * @return the lease id
      */
-    public long newLease(String RType, int uid) {
-        if (!validateTypeParameters(RType)) {
+    public long newLease(ResourceType RType, int uid) {
+
+        /*if (!validateTypeParameters(RType)) {
             return FAILED;
-        }
-        Lease lease = new Lease(mleaseid, uid, RType);
+        }*/
+        Lease lease = new Lease(mLastLeaseId, uid, RType);
         mLeases.add(lease);
-        lease.createLease();
-        mleaseid++;
+        lease.create();
+        mLastLeaseId++;
         return lease.mLeaseid;
     }
 
@@ -99,7 +99,7 @@ public class LeaseManagerService {
         int index = findLeaseIndex(Leaseid);
         if (index >= 0) {
             Lease lease = mLeases.get(index);
-            return lease.isvalid();
+            return lease.isActive();
         } else {
             throw new Exception("No lease");
         }

@@ -38,6 +38,7 @@ public class WakelockStat extends ResourceStat {
         mHoldingTime = holdingTime;
         mUsageTime = usageTime;
         mExceptionFrequency = exceptionFrequency;
+
     }
 
     @Override

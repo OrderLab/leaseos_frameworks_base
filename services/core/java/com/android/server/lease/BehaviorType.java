@@ -24,7 +24,7 @@ package com.android.server.lease;
 /**
  *
  */
-public enum DisruptiveType {
+public enum BehaviorType {
     FrequencyAsking,
     LongHolding,
     LowUtility,

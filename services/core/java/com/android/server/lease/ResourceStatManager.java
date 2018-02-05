@@ -40,8 +40,8 @@ public class ResourceStatManager<T> {
         mStats.add(resourceStat);
     }
 
-    public DisruptiveType isDisruptive() {
-        return DisruptiveType.FrequencyAsking;
+    public BehaviorType judge() {
+        return BehaviorType.FrequencyAsking;
     }
 
     public void removeUsage() {

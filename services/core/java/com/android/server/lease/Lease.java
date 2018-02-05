@@ -61,30 +61,30 @@ public class Lease {
     //The number of current lease term
     protected int mLeaseTerm;
 
-    public Lease(long lid, long Oid, String type) {
+    public Lease(long lid, long Oid, ResourceType type) {
         mLeaseid = lid;
         mOwnerid = Oid;
-        mType.setType(type);
-        mStatus.setStatus("invalid");
+        mType = type;
+        mStatus = LeaseStatus.INVALID;
     }
 
 
     /**
      * Create a new lease and the corresponding resource manager
      */
-    public void createLease() {
+    public void create() {
         mLeaseTerm = 0;
-        mStatus.setStatus("active");
+        mStatus = LeaseStatus.ACTIVE;
         mLength = 5;
         mBeginTime = System.currentTimeMillis();
-        switch (mType.toString()) {
-            case "Wakelock":
+        switch (mType) {
+            case Wakelock:
                 mRStatManager = new ResourceStatManager<WakelockStat>();
                 break;
-            case "Location":
+            case Location:
                 mRStatManager = new ResourceStatManager<LocationStat>();
                 break;
-            case "Sensor":
+            case Sensor:
                 mRStatManager = new ResourceStatManager<SensorStat>();
                 break;
 
@@ -103,15 +103,13 @@ public class Lease {
      * Check the validation of lease
      * @return true if the lease is valid
      */
-    public boolean isvalid() {
-        for (LeaseStatus status : LeaseStatus.values()) {
-            if (mStatus == status) {
-                return true;
-            }
-        }
-        return false;
+    public boolean isValid() {
+        return mStatus !=  LeaseStatus.INVALID;
     }
 
+    public boolean isActive() {
+        return mStatus !=  LeaseStatus.ACTIVE;
+    }
     /**
      * Get the length of this lease term
      * @return The length of lease term
@@ -124,7 +122,7 @@ public class Lease {
      * Get the lease id
      * @return Lease id
      */
-    public long getLease() {
+    public long getId() {
         return mLeaseid;
     }
 
@@ -140,7 +138,7 @@ public class Lease {
      * Get the type of lease
      * @return lease type
      */
-    public String getLeaseType() {
+    public String getTypeStr() {
         return mType.toString();
     }
 
@@ -148,7 +146,7 @@ public class Lease {
      * Get the status of lease
      * @return the status of lease
      */
-    public String getLeaseStatus() {
+    public String getStatusStr() {
         return mStatus.toString();
     }
 
@@ -158,17 +156,18 @@ public class Lease {
      */
     public boolean expire() {
         mEndTime = System.currentTimeMillis();
-        mStatus.setStatus("expired");
-        switch (mType.toString()) {
-            case "Wakelock":
-                WakelockStat wStat = new WakelockStat(mBeginTime, mEndTime);
+        mStatus = LeaseStatus.EXPIRED;
+        switch (mType) {
+            case Wakelock:
+                // TODO: supply real argument for holding time and usage time.
+                WakelockStat wStat = new WakelockStat(mBeginTime, mEndTime,0,0,0);
                 mRStatManager.setResourceStat(wStat);
                 break;
-            case "Location":
+            case Location:
                 LocationStat lStat = new LocationStat(mBeginTime, mEndTime);
                 mRStatManager.setResourceStat(lStat);
                 break;
-            case "Sensor":
+            case Sensor:
                 SensorStat sStat = new SensorStat(mBeginTime, mEndTime);
                 mRStatManager.setResourceStat(sStat);
                 break;
@@ -182,8 +181,12 @@ public class Lease {
      * @return true if the lease is renewed
      */
     public boolean renew() {
+        if (mStatus == LeaseStatus.ACTIVE)
+            return false;
         mLeaseTerm++;
         mBeginTime = System.currentTimeMillis();
+        mStatus = LeaseStatus.ACTIVE;
+        //TODO: Acquire the resource again
         return false;
     }
 
