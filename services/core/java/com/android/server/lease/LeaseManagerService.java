@@ -26,6 +26,8 @@ import com.android.server.ServiceThread;
 
 import java.util.ArrayList;
 
+import sun.misc.Resource;
+
 
 /**
  * The central lease manager service
@@ -183,6 +185,7 @@ public class LeaseManagerService {
         if (index >= 0) {
             Lease lease = mLeases.get(index);
             lease.expire();
+            mRStatManager.removeStatHistory(lease);
             mLeases.remove(index);
         } else {
             throw new Exception("No lease");

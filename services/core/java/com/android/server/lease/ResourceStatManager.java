@@ -21,7 +21,6 @@
  */
 package com.android.server.lease;
 
-import java.util.ArrayList;
 import java.util.Hashtable;
 
 
@@ -30,29 +29,37 @@ import java.util.Hashtable;
  */
 public class ResourceStatManager {
 
-    protected Hashtable<Lease, StatHistory> mStatsHistory;
+    protected Hashtable<Lease, StatHistory> mStatsHistorys;
 
 
     ResourceStatManager(){
-        mStatsHistory = new Hashtable<>();
+        mStatsHistorys = new Hashtable<>();
     }
 
     public void setStatsHistory(Lease lease, StatHistory statHistory) {
-        mStatsHistory.put(lease, statHistory);
+        mStatsHistorys.put(lease, statHistory);
 
     }
 
     public boolean setResourceStat(Lease lease, ResourceStat rStat) {
-        StatHistory statHistory = mStatsHistory.get(lease);
+        StatHistory statHistory = mStatsHistorys.get(lease);
         if (statHistory == null) {
             return false;
         }
         return statHistory.setResourceStat(rStat);
     }
 
+    //TODO:This is the core part of lease manager
     public BehaviorType judge() {
         return BehaviorType.FrequencyAsking;
     }
 
-
+    public boolean removeStatHistory(Lease lease){
+        StatHistory statHistory = mStatsHistorys.get(lease);
+        if (statHistory == null) {
+            return false;
+        }
+        statHistory.remove();
+        return mStatsHistorys.remove(lease, statHistory);
+    }
 }

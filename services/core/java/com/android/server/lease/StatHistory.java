@@ -38,14 +38,15 @@ public class StatHistory <T> {
        return mStats.add(resourceStat);
     }
 
+    public void remove() {
+        mStats.clear();
+    }
+
     //TODO:need to implement the judge behavior part
     public BehaviorType judgeHistory() {
-
         return BehaviorType.FrequencyAsking;
     }
 
-    public void removeUsage() {
-        mStats.clear();
-    }
+
 
 }
