@@ -65,16 +65,12 @@ public class Lease {
     //The number of current lease term
     protected int mLeaseTerm;
 
-<<<<<<< HEAD
-    public Lease(long lid, long Oid, ResourceType type, ResourceStatManager RStatManager) {
-=======
     private ServiceThread mHandlerThread;
     private Handler mHandler;
     private boolean mScheduled;
     private static final String TAG = "LeaseManagerService";
 
-    public Lease(long lid, long Oid, ResourceType type) {
->>>>>>> fc360cc75b819e813dba7a36f3e73bf0eb1cee0d
+    public Lease(long lid, long Oid, ResourceType type, ResourceStatManager RStatManager) {
         mLeaseid = lid;
         mOwnerid = Oid;
         mType = type;
@@ -91,33 +87,32 @@ public class Lease {
         mStatus = LeaseStatus.ACTIVE;
         mLength = 5;
         mBeginTime = System.currentTimeMillis();
-<<<<<<< HEAD
-=======
 
         mHandlerThread = new ServiceThread(TAG,
                 Process.THREAD_PRIORITY_DISPLAY, false /*allowIo*/);
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
         scheduleChecks();
-        
+
         switch (mType) {
             case Wakelock:
-                mRStatManager = new ResourceStatManager<WakelockStat>();
+                mRStatManager = new ResourceStatManager();
                 break;
             case Location:
-                mRStatManager = new ResourceStatManager<LocationStat>();
+                mRStatManager = new ResourceStatManager();
                 break;
             case Sensor:
-                mRStatManager = new ResourceStatManager<SensorStat>();
+                mRStatManager = new ResourceStatManager();
                 break;
 
         }
 
->>>>>>> fc360cc75b819e813dba7a36f3e73bf0eb1cee0d
+
     }
 
     /**
      * Get the history information of past lease term
+     *
      * @return ResourceManager, the manager of history information
      */
     public ResourceStatManager getRStatManager() {
@@ -126,17 +121,20 @@ public class Lease {
 
     /**
      * Check the validation of lease
+     *
      * @return true if the lease is valid
      */
     public boolean isValid() {
-        return mStatus !=  LeaseStatus.INVALID;
+        return mStatus != LeaseStatus.INVALID;
     }
 
     public boolean isActive() {
-        return mStatus !=  LeaseStatus.ACTIVE;
+        return mStatus != LeaseStatus.ACTIVE;
     }
+
     /**
      * Get the length of this lease term
+     *
      * @return The length of lease term
      */
     public long getLength() {
@@ -145,6 +143,7 @@ public class Lease {
 
     /**
      * Get the lease id
+     *
      * @return Lease id
      */
     public long getId() {
@@ -153,6 +152,7 @@ public class Lease {
 
     /**
      * Get the Owner of the lease
+     *
      * @return Owner id
      */
     public long getOwner() {
@@ -161,6 +161,7 @@ public class Lease {
 
     /**
      * Get the type of lease
+     *
      * @return lease type
      */
     public String getTypeStr() {
@@ -169,6 +170,7 @@ public class Lease {
 
     /**
      * Get the status of lease
+     *
      * @return the status of lease
      */
     public String getStatusStr() {
@@ -177,27 +179,29 @@ public class Lease {
 
     /**
      * Expire the lease
+     *
      * @return true if the lease is successfully expired
      */
     public boolean expire() {
         mEndTime = System.currentTimeMillis();
         mStatus = LeaseStatus.EXPIRED;
+        boolean success = false;
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime, mEndTime,0,0,0);
-                mRStatManager.setResourceStat(this, wStat);
+                WakelockStat wStat = new WakelockStat(mBeginTime, mEndTime, 0, 0, 0);
+                success = mRStatManager.setResourceStat(this, wStat);
                 break;
             case Location:
                 LocationStat lStat = new LocationStat(mBeginTime, mEndTime);
-                mRStatManager.setResourceStat(this, lStat);
+                success = mRStatManager.setResourceStat(this, lStat);
                 break;
             case Sensor:
                 SensorStat sStat = new SensorStat(mBeginTime, mEndTime);
-                mRStatManager.setResourceStat(this, sStat);
+                success = mRStatManager.setResourceStat(this, sStat);
                 break;
         }
-        return false;
+        return success;
     }
 
     private Runnable mExpireRunnable = new Runnable() {
@@ -226,11 +230,13 @@ public class Lease {
 
     /**
      * Renew a new lease term for the lease
+     *
      * @return true if the lease is renewed
      */
     public boolean renew() {
-        if (mStatus == LeaseStatus.ACTIVE)
+        if (mStatus == LeaseStatus.ACTIVE) {
             return false;
+        }
         mLeaseTerm++;
         mBeginTime = System.currentTimeMillis();
         mStatus = LeaseStatus.ACTIVE;

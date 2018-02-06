@@ -51,7 +51,7 @@ public class LeaseManagerService {
         mContext = context;
         mRStatManager = new ResourceStatManager();
     }
-    
+
     /**
      * Create a new lease
      *
