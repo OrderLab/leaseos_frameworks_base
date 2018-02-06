@@ -22,9 +22,13 @@
 package com.android.server.lease;
 
 import android.location.Location;
+import android.os.Handler;
 import android.os.IBinder;
+import android.os.Process;
+import android.util.Slog;
 
 import com.android.internal.os.BatteryStatsImpl;
+import com.android.server.ServiceThread;
 
 /**
  * The struct of lease
@@ -61,6 +65,11 @@ public class Lease {
     //The number of current lease term
     protected int mLeaseTerm;
 
+    private ServiceThread mHandlerThread;
+    private Handler mHandler;
+    private boolean mScheduled;
+    private static final String TAG = "LeaseManagerService";
+
     public Lease(long lid, long Oid, ResourceType type) {
         mLeaseid = lid;
         mOwnerid = Oid;
@@ -77,6 +86,13 @@ public class Lease {
         mStatus = LeaseStatus.ACTIVE;
         mLength = 5;
         mBeginTime = System.currentTimeMillis();
+
+        mHandlerThread = new ServiceThread(TAG,
+                Process.THREAD_PRIORITY_DISPLAY, false /*allowIo*/);
+        mHandlerThread.start();
+        mHandler = new Handler(mHandlerThread.getLooper());
+        scheduleChecks();
+        
         switch (mType) {
             case Wakelock:
                 mRStatManager = new ResourceStatManager<WakelockStat>();
@@ -89,6 +105,7 @@ public class Lease {
                 break;
 
         }
+
     }
 
     /**
@@ -174,6 +191,30 @@ public class Lease {
         }
 
         return false;
+    }
+
+    private Runnable mExpireRunnable = new Runnable() {
+        @Override
+        public void run() {
+            expire();
+            cancelChecks();
+        }
+    };
+
+    public void scheduleChecks() {
+        if (!mScheduled) {
+            //Slog.d(TAG, "Scheduling checker queue [" + mCheckInterval + " ms]");
+            mHandler.postDelayed(mExpireRunnable, mLength);
+            mScheduled = true;
+        }
+    }
+
+    public void cancelChecks() {
+        if (mScheduled) {
+            //Slog.d(TAG, "Canceling checker queue [" + mCheckInterval + " ms]");
+            mHandler.removeCallbacks(mExpireRunnable);
+            mScheduled = false;
+        }
     }
 
     /**
