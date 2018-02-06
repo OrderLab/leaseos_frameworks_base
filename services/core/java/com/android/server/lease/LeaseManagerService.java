@@ -21,12 +21,8 @@
 package com.android.server.lease;
 
 import android.content.Context;
-import com.android.server.ServiceThread;
 
-
-import java.util.ArrayList;
-
-import sun.misc.Resource;
+import java.util.Hashtable;
 
 
 /**
@@ -39,7 +35,7 @@ public class LeaseManagerService {
 
     // Table of all leases acquired by services.
     //TODO: change the hash table
-    private final ArrayList<Lease> mLeases = new ArrayList<Lease>();
+    private final Hashtable<Long, Lease> mLeases = new Hashtable();
 
     //The identifier of the last lease
     private long mLastLeaseId = 1000;
@@ -48,7 +44,7 @@ public class LeaseManagerService {
 
     private Context mContext;
 
-    public LeaseManagerService (Context context) {
+    public LeaseManagerService(Context context) {
         super();
         mContext = context;
         mRStatManager = new ResourceStatManager();
@@ -69,7 +65,7 @@ public class LeaseManagerService {
         Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
         StatHistory statHistory;
 
-        mLeases.add(lease);
+        mLeases.put(mLastLeaseId, lease);
         lease.create();
         switch (RType) {
             case Wakelock:
@@ -91,11 +87,78 @@ public class LeaseManagerService {
     }
 
     /**
+     * Check the validation of the lease
+     *
+     * @param leaseid The identifier of lease
+     * @return True if the lease is valid
+     * @throws Exception can not find a lease by the leaseid
+     */
+    public boolean check(long leaseid) throws Exception {
+        Lease lease = mLeases.get(leaseid);
+        if (lease == null) {
+            throw new Exception("Can not find lease with the leaseId: " + leaseid);
+        }
+        return lease.isActive();
+    }
+
+
+    /**
+     * Expire the lease
+     *
+     * @param leaseid The identifier of lease
+     * @return Ture if the lease expire
+     * @throws Exception can not find a lease by the leaseid
+     */
+    public boolean expire(int leaseid) throws Exception {
+        Lease lease = mLeases.get(leaseid);
+        if (lease == null) {
+            throw new Exception("Can not find lease with the leaseId: " + leaseid);
+        }
+        return lease.expire();
+    }
+
+    /**
+     * Renew the lease
+     *
+     * @param leaseid The identifier of lease
+     * @return Ture if the lease is renewed
+     * @throws Exception can not find a lease by the leaseid
+     */
+    public boolean renew(int leaseid) throws Exception {
+       Lease lease = mLeases.get(leaseid);
+        if (lease == null) {
+            throw new Exception("Can not find lease with the leaseId: " + leaseid);
+        }
+        return lease.expire();
+    }
+
+    /**
+     * Remove the lease
+     *
+     * @param leaseid The identifier of lease
+     * @return Ture if the lease is removed from lease table
+     * @throws Exception can not find a lease by the leaseid
+     */
+    public boolean remove(int leaseid) throws Exception {
+
+            Lease lease = mLeases.get(leaseid);
+        if (lease == null) {
+            throw new Exception("Can not find lease with the leaseId: " + leaseid);
+        }
+        //TODO: how to handler the logic of true or false
+        lease.expire();
+        mRStatManager.removeStatHistory(lease);
+        mLeases.remove(leaseid, lease);
+        return true;
+    }
+
+    /**
      * Verify the type parameter is vaild
      *
      * @param RType The resource type of the lease
      * @return true if the type is valid
      */
+    /*
     public static boolean validateTypeParameters(String RType) {
         for (ResourceType type : ResourceType.values()) {
             if (type.toString() == RType) {
@@ -103,7 +166,7 @@ public class LeaseManagerService {
             }
         }
         return false;
-    }
+    }*/
 
     /**
      * Find the lease index by the Leaseid
@@ -111,6 +174,7 @@ public class LeaseManagerService {
      * @param Leaseid The identifier of lease
      * @return The lease index or -1 if can not find the lease
      */
+    /*
     private int findLeaseIndex(int Leaseid) {
         final int count = mLeases.size();
         for (int i = 0; i < count; i++) {
@@ -120,76 +184,5 @@ public class LeaseManagerService {
         }
         return FAILED;
     }
-
-    /**
-     * Check the validation of the lease
-     *
-     * @param Leaseid The identifier of lease
-     * @return True if the lease is valid
-     * @throws Exception can not find a lease by the leaseid
-     */
-    public boolean check(int Leaseid) throws Exception {
-        int index = findLeaseIndex(Leaseid);
-        if (index >= 0) {
-            Lease lease = mLeases.get(index);
-            return lease.isActive();
-        } else {
-            throw new Exception("No lease");
-        }
-    }
-
-
-    /**
-     * Expire the lease
-     *
-     * @param Leaseid The identifier of lease
-     * @return Ture if the lease expire
-     * @throws Exception can not find a lease by the leaseid
-     */
-    public boolean expire(int Leaseid) throws Exception {
-        int index = findLeaseIndex(Leaseid);
-        if (index >= 0) {
-            Lease lease = mLeases.get(index);
-            return lease.expire();
-        } else {
-            throw new Exception("No lease");
-        }
-    }
-
-    /**
-     * Renew the lease
-     *
-     * @param Leaseid The identifier of lease
-     * @return Ture if the lease is renewed
-     * @throws Exception can not find a lease by the leaseid
-     */
-    public boolean renew(int Leaseid) throws Exception {
-        int index = findLeaseIndex(Leaseid);
-        if (index >= 0) {
-            Lease lease = mLeases.get(index);
-            return lease.expire();
-        } else {
-            throw new Exception("No lease");
-        }
-    }
-
-    /**
-     * Remove the lease
-     *
-     * @param Leaseid The identifier of lease
-     * @return Ture if the lease is removed from lease table
-     * @throws Exception can not find a lease by the leaseid
-     */
-    public boolean remove(int Leaseid) throws Exception {
-        int index = findLeaseIndex(Leaseid);
-        if (index >= 0) {
-            Lease lease = mLeases.get(index);
-            lease.expire();
-            mRStatManager.removeStatHistory(lease);
-            mLeases.remove(index);
-        } else {
-            throw new Exception("No lease");
-        }
-        return true;
-    }
+*/
 }
