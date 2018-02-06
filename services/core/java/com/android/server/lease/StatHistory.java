@@ -1,6 +1,6 @@
     
 /*
- *  @author Yigong Hu <hyigong1@jhu.edu>
+ *  @author Yigong HU <hyigong1@jhu.edu>
  *
  *  The LeaseOS Project
  *
@@ -22,37 +22,30 @@
 package com.android.server.lease;
 
 import java.util.ArrayList;
-import java.util.Hashtable;
-
 
 /**
  *
  */
-public class ResourceStatManager {
+public class StatHistory <T> {
+    protected ArrayList<T> mStats;
 
-    protected Hashtable<Lease, StatHistory> mStatsHistory;
 
-
-    ResourceStatManager(){
-        mStatsHistory = new Hashtable<>();
+    StatHistory() {
+        mStats = new ArrayList<T>();
     }
 
-    public void setStatsHistory(Lease lease, StatHistory statHistory) {
-        mStatsHistory.put(lease, statHistory);
-
+    public boolean setResourceStat(T resourceStat) {
+       return mStats.add(resourceStat);
     }
 
-    public boolean setResourceStat(Lease lease, ResourceStat rStat) {
-        StatHistory statHistory = mStatsHistory.get(lease);
-        if (statHistory == null) {
-            return false;
-        }
-        return statHistory.setResourceStat(rStat);
-    }
+    //TODO:need to implement the judge behavior part
+    public BehaviorType judgeHistory() {
 
-    public BehaviorType judge() {
         return BehaviorType.FrequencyAsking;
     }
 
+    public void removeUsage() {
+        mStats.clear();
+    }
 
 }

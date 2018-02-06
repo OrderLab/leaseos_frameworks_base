@@ -68,31 +68,23 @@ abstract class ResourceStat {
         return mEndTime - mBeginTime;
     }
 
-    public long getFrequency() {
-        return mFrequency;
-    }
+    public abstract long getConsumption();
+
+    public abstract long getWork();
+
+    public abstract long getFrequency() ;
+
+    public abstract long getEfficientRatio();
+
+    public abstract long getDamage();
 
     public long getEfficiency() {
-        return mWork / getConsumption();
+        return getWork() / getConsumption();
     }
+
 
     public long getUtility() {
-        return mWork / (mConsumption * mEfficientRatio);
+        return getWork() / (getConsumption() * getEfficientRatio());
     }
-
-    public long getDamage() {
-        return mSystemdamage;
-    }
-
-    public abstract void setFrequency();
-
-    public abstract void setConsumption();
-
-    public abstract void setWork();
-
-    public abstract void setRatio();
-
-    public abstract void setDamage();
-
 
 }

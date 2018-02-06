@@ -20,6 +20,8 @@
  */
 package com.android.server.lease;
 
+import android.content.Context;
+
 import java.util.ArrayList;
 
 
@@ -38,6 +40,17 @@ public class LeaseManagerService {
     //The identifier of the last lease
     private long mLastLeaseId = 1000;
 
+    private ResourceStatManager mRStatManager;
+
+    private Context mContext;
+
+    public LeaseManagerService (Context context) {
+        super();
+        mContext = context;
+        mRStatManager = new ResourceStatManager();
+    }
+
+
     /**
      * Create a new lease
      *
@@ -50,9 +63,26 @@ public class LeaseManagerService {
         /*if (!validateTypeParameters(RType)) {
             return FAILED;
         }*/
-        Lease lease = new Lease(mLastLeaseId, uid, RType);
+        Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
+        StatHistory statHistory;
+
         mLeases.add(lease);
         lease.create();
+        switch (RType) {
+            case Wakelock:
+                statHistory = new StatHistory<WakelockStat>();
+                mRStatManager.setStatsHistory(lease, statHistory);
+                break;
+            case Location:
+                statHistory = new StatHistory<LocationStat>();
+                mRStatManager.setStatsHistory(lease, statHistory);
+                break;
+            case Sensor:
+                statHistory = new StatHistory<SensorStat>();
+                mRStatManager.setStatsHistory(lease, statHistory);
+                break;
+
+        }
         mLastLeaseId++;
         return lease.mLeaseid;
     }

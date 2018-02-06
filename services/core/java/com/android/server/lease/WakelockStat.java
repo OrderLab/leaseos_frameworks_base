@@ -42,27 +42,33 @@ public class WakelockStat extends ResourceStat {
     }
 
     @Override
-    public void setFrequency() {
-        super.mFrequency = 0;
+    public long getConsumption(){
+        return mHoldingTime;
     }
 
     @Override
-    public void setConsumption() {
-        super.mConsumption = mHoldingTime;
+    public long getWork(){
+        return mUsageTime;
     }
 
     @Override
-    public void setWork() {
-        super.mWork = mUsageTime;
+    public long getEfficientRatio(){
+        return mExceptionFrequency;
     }
 
     @Override
-    public void setRatio() {
-        super.mEfficientRatio = mExceptionFrequency;
+    public long getFrequency(){
+        return 0;
     }
 
+    //TODO: implment the getDamage method
     @Override
-    public void setDamage() {
+    public long getDamage() {
+         return 0;
+    }
 
+    //TODO: implment the judge method
+    public BehaviorType judge (){
+        return BehaviorType.FrequencyAsking;
     }
 }

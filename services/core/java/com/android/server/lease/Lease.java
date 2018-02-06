@@ -61,11 +61,12 @@ public class Lease {
     //The number of current lease term
     protected int mLeaseTerm;
 
-    public Lease(long lid, long Oid, ResourceType type) {
+    public Lease(long lid, long Oid, ResourceType type, ResourceStatManager RStatManager) {
         mLeaseid = lid;
         mOwnerid = Oid;
         mType = type;
         mStatus = LeaseStatus.INVALID;
+        mRStatManager = RStatManager;
     }
 
 
@@ -77,18 +78,6 @@ public class Lease {
         mStatus = LeaseStatus.ACTIVE;
         mLength = 5;
         mBeginTime = System.currentTimeMillis();
-        switch (mType) {
-            case Wakelock:
-                mRStatManager = new ResourceStatManager<WakelockStat>();
-                break;
-            case Location:
-                mRStatManager = new ResourceStatManager<LocationStat>();
-                break;
-            case Sensor:
-                mRStatManager = new ResourceStatManager<SensorStat>();
-                break;
-
-        }
     }
 
     /**
@@ -161,18 +150,17 @@ public class Lease {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
                 WakelockStat wStat = new WakelockStat(mBeginTime, mEndTime,0,0,0);
-                mRStatManager.setResourceStat(wStat);
+                mRStatManager.setResourceStat(this, wStat);
                 break;
             case Location:
                 LocationStat lStat = new LocationStat(mBeginTime, mEndTime);
-                mRStatManager.setResourceStat(lStat);
+                mRStatManager.setResourceStat(this, lStat);
                 break;
             case Sensor:
                 SensorStat sStat = new SensorStat(mBeginTime, mEndTime);
-                mRStatManager.setResourceStat(sStat);
+                mRStatManager.setResourceStat(this, sStat);
                 break;
         }
-
         return false;
     }
 
