@@ -21,14 +21,13 @@
 package com.android.server.lease;
 
 import android.content.Context;
-
 import java.util.Hashtable;
-
+import android.lease.*;
 
 /**
  * The central lease manager service
  */
-public class LeaseManagerService {
+public class LeaseManagerService extends ILeaseManager.Stub{
 
     //Operation failed
     public static final int FAILED = -1;
@@ -57,7 +56,7 @@ public class LeaseManagerService {
      * @param uid   the identifier of caller
      * @return the lease id
      */
-    public long newLease(ResourceType RType, int uid) {
+    public long newLease(ResourceType RType, long uid) {
 
         /*if (!validateTypeParameters(RType)) {
             return FAILED;

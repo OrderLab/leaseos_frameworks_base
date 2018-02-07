@@ -26,4 +26,29 @@ package android.lease;
  * {@hide}
  */
 interface ILeaseManager {
+
+     /**
+     *  create a lease
+     **/
+    long newLease(ResourceType RType, long uid);
+
+    /**
+    *  check whether the lease is active or not
+    **/
+    boolean check(long leaseId);
+
+    /**
+    * expire the lease
+    **/
+    boolean expire(long leaseId);
+
+    /**
+    * renew the lease
+    **/
+    boolean renew(long leaseId);
+
+    /**
+    * remove the lease
+    **/
+    boolean remove(long leaseId);
 }

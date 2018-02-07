@@ -106,8 +106,6 @@ public class Lease {
                 break;
 
         }
-
-
     }
 
     /**
@@ -240,6 +238,7 @@ public class Lease {
         mLeaseTerm++;
         mBeginTime = System.currentTimeMillis();
         mStatus = LeaseStatus.ACTIVE;
+        scheduleChecks();
         //TODO: Acquire the resource again
         return false;
     }

@@ -3937,4 +3937,7 @@ public final class PowerManagerService extends SystemService
             powerHintInternal(hintId, data);
         }
     }
+
+
+
 }

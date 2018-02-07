@@ -34,7 +34,7 @@ public class StatHistory <T> {
         mStats = new ArrayList<T>();
     }
 
-    public boolean setResourceStat(T resourceStat) {
+    public boolean addItem(T resourceStat) {
        return mStats.add(resourceStat);
     }
 

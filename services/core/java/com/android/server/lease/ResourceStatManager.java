@@ -46,7 +46,7 @@ public class ResourceStatManager {
         if (statHistory == null) {
             return false;
         }
-        return statHistory.setResourceStat(rStat);
+        return statHistory.addItem(rStat);
     }
 
     //TODO:This is the core part of lease manager
