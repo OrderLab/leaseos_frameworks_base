@@ -21,13 +21,11 @@
  */
 package com.android.server.lease;
 
-import android.location.Location;
+import android.lease.ResourceType;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Process;
-import android.util.Slog;
 
-import com.android.internal.os.BatteryStatsImpl;
 import com.android.server.ServiceThread;
 
 /**

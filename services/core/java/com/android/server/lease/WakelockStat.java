@@ -21,7 +21,7 @@
  */
 package com.android.server.lease;
 
-import gov.nist.javax.sip.parser.SubjectParser;
+import android.lease.ResourceStat;
 
 /**
  *

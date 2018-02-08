@@ -21,10 +21,12 @@
  */
 package com.android.server.lease;
 
+import android.lease.ResourceStat;
+
 /**
  *
  */
-public class LocationStat extends ResourceStat{
+public class LocationStat extends ResourceStat {
 
 
     public LocationStat(long BeginTime, long Endtime) {

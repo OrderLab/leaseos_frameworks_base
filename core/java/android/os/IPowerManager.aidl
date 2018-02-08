@@ -19,6 +19,7 @@ package android.os;
 
 import android.os.WorkSource;
 
+
 /** @hide */
 
 interface IPowerManager

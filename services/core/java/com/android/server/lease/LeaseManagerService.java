@@ -108,7 +108,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @return Ture if the lease expire
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean expire(int leaseid) throws Exception {
+    public boolean expire(long leaseid) throws Exception {
         Lease lease = mLeases.get(leaseid);
         if (lease == null) {
             throw new Exception("Can not find lease with the leaseId: " + leaseid);
@@ -123,7 +123,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @return Ture if the lease is renewed
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean renew(int leaseid) throws Exception {
+    public boolean renew(long leaseid) throws Exception {
        Lease lease = mLeases.get(leaseid);
         if (lease == null) {
             throw new Exception("Can not find lease with the leaseId: " + leaseid);
@@ -138,7 +138,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @return Ture if the lease is removed from lease table
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean remove(int leaseid) throws Exception {
+    public boolean remove(long leaseid) throws Exception {
 
             Lease lease = mLeases.get(leaseid);
         if (lease == null) {

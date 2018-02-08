@@ -1,5 +1,5 @@
 /*
- *  @author Ryan Huang <huang@cs.jhu.edu>
+ *  @author Yigong Hu <hyigong1@cs.jhu.edu>
  *
  *  The LeaseOS Project
  *
@@ -18,41 +18,6 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package android.lease;
+ package android.lease;
 
-
-//import android.lease.LeaseManager;
-import android.lease.ResourceType;
-
-/**
- * Lease manager interfaces
- *
- * {@hide}
- */
-interface ILeaseManager {
-
-     /**
-     *  create a lease
-     **/
-    long newLease(in ResourceType RType, long uid);
-
-    /**
-    *  check whether the lease is active or not
-    **/
-    boolean check(long leaseId);
-
-    /**
-    * expire the lease
-    **/
-    boolean expire(long leaseId);
-
-    /**
-    * renew the lease
-    **/
-    boolean renew(long leaseId);
-
-    /**
-    * remove the lease
-    **/
-    boolean remove(long leaseId);
-}
+ parcelable ResourceType;

@@ -25,8 +25,6 @@ import android.content.Context;
 import android.os.RemoteException;
 import android.util.Log;
 
-import com.android.server.lease.*;
-
 /**
  *The manager class for Lease, the wrapper of LeaseManagerServices
  */
@@ -48,9 +46,9 @@ public class LeaseManager {
      * @return lease id
      */
     public long newLease(ResourceType RType, long uid) {
-        long leaseId;
+        long leaseId = -1;
         try {
-           leaseId = mService.newLease( RType, uid);
+           leaseId = mService.newLease(RType, uid);
         } catch (RemoteException e) {
             Log.wtf(TAG, "Fail to create new lease");
         }
@@ -63,9 +61,9 @@ public class LeaseManager {
      * @return true if the lease is active
      */
     public boolean check(long leaseId){
-        boolean success;
+        boolean success = false;
         try {
-             success  = mService.check( leaseId);
+             success  = mService.check(leaseId);
         } catch (RemoteException e) {
             Log.wtf(TAG, "Fail to check the lease status");
         }
@@ -78,7 +76,7 @@ public class LeaseManager {
      * @return ture if the lease is successfully expired
      */
     public boolean expire(long leaseId){
-        boolean success;
+        boolean success= false;
         try{
             success = mService.expire(leaseId);
         } catch (RemoteException e){
@@ -93,7 +91,7 @@ public class LeaseManager {
      * @return ture if the lease is successfully renewed
      */
     public boolean renew(long leaseId) {
-        boolean success;
+        boolean success = false;
         try {
             success = mService.renew(leaseId);
         }catch (RemoteException e){
@@ -108,7 +106,7 @@ public class LeaseManager {
      * @return true if the lease is successfully removed
      */
     public boolean remove(long leaseId){
-        boolean success;
+        boolean success = false;
         try {
             success = mService.remove(leaseId);
         }catch (RemoteException e){
