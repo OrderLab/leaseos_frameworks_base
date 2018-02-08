@@ -26,11 +26,13 @@ import android.content.Intent;
 import android.content.pm.PackageManager;
 import android.content.res.Configuration;
 import android.content.res.Resources.Theme;
+import android.lease.LeaseManager;
 import android.os.BaseBundle;
 import android.os.Build;
 import android.os.Environment;
 import android.os.FactoryTest;
 import android.os.FileUtils;
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.PowerManager;
 import android.os.RemoteException;
@@ -71,6 +73,7 @@ import com.android.server.fingerprint.FingerprintService;
 import com.android.server.hdmi.HdmiControlService;
 import com.android.server.input.InputManagerService;
 import com.android.server.job.JobSchedulerService;
+import com.android.server.lease.LeaseManagerService;
 import com.android.server.lights.LightsService;
 import com.android.server.media.MediaResourceMonitorService;
 import com.android.server.media.MediaRouterService;
@@ -692,6 +695,7 @@ public final class SystemServer {
         ILockSettings lockSettings = null;
         AssetAtlasService atlas = null;
         MediaRouterService mediaRouter = null;
+        LeaseManagerService lease = null;
 
         // Bring up services needed for UI.
         if (mFactoryTestMode != FactoryTest.FACTORY_TEST_LOW_LEVEL) {
@@ -938,6 +942,16 @@ public final class SystemServer {
                 }
                 Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
             }
+
+            try {
+                traceBeginAndSlog("LeaseManagerService");
+                lease = new LeaseManagerService(context);
+                ServiceManager.addService(Context.LEASE_SERVICE,lease);
+                Slog.i(TAG, "LeaseManagerService Started");
+            } catch (Throwable e) {
+                reportWtf("Failure starting LeaseManager Service", e);
+            }
+            Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
 
             if (!disableNonCoreServices && !disableSearchManager) {
                 traceBeginAndSlog("StartSearchManagerService");

@@ -762,6 +762,7 @@ class ContextImpl extends Context {
         return getSystemService(WallpaperManager.class);
     }
 
+
     @Override
     public void startActivity(Intent intent) {
         warnIfCallingFromSystemProcess();

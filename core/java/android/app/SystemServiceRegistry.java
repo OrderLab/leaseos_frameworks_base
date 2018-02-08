@@ -775,6 +775,17 @@ final class SystemServiceRegistry {
                 return new ContextHubManager(ctx.getOuterContext(),
                   ctx.mMainThread.getHandler().getLooper());
             }});
+
+        /**
+         * LeaseOS project
+         */
+        registerService(Context.LEASE_SERVICE, ContextHubManager.class,
+                new CachedServiceFetcher<ContextHubManager>() {
+            @Override
+            public ContextHubManager createService(ContextImpl ctx) {
+                return new ContextHubManager(ctx.getOuterContext(),
+                        ctx.mMainThread.getHandler().getLooper());
+            }});
     }
 
     /**

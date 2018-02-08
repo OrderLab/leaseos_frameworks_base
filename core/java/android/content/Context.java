@@ -3653,6 +3653,12 @@ public abstract class Context {
     public static final String GATEKEEPER_SERVICE = "android.service.gatekeeper.IGateKeeperService";
 
     /**
+     * Use with {@link #getSystemService} to retrieve a
+     * {@link android.lease.LeaseManager} for using Lease Manger Service.
+     * EDIT for leaseOS project
+     */
+    public static final String LEASE_SERVICE = "Lease";
+    /**
      * Determine whether the given permission is allowed for a particular
      * process and user ID running in the system.
      *
