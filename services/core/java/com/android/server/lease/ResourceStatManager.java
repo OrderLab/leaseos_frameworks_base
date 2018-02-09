@@ -21,7 +21,7 @@
  */
 package com.android.server.lease;
 
-import android.lease.ResourceStat;
+import com.android.server.lease.StatHistory;
 
 import java.util.Hashtable;
 

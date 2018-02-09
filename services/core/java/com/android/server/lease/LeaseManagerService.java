@@ -92,10 +92,10 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @return True if the lease is valid
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean check(long leaseid) throws Exception {
+    public boolean check(long leaseid)  {
         Lease lease = mLeases.get(leaseid);
         if (lease == null) {
-            throw new Exception("Can not find lease with the leaseId: " + leaseid);
+            return false;
         }
         return lease.isActive();
     }
@@ -108,10 +108,10 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @return Ture if the lease expire
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean expire(long leaseid) throws Exception {
+    public boolean expire(long leaseid){
         Lease lease = mLeases.get(leaseid);
         if (lease == null) {
-            throw new Exception("Can not find lease with the leaseId: " + leaseid);
+            return false;
         }
         return lease.expire();
     }
@@ -123,10 +123,10 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @return Ture if the lease is renewed
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean renew(long leaseid) throws Exception {
+    public boolean renew(long leaseid) {
        Lease lease = mLeases.get(leaseid);
         if (lease == null) {
-            throw new Exception("Can not find lease with the leaseId: " + leaseid);
+            return false;
         }
         return lease.expire();
     }
@@ -138,11 +138,11 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @return Ture if the lease is removed from lease table
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean remove(long leaseid) throws Exception {
+    public boolean remove(long leaseid) {
 
             Lease lease = mLeases.get(leaseid);
         if (lease == null) {
-            throw new Exception("Can not find lease with the leaseId: " + leaseid);
+            return false;
         }
         //TODO: how to handler the logic of true or false
         lease.expire();

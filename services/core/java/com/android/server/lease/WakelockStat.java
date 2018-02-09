@@ -21,7 +21,6 @@
  */
 package com.android.server.lease;
 
-import android.lease.ResourceStat;
 
 /**
  *

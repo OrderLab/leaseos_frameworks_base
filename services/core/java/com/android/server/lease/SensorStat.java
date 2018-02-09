@@ -21,7 +21,6 @@
  */
 package com.android.server.lease;
 
-import android.lease.ResourceStat;
 
 /**
  *
@@ -33,27 +32,28 @@ public class SensorStat extends ResourceStat {
     }
 
     @Override
-    public void setFrequency() {
-
+    public long getConsumption() {
+        return 0;
     }
 
     @Override
-    public void setConsumption() {
-
+    public long getWork() {
+        return 0;
     }
 
     @Override
-    public void setWork() {
-
+    public long getFrequency() {
+        return 0;
     }
 
     @Override
-    public void setRatio() {
-
+    public long getEfficientRatio() {
+        return 0;
     }
 
     @Override
-    public void setDamage() {
-
+    public long getDamage() {
+        return 0;
     }
+
 }

@@ -3128,7 +3128,7 @@ public final class PowerManagerService extends SystemService
     /**
      * Handler for asynchronous operations performed by the power manager.
      */
-    private final class mHandlerThreadPowerManagerHandler extends Handler {
+    private final class PowerManagerHandler extends Handler {
         public PowerManagerHandler(Looper looper) {
             super(looper, null, true /*async*/);
         }
