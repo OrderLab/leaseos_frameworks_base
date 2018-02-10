@@ -16,6 +16,7 @@
 
 package com.android.server.power;
 
+import android.lease.*;
 import android.Manifest;
 import android.annotation.IntDef;
 import android.app.ActivityManager;
@@ -50,7 +51,6 @@ import android.os.Trace;
 import android.os.UserHandle;
 import android.os.WorkSource;
 import android.provider.Settings;
-import android.provider.Settings.Secure;
 import android.provider.Settings.SettingNotFoundException;
 import android.service.dreams.DreamManagerInternal;
 import android.service.vr.IVrManager;
@@ -83,6 +83,8 @@ import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.HashMap;
+import java.util.Hashtable;
 
 import static android.os.PowerManagerInternal.POWER_HINT_INTERACTION;
 import static android.os.PowerManagerInternal.WAKEFULNESS_ASLEEP;
@@ -504,6 +506,10 @@ public final class PowerManagerService extends SystemService
     private final ArrayList<PowerManagerInternal.LowPowerModeListener> mLowPowerModeListeners
             = new ArrayList<PowerManagerInternal.LowPowerModeListener>();
 
+    /*** LeaseOS changes ***/
+    private LeaseManager mLeaseManager;
+    private Hashtable <Integer, Long> mLeasetable;
+    /************************/
     // True if we are currently in VR Mode.
     private boolean mIsVrModeEnabled;
 
@@ -688,6 +694,11 @@ public final class PowerManagerService extends SystemService
             updateSettingsLocked();
             mDirty |= DIRTY_BATTERY_STATE;
             updatePowerStateLocked();
+
+            /*** LeaseOS changes***/
+            mLeaseManager = (LeaseManager) mContext.getSystemService(Context.LEASE_SERVICE);
+            mLeasetable = new Hashtable<>();
+            /**********************/
         }
     }
 
@@ -904,6 +915,12 @@ public final class PowerManagerService extends SystemService
                 mWakeLocks.add(wakeLock);
                 setWakeLockDisabledStateLocked(wakeLock);
                 notifyAcquire = true;
+
+                /***LeaseOS changes***/
+                int index = findWakeLockIndexLocked(lock);
+                long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
+                mLeasetable.put(index, leaseid);
+                /*********************/
             }
 
             applyWakeLockFlagsOnAcquireLocked(wakeLock, uid);
@@ -969,6 +986,10 @@ public final class PowerManagerService extends SystemService
             if ((flags & PowerManager.RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY) != 0) {
                 mRequestWaitForNegativeProximity = true;
             }
+            /***LeaseOS changes***/
+            long leaseid = mLeasetable.get(index);
+            mLeaseManager.remove(leaseid);
+            /*********************/
 
             wakeLock.mLock.unlinkToDeath(wakeLock, 0);
             removeWakeLockLocked(wakeLock, index);
