@@ -56,6 +56,7 @@ import android.service.dreams.DreamManagerInternal;
 import android.service.vr.IVrManager;
 import android.service.vr.IVrStateCallbacks;
 import android.util.EventLog;
+import android.util.Log;
 import android.util.PrintWriterPrinter;
 import android.util.Slog;
 import android.util.SparseIntArray;
@@ -917,7 +918,7 @@ public final class PowerManagerService extends SystemService
                 notifyAcquire = true;
 
                 /***LeaseOS changes***/
-                logi(TAG, "create the lease");
+                Log.i(TAG, "create the lease");
                 int in = findWakeLockIndexLocked(lock);
                 long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
                 mLeasetable.put(in, leaseid);
@@ -988,7 +989,7 @@ public final class PowerManagerService extends SystemService
                 mRequestWaitForNegativeProximity = true;
             }
             /***LeaseOS changes***/
-            logi(TAG, "remove the lease");
+            Log.i(TAG, "remove the lease");
             long leaseid = mLeasetable.get(index);
             mLeaseManager.remove(leaseid);
             /*********************/

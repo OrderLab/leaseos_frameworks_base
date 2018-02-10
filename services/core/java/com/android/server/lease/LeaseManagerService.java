@@ -30,7 +30,7 @@ import android.util.Log;
  */
 public class LeaseManagerService extends ILeaseManager.Stub{
 
-    private static final String TAG = "L"
+    private static final String TAG = "LeaseManagerService";
     //Operation failed
     public static final int FAILED = -1;
 
@@ -66,7 +66,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
         Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
         StatHistory statHistory;
 
-        Log.i(TAG, "newLease: begin to create a lease for process: " +_ uid + );
+        Log.i(TAG, "newLease: begin to create a lease for process: " + uid);
         mLeases.put(mLastLeaseId, lease);
         lease.create();
         switch (RType) {
