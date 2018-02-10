@@ -23,17 +23,19 @@ package com.android.server.lease;
 import android.content.Context;
 import java.util.Hashtable;
 import android.lease.*;
+import android.util.Log;
 
 /**
  * The central lease manager service
  */
 public class LeaseManagerService extends ILeaseManager.Stub{
 
+    private static final String TAG = "L"
     //Operation failed
     public static final int FAILED = -1;
 
     // Table of all leases acquired by services.
-    //TODO: change the hash table
+    //TODO: change the hash tableeasaseeaseM
     private final Hashtable<Long, Lease> mLeases = new Hashtable();
 
     //The identifier of the last lease
@@ -64,6 +66,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
         Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
         StatHistory statHistory;
 
+        Log.i(TAG, "newLease: begin to create a lease for process: " +_ uid + );
         mLeases.put(mLastLeaseId, lease);
         lease.create();
         switch (RType) {

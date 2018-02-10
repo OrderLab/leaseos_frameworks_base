@@ -917,9 +917,10 @@ public final class PowerManagerService extends SystemService
                 notifyAcquire = true;
 
                 /***LeaseOS changes***/
-                int index = findWakeLockIndexLocked(lock);
+                logi(TAG, "create the lease");
+                int in = findWakeLockIndexLocked(lock);
                 long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
-                mLeasetable.put(index, leaseid);
+                mLeasetable.put(in, leaseid);
                 /*********************/
             }
 
@@ -987,6 +988,7 @@ public final class PowerManagerService extends SystemService
                 mRequestWaitForNegativeProximity = true;
             }
             /***LeaseOS changes***/
+            logi(TAG, "remove the lease");
             long leaseid = mLeasetable.get(index);
             mLeaseManager.remove(leaseid);
             /*********************/
