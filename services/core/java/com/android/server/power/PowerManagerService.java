@@ -101,7 +101,7 @@ public final class PowerManagerService extends SystemService
         implements Watchdog.Monitor {
     private static final String TAG = "PowerManagerService";
 
-    private static final boolean DEBUG = false;
+    private static final boolean DEBUG = true;
     private static final boolean DEBUG_SPEW = DEBUG && true;
 
     // Message: Sent when a user activity timeout occurs to update the power state.
@@ -918,10 +918,10 @@ public final class PowerManagerService extends SystemService
                 notifyAcquire = true;
 
                 /***LeaseOS changes***/
-                Log.i(TAG, "create the lease");
+                Slog.i(TAG, "create the lease");
                 int in = findWakeLockIndexLocked(lock);
-                long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
-                mLeasetable.put(in, leaseid);
+               // long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
+               // mLeasetable.put(in, leaseid);
                 /*********************/
             }
 
@@ -989,9 +989,9 @@ public final class PowerManagerService extends SystemService
                 mRequestWaitForNegativeProximity = true;
             }
             /***LeaseOS changes***/
-            Log.i(TAG, "remove the lease");
-            long leaseid = mLeasetable.get(index);
-            mLeaseManager.remove(leaseid);
+            Slog.i(TAG, "remove the lease");
+            //long leaseid = mLeasetable.get(index);
+           // mLeaseManager.remove(leaseid);
             /*********************/
 
             wakeLock.mLock.unlinkToDeath(wakeLock, 0);
@@ -1288,6 +1288,8 @@ public final class PowerManagerService extends SystemService
             Slog.d(TAG, "goToSleepNoUpdateLocked: eventTime=" + eventTime
                     + ", reason=" + reason + ", flags=" + flags + ", uid=" + uid);
         }
+        Slog.i(TAG, "goToSleepNoUpdateLocked: eventTime=" + eventTime
+                + ", reason=" + reason + ", flags=" + flags + ", uid=" + uid);
 
         if (eventTime < mLastWakeTime
                 || mWakefulness == WAKEFULNESS_ASLEEP
