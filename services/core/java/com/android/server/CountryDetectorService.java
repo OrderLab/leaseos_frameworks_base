@@ -31,6 +31,7 @@ import android.location.ICountryListener;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.RemoteException;
+import android.util.Log;
 import android.util.PrintWriterPrinter;
 import android.util.Printer;
 import android.util.Slog;
@@ -94,6 +95,7 @@ public class CountryDetectorService extends ICountryDetector.Stub implements Run
         super();
         mReceivers = new HashMap<IBinder, Receiver>();
         mContext = context;
+
     }
 
     @Override

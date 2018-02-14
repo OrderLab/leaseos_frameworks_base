@@ -55,6 +55,8 @@ import android.hardware.location.ContextHubManager;
 import android.hardware.usb.IUsbManager;
 import android.hardware.usb.UsbManager;
 import android.hardware.radio.RadioManager;
+import android.lease.ILeaseManager;
+import android.lease.LeaseManager;
 import android.location.CountryDetector;
 import android.location.ICountryDetector;
 import android.location.ILocationManager;
@@ -779,13 +781,17 @@ final class SystemServiceRegistry {
         /**
          * LeaseOS project
          */
-        registerService(Context.LEASE_SERVICE, ContextHubManager.class,
-                new CachedServiceFetcher<ContextHubManager>() {
+        registerService(Context.LEASE_SERVICE, LeaseManager.class,
+                new CachedServiceFetcher<LeaseManager>() {
             @Override
-            public ContextHubManager createService(ContextImpl ctx) {
-                return new ContextHubManager(ctx.getOuterContext(),
-                        ctx.mMainThread.getHandler().getLooper());
+            public LeaseManager createService(ContextImpl ctx) {
+                IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
+                return new LeaseManager(ctx,
+                        ILeaseManager.Stub.asInterface(b));
             }});
+
+
+
     }
 
     /**

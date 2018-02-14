@@ -920,7 +920,7 @@ public final class PowerManagerService extends SystemService
                 /***LeaseOS changes***/
                 Slog.i(TAG, "create the lease");
                 int in = findWakeLockIndexLocked(lock);
-               // long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
+                //long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
                // mLeasetable.put(in, leaseid);
                 /*********************/
             }
@@ -990,7 +990,7 @@ public final class PowerManagerService extends SystemService
             }
             /***LeaseOS changes***/
             Slog.i(TAG, "remove the lease");
-            //long leaseid = mLeasetable.get(index);
+           // long leaseid = mLeasetable.get(index);
            // mLeaseManager.remove(leaseid);
             /*********************/
 

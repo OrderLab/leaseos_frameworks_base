@@ -2651,6 +2651,7 @@ public abstract class Context {
             CAPTIONING_SERVICE,
             KEYGUARD_SERVICE,
             LOCATION_SERVICE,
+            LEASE_SERVICE,
             //@hide: COUNTRY_DETECTOR,
             SEARCH_SERVICE,
             SENSOR_SERVICE,
@@ -3657,7 +3658,7 @@ public abstract class Context {
      * {@link android.lease.LeaseManager} for using Lease Manger Service.
      * EDIT for leaseOS project
      */
-    public static final String LEASE_SERVICE = "Lease";
+    public static final String LEASE_SERVICE = "lease";
     /**
      * Determine whether the given permission is allowed for a particular
      * process and user ID running in the system.

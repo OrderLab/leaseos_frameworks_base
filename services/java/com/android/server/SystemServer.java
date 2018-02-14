@@ -944,7 +944,7 @@ public final class SystemServer {
             }
 
             try {
-                traceBeginAndSlog("LeaseManagerService");
+                traceBeginAndSlog("LeaseManagerService ");
                 lease = new LeaseManagerService(context);
                 ServiceManager.addService(Context.LEASE_SERVICE,lease);
                 Slog.i(TAG, "LeaseManagerService Started");

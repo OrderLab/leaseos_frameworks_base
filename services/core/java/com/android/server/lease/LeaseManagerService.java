@@ -47,6 +47,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
 
     public LeaseManagerService(Context context) {
         super();
+        Log.i(TAG, "LeaseManagerService: hahaha");
         mContext = context;
         mRStatManager = new ResourceStatManager();
     }
