@@ -943,16 +943,6 @@ public final class SystemServer {
                 Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
             }
 
-            try {
-                traceBeginAndSlog("LeaseManagerService ");
-                lease = new LeaseManagerService(context);
-                ServiceManager.addService(Context.LEASE_SERVICE,lease);
-                Slog.i(TAG, "LeaseManagerService Started");
-            } catch (Throwable e) {
-                reportWtf("Failure starting LeaseManager Service", e);
-            }
-            Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
-
             if (!disableNonCoreServices && !disableSearchManager) {
                 traceBeginAndSlog("StartSearchManagerService");
                 try {
@@ -1260,6 +1250,17 @@ public final class SystemServer {
             }
         }
         Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
+
+        try {
+            traceBeginAndSlog("StartLeaseManagerService");
+            lease = new LeaseManagerService(context);
+            ServiceManager.addService(Context.LEASE_SERVICE, lease);
+            Slog.i(TAG, "LeaseManagerService Started");
+        } catch (Throwable e) {
+            reportWtf("Failure starting LeaseManager Service", e);
+        }
+        Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
+
 
         // Needed by DevicePolicyManager for initialization
         mSystemServiceManager.startBootPhase(SystemService.PHASE_LOCK_SETTINGS_READY);

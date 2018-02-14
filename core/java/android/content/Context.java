@@ -3659,6 +3659,7 @@ public abstract class Context {
      * EDIT for leaseOS project
      */
     public static final String LEASE_SERVICE = "lease";
+
     /**
      * Determine whether the given permission is allowed for a particular
      * process and user ID running in the system.
