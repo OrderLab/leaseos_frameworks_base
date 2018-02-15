@@ -918,10 +918,14 @@ public final class PowerManagerService extends SystemService
                 notifyAcquire = true;
 
                 /***LeaseOS changes***/
-                Slog.i(TAG, "create the lease");
-                int in = findWakeLockIndexLocked(lock);
-                //long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
-               // mLeasetable.put(in, leaseid);
+                if (mLeaseManager != null) {
+                    Slog.i(TAG, "create new lease");
+                    int in = findWakeLockIndexLocked(lock);
+                    long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
+                    mLeasetable.put(in, leaseid);
+                } else {
+                    Slog.i(TAG, "LeaseManager is not ready");
+                }
                 /*********************/
             }
 
@@ -989,9 +993,13 @@ public final class PowerManagerService extends SystemService
                 mRequestWaitForNegativeProximity = true;
             }
             /***LeaseOS changes***/
-            Slog.i(TAG, "remove the lease");
-           // long leaseid = mLeasetable.get(index);
-           // mLeaseManager.remove(leaseid);
+            if (mLeaseManager != null) {
+                Slog.i(TAG, "remove the lease");
+                long leaseid = mLeasetable.get(index);
+                mLeaseManager.remove(leaseid);
+            } else {
+                Slog.i(TAG, "LeaseManager is not ready");
+            }
             /*********************/
 
             wakeLock.mLock.unlinkToDeath(wakeLock, 0);

@@ -786,10 +786,15 @@ final class SystemServiceRegistry {
             @Override
             public LeaseManager createService(ContextImpl ctx) {
                 IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
-                return new LeaseManager(ctx,
-                        ILeaseManager.Stub.asInterface(b));
+                ILeaseManager service = ILeaseManager.Stub.asInterface(b);
+                if (service == null) {
+                    Log.wtf(TAG, "Failed to get lease manager service.");
+                    return null;
+                } else {
+                    Log.i(TAG, "Found an instance of lease manager service");
+                }
+                return new LeaseManager(ctx, service);
             }});
-
 
 
     }
