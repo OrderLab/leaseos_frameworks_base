@@ -29,6 +29,7 @@ import android.lease.WakelockStat;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Process;
+import android.os.SystemClock;
 
 import com.android.server.ServiceThread;
 
@@ -36,6 +37,8 @@ import com.android.server.ServiceThread;
  * The struct of lease
  */
 public class Lease {
+
+    public static final int INVALID_LEASE = -1;
 
     //The identifier of lease
     protected long mLeaseid;
@@ -88,7 +91,7 @@ public class Lease {
         mLeaseTerm = 0;
         mStatus = LeaseStatus.ACTIVE;
         mLength = 5;
-        mBeginTime = System.currentTimeMillis();
+        mBeginTime = SystemClock.elapsedRealtime();
 
         mHandlerThread = new ServiceThread(TAG,
                 Process.THREAD_PRIORITY_DISPLAY, false /*allowIo*/);
@@ -173,8 +176,6 @@ public class Lease {
         mEndTime = System.currentTimeMillis();
         mStatus = LeaseStatus.EXPIRED;
         boolean success = false;
-
-
         return success;
     }
 

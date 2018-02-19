@@ -28,8 +28,8 @@ import java.util.ArrayList;
 /**
  *
  */
-public class StatHistory <T> {
-    protected ArrayList<T> mStats;
+public class StatHistory {
+    protected ArrayList<ResourceStat> mStats;
 
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
@@ -37,11 +37,11 @@ public class StatHistory <T> {
     private int currentstat;
 
     public StatHistory() {
-        mStats = new ArrayList<T>();
+        mStats = new ArrayList<ResourceStat>();
         currentstat = 0;
     }
 
-    public boolean addItem(T resourceStat) {
+    public boolean addItem(ResourceStat resourceStat) {
        return mStats.add(resourceStat);
     }
 

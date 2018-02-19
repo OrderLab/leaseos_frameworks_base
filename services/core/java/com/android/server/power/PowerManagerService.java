@@ -73,6 +73,7 @@ import com.android.server.ServiceThread;
 import com.android.server.SystemService;
 import com.android.server.Watchdog;
 import com.android.server.am.BatteryStatsService;
+import com.android.server.lease.Lease;
 import com.android.server.lights.Light;
 import com.android.server.lights.LightsManager;
 import com.android.server.vr.VrManagerService;
@@ -919,12 +920,15 @@ public final class PowerManagerService extends SystemService
 
                 /***LeaseOS changes***/
                 if (mLeaseManager != null) {
-                    if(mLeasetable.get(lock) == null)
-                    {
+                    if (mLeasetable.get(lock) == null) {
                         Slog.i(TAG, "create new lease");
-                        long now = SystemClock.elapsedRealtime();
-                        long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid, now);
-                        mLeasetable.put(lock,leaseid);
+                        long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
+                        if (leaseid == Lease.INVALID_LEASE) {
+                            Slog.i(TAG,"Skip lease for system service");
+                        } else {
+                            mLeasetable.put(lock,leaseid);
+                            Slog.d(TAG, "The lenght of the lease table is " + mLeasetable.size());
+                        }
                     }
                 } else {
                     Slog.i(TAG, "LeaseManager is not ready");
@@ -975,7 +979,7 @@ public final class PowerManagerService extends SystemService
         }
     }
 
-    private void releaseWakeLockInternal(IBinder lock, int flags) {
+    private void releaseWakeLockInternal(IBinder lock, int flags, boolean finalized) {
         synchronized (mLock) {
             int index = findWakeLockIndexLocked(lock);
             if (index < 0) {
@@ -999,7 +1003,13 @@ public final class PowerManagerService extends SystemService
             if (mLeaseManager != null) {
                 Slog.i(TAG, "remove the lease");
                 long leaseid = mLeasetable.get(lock);
-                mLeaseManager.remove(leaseid);
+                if (leaseid != Lease.INVALID_LEASE) {
+                    mLeaseManager.remove(leaseid);
+                }
+                if (finalized) {
+                    Slog.i(TAG, "Final remove of lease " + leaseid);
+                    mLeasetable.remove(lock);
+                }
             } else {
                 Slog.i(TAG, "LeaseManager is not ready");
             }
@@ -3445,7 +3455,7 @@ public final class PowerManagerService extends SystemService
         }
 
         @Override // Binder call
-        public void releaseWakeLock(IBinder lock, int flags) {
+        public void releaseWakeLock(IBinder lock, int flags, boolean finalized) {
             if (lock == null) {
                 throw new IllegalArgumentException("lock must not be null");
             }
@@ -3454,7 +3464,7 @@ public final class PowerManagerService extends SystemService
 
             final long ident = Binder.clearCallingIdentity();
             try {
-                releaseWakeLockInternal(lock, flags);
+                releaseWakeLockInternal(lock, flags, finalized);
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }

@@ -31,6 +31,8 @@ import android.util.Log;
 public class LeaseManagerService extends ILeaseManager.Stub{
 
     private static final String TAG = "LeaseManagerService";
+
+
     //Operation failed
     public static final int FAILED = -1;
 
@@ -59,30 +61,29 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @param uid   the identifier of caller
      * @return the lease id
      */
-    public long newLease(ResourceType RType, long uid, long birthTime) {
+    public long newLease(ResourceType RType, long uid) {
 
-        /*if (!validateTypeParameters(RType)) {
-            return FAILED;
-        }*/
+        if (uid < 1000) {
+            return Lease.INVALID_LEASE;
+        }
         Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
         StatHistory statHistory;
 
-        Log.i(TAG, "newLease: begin to create a lease for process: " + uid);
+        Log.i(TAG, "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
+
         mLeases.put(mLastLeaseId, lease);
         lease.create();
+        statHistory = new StatHistory();
         switch (RType) {
             case Wakelock:
-                statHistory = new StatHistory<WakelockStat>();
+                WakelockStat wStat = new WakelockStat(lease.mBeginTime);
+                statHistory.addItem(wStat);
                 mRStatManager.setStatsHistory(lease, statHistory);
-                WakelockStat wStat = new WakelockStat(birthTime);
-                mRStatManager.setResourceStat(lease, wStat);
                 break;
             case Location:
-                statHistory = new StatHistory<LocationStat>();
                 mRStatManager.setStatsHistory(lease, statHistory);
                 break;
             case Sensor:
-                statHistory = new StatHistory<SensorStat>();
                 mRStatManager.setStatsHistory(lease, statHistory);
                 break;
         }
@@ -145,8 +146,9 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      */
     public boolean remove(long leaseid) {
 
-            Lease lease = mLeases.get(leaseid);
+        Lease lease = mLeases.get(leaseid);
         if (lease == null) {
+            Log.d(TAG, "remove: can not find lease for id:" + leaseid);
             return false;
         }
         //TODO: how to handler the logic of true or false

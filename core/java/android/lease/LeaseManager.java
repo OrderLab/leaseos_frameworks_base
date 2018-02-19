@@ -45,7 +45,7 @@ public class LeaseManager {
      * @param uid the owner id
      * @return lease id
      */
-    public long newLease(ResourceType RType, long uid, long now) {
+    public long newLease(ResourceType RType, long uid) {
         long leaseId = -1;
         try {
            leaseId = mService.newLease(RType, uid);

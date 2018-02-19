@@ -1181,7 +1181,7 @@ public final class PowerManager {
                     Log.wtf(TAG, "WakeLock finalized while still held: " + mTag);
                     Trace.asyncTraceEnd(Trace.TRACE_TAG_POWER, mTraceName, 0);
                     try {
-                        mService.releaseWakeLock(mToken, 0);
+                        mService.releaseWakeLock(mToken, 0, true);
                     } catch (RemoteException e) {
                         throw e.rethrowFromSystemServer();
                     }
@@ -1289,7 +1289,7 @@ public final class PowerManager {
                     if (mHeld) {
                         Trace.asyncTraceEnd(Trace.TRACE_TAG_POWER, mTraceName, 0);
                         try {
-                            mService.releaseWakeLock(mToken, flags);
+                            mService.releaseWakeLock(mToken, flags, false);
                         } catch (RemoteException e) {
                             throw e.rethrowFromSystemServer();
                         }

@@ -33,7 +33,7 @@ interface IPowerManager
             String historyTag);
     void acquireWakeLockWithUid(IBinder lock, int flags, String tag, String packageName,
             int uidtoblame);
-    void releaseWakeLock(IBinder lock, int flags);
+    void releaseWakeLock(IBinder lock, int flags, boolean finalized);
     void updateWakeLockUids(IBinder lock, in int[] uids);
     oneway void powerHint(int hintId, int data);
 
