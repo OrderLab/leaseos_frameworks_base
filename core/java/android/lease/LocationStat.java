@@ -19,55 +19,44 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.android.server.lease;
+package android.lease;
 
+
+import android.lease.ResourceStat;
 
 /**
  *
  */
-public class WakelockStat extends ResourceStat {
-    protected long mHoldingTime;
-    protected long mUsageTime;
-    protected long mExceptionFrequency;
+public class LocationStat extends ResourceStat {
 
 
-    public WakelockStat(long BeginTime, long Endtime, long holdingTime, long usageTime,
-            long exceptionFrequency) {
-        super(BeginTime, Endtime);
-        mHoldingTime = holdingTime;
-        mUsageTime = usageTime;
-        mExceptionFrequency = exceptionFrequency;
-
+    public LocationStat(long BeginTime) {
+        super(BeginTime);
     }
 
     @Override
-    public long getConsumption(){
-        return mHoldingTime;
-    }
-
-    @Override
-    public long getWork(){
-        return mUsageTime;
-    }
-
-    @Override
-    public long getEfficientRatio(){
-        return mExceptionFrequency;
-    }
-
-    @Override
-    public long getFrequency(){
+    public long getConsumption() {
         return 0;
     }
 
-    //TODO: implment the getDamage method
     @Override
-    public long getDamage() {
-         return 0;
+    public long getWork() {
+        return 0;
     }
 
-    //TODO: implment the judge method
-    public BehaviorType judge (){
-        return BehaviorType.FrequencyAsking;
+    @Override
+    public long getFrequency() {
+        return 0;
     }
+
+    @Override
+    public long getEfficientRatio() {
+        return 0;
+    }
+
+    @Override
+    public long getDamage() {
+        return 0;
+    }
+
 }

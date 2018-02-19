@@ -509,8 +509,8 @@ public final class PowerManagerService extends SystemService
 
     /*** LeaseOS changes ***/
     private LeaseManager mLeaseManager;
-    private Hashtable <Integer, Long> mLeasetable;
-    /************************/
+    private Hashtable <IBinder, Long> mLeasetable;
+   /************************/
     // True if we are currently in VR Mode.
     private boolean mIsVrModeEnabled;
 
@@ -919,10 +919,13 @@ public final class PowerManagerService extends SystemService
 
                 /***LeaseOS changes***/
                 if (mLeaseManager != null) {
-                    Slog.i(TAG, "create new lease");
-                    int in = findWakeLockIndexLocked(lock);
-                    long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
-                    mLeasetable.put(in, leaseid);
+                    if(mLeasetable.get(lock) == null)
+                    {
+                        Slog.i(TAG, "create new lease");
+                        long now = SystemClock.elapsedRealtime();
+                        long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid, now);
+                        mLeasetable.put(lock,leaseid);
+                    }
                 } else {
                     Slog.i(TAG, "LeaseManager is not ready");
                 }
@@ -995,7 +998,7 @@ public final class PowerManagerService extends SystemService
             /***LeaseOS changes***/
             if (mLeaseManager != null) {
                 Slog.i(TAG, "remove the lease");
-                long leaseid = mLeasetable.get(index);
+                long leaseid = mLeasetable.get(lock);
                 mLeaseManager.remove(leaseid);
             } else {
                 Slog.i(TAG, "LeaseManager is not ready");

@@ -19,41 +19,41 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.android.server.lease;
+package android.lease;
 
+import com.android.server.lease.BehaviorType;
+
+import java.util.ArrayList;
 
 /**
  *
  */
-public class SensorStat extends ResourceStat {
+public class StatHistory <T> {
+    protected ArrayList<T> mStats;
 
-    public SensorStat(long BeginTime, long Endtime) {
-        super(BeginTime, Endtime);
+    // Number of sessions (resource request OPEN, CLOSE pairs)
+    public int frequencyCount;
+
+    private int currentstat;
+
+    public StatHistory() {
+        mStats = new ArrayList<T>();
+        currentstat = 0;
     }
 
-    @Override
-    public long getConsumption() {
-        return 0;
+    public boolean addItem(T resourceStat) {
+       return mStats.add(resourceStat);
     }
 
-    @Override
-    public long getWork() {
-        return 0;
+    public void remove() {
+        mStats.clear();
     }
 
-    @Override
-    public long getFrequency() {
-        return 0;
+    //TODO:need to implement the judge behavior part
+    public BehaviorType judgeHistory() {
+        return BehaviorType.FrequencyAsking;
     }
 
-    @Override
-    public long getEfficientRatio() {
-        return 0;
-    }
 
-    @Override
-    public long getDamage() {
-        return 0;
-    }
 
 }

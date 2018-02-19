@@ -19,9 +19,11 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.android.server.lease;
+package android.lease;
 
-import com.android.server.lease.StatHistory;
+import com.android.compatibility.common.util.Stat;
+import com.android.server.lease.BehaviorType;
+import com.android.server.lease.Lease;
 
 import java.util.Hashtable;
 
@@ -34,26 +36,33 @@ public class ResourceStatManager {
     protected Hashtable<Lease, StatHistory> mStatsHistorys;
 
 
-    ResourceStatManager(){
+    public ResourceStatManager(){
         mStatsHistorys = new Hashtable<>();
     }
 
+    /**
+     * Set a new Resource  statHistory
+     * @param lease the related lease
+     * @param statHistory the new stat
+     * @return true if successfully add one lease
+     */
+
     public void setStatsHistory(Lease lease, StatHistory statHistory) {
         mStatsHistorys.put(lease, statHistory);
-
     }
 
+    /**
+     * Set a new Resource stat into the statHistory
+     * @param lease the related lease
+     * @param rStat the new stat
+     * @return true if successfully add one lease
+     */
     public boolean setResourceStat(Lease lease, ResourceStat rStat) {
         StatHistory statHistory = mStatsHistorys.get(lease);
         if (statHistory == null) {
             return false;
         }
         return statHistory.addItem(rStat);
-    }
-
-    //TODO:This is the core part of lease manager
-    public BehaviorType judge() {
-        return BehaviorType.FrequencyAsking;
     }
 
     public boolean removeStatHistory(Lease lease){
@@ -64,4 +73,12 @@ public class ResourceStatManager {
         statHistory.remove();
         return mStatsHistorys.remove(lease, statHistory);
     }
+
+
+    //TODO:This is the core part of lease manager
+    public BehaviorType judge() {
+        return BehaviorType.FrequencyAsking;
+    }
+
+
 }

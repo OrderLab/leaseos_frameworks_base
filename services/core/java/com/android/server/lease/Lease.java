@@ -21,7 +21,11 @@
  */
 package com.android.server.lease;
 
+import android.lease.LocationStat;
+import android.lease.ResourceStatManager;
 import android.lease.ResourceType;
+import android.lease.SensorStat;
+import android.lease.WakelockStat;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Process;
@@ -91,19 +95,6 @@ public class Lease {
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
         scheduleChecks();
-
-        switch (mType) {
-            case Wakelock:
-                mRStatManager = new ResourceStatManager();
-                break;
-            case Location:
-                mRStatManager = new ResourceStatManager();
-                break;
-            case Sensor:
-                mRStatManager = new ResourceStatManager();
-                break;
-
-        }
     }
 
     /**
@@ -182,21 +173,8 @@ public class Lease {
         mEndTime = System.currentTimeMillis();
         mStatus = LeaseStatus.EXPIRED;
         boolean success = false;
-        switch (mType) {
-            case Wakelock:
-                // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime, mEndTime, 0, 0, 0);
-                success = mRStatManager.setResourceStat(this, wStat);
-                break;
-            case Location:
-                LocationStat lStat = new LocationStat(mBeginTime, mEndTime);
-                success = mRStatManager.setResourceStat(this, lStat);
-                break;
-            case Sensor:
-                SensorStat sStat = new SensorStat(mBeginTime, mEndTime);
-                success = mRStatManager.setResourceStat(this, sStat);
-                break;
-        }
+
+
         return success;
     }
 
@@ -230,15 +208,35 @@ public class Lease {
      * @return true if the lease is renewed
      */
     public boolean renew() {
+        boolean success = false;
+
         if (mStatus == LeaseStatus.ACTIVE) {
             return false;
         }
+
         mLeaseTerm++;
         mBeginTime = System.currentTimeMillis();
         mStatus = LeaseStatus.ACTIVE;
+        // create a new stat for the new lease term
+        switch (mType) {
+            case Wakelock:
+                // TODO: supply real argument for holding time and usage time.
+                WakelockStat wStat = new WakelockStat(mBeginTime);
+                success = mRStatManager.setResourceStat(this, wStat);
+                break;
+            case Location:
+                LocationStat lStat = new LocationStat(mBeginTime);
+                success = mRStatManager.setResourceStat(this, lStat);
+                break;
+            case Sensor:
+                SensorStat sStat = new SensorStat(mBeginTime);
+                success = mRStatManager.setResourceStat(this, sStat);
+                break;
+        }
+
         scheduleChecks();
         //TODO: Acquire the resource again
-        return false;
+        return success;
     }
 
 }

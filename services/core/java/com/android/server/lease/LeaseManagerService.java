@@ -59,7 +59,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @param uid   the identifier of caller
      * @return the lease id
      */
-    public long newLease(ResourceType RType, long uid) {
+    public long newLease(ResourceType RType, long uid, long birthTime) {
 
         /*if (!validateTypeParameters(RType)) {
             return FAILED;
@@ -74,6 +74,8 @@ public class LeaseManagerService extends ILeaseManager.Stub{
             case Wakelock:
                 statHistory = new StatHistory<WakelockStat>();
                 mRStatManager.setStatsHistory(lease, statHistory);
+                WakelockStat wStat = new WakelockStat(birthTime);
+                mRStatManager.setResourceStat(lease, wStat);
                 break;
             case Location:
                 statHistory = new StatHistory<LocationStat>();
@@ -83,7 +85,6 @@ public class LeaseManagerService extends ILeaseManager.Stub{
                 statHistory = new StatHistory<SensorStat>();
                 mRStatManager.setStatsHistory(lease, statHistory);
                 break;
-
         }
         mLastLeaseId++;
         return lease.mLeaseid;
