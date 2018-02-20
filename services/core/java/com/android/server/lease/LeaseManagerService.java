@@ -78,17 +78,17 @@ public class LeaseManagerService extends ILeaseManager.Stub{
             case Wakelock:
                 WakelockStat wStat = new WakelockStat(lease.mBeginTime);
                 statHistory.addItem(wStat);
-                mRStatManager.setStatsHistory(lease, statHistory);
+                mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
                 break;
             case Location:
-                mRStatManager.setStatsHistory(lease, statHistory);
+                mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
                 break;
             case Sensor:
-                mRStatManager.setStatsHistory(lease, statHistory);
+                mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
                 break;
         }
         mLastLeaseId++;
-        return lease.mLeaseid;
+        return lease.mLeaseId;
     }
 
     /**
@@ -184,7 +184,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
     private int findLeaseIndex(int Leaseid) {
         final int count = mLeases.size();
         for (int i = 0; i < count; i++) {
-            if (mLeases.get(i).mLeaseid == Leaseid) {
+            if (mLeases.get(i).mLeaseId == Leaseid) {
                 return i;
             }
         }

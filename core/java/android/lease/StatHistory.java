@@ -34,11 +34,15 @@ public class StatHistory {
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
 
-    private int currentstat;
-
     public StatHistory() {
         mStats = new ArrayList<ResourceStat>();
-        currentstat = 0;
+    }
+
+    public ResourceStat getCurrentStat() {
+        if (mStats.size() == 0) {
+            return null;
+        }
+        return mStats.get(mStats.size()-1);
     }
 
     public boolean addItem(ResourceStat resourceStat) {

@@ -21,7 +21,9 @@
  */
 package android.lease;
 
-import com.android.compatibility.common.util.Stat;
+
+import android.util.Slog;
+
 import com.android.server.lease.BehaviorType;
 import com.android.server.lease.Lease;
 
@@ -32,33 +34,54 @@ import java.util.Hashtable;
  *
  */
 public class ResourceStatManager {
+    private static final String TAG = "ResourceStatManager";
 
-    protected Hashtable<Lease, StatHistory> mStatsHistorys;
+    protected Hashtable<Long, StatHistory> mStatsHistorys;
 
 
     public ResourceStatManager(){
         mStatsHistorys = new Hashtable<>();
     }
 
+    public boolean update(long leaseId, long startTime, long leaseTerm) {
+        StatHistory statHistory = mStatsHistorys.get(leaseId);
+        if (statHistory == null) {
+            Slog.e(TAG, "No statHistory for the lease " + leaseId);
+            return false;
+        }
+        ResourceStat resourceStat = statHistory.getCurrentStat();
+        resourceStat.update(startTime, leaseTerm);
+        return true;
+    }
+
+    public ResourceStat getCurrentStat(long leaseId) {
+        StatHistory statHistory = mStatsHistorys.get(leaseId);
+        if (statHistory == null) {
+            Slog.e(TAG, "No statHistory for the lease " + leaseId);
+            return null;
+        }
+        return statHistory.getCurrentStat();
+    }
+
     /**
      * Set a new Resource  statHistory
-     * @param lease the related lease
+     * @param leaseId the related lease
      * @param statHistory the new stat
      * @return true if successfully add one lease
      */
 
-    public void setStatsHistory(Lease lease, StatHistory statHistory) {
-        mStatsHistorys.put(lease, statHistory);
+    public void setStatsHistory(long leaseId, StatHistory statHistory) {
+        mStatsHistorys.put(leaseId, statHistory);
     }
 
     /**
      * Set a new Resource stat into the statHistory
-     * @param lease the related lease
+     * @param leaseId the related lease
      * @param rStat the new stat
      * @return true if successfully add one lease
      */
-    public boolean setResourceStat(Lease lease, ResourceStat rStat) {
-        StatHistory statHistory = mStatsHistorys.get(lease);
+    public boolean setResourceStat(long leaseId, ResourceStat rStat) {
+        StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             return false;
         }

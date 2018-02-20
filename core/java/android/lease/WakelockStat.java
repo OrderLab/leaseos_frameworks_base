@@ -23,8 +23,17 @@ package android.lease;
 
 
 import android.lease.ResourceStat;
+import android.os.SystemClock;
+import android.os.BatteryStats;
+import static android.os.BatteryStats.STATS_CURRENT;
 
+import com.android.internal.os.BatteryStatsImpl;
+import com.android.phone.ProcessOutgoingCallTest;
 import com.android.server.lease.BehaviorType;
+
+import java.util.ArrayList;
+import java.util.List;
+
 
 /**
  *
@@ -33,26 +42,74 @@ public class WakelockStat extends ResourceStat {
     protected long mHoldingTime;
     protected long mUsageTime;
     protected long mExceptionFrequency;
-    protected long mOpenTime;
-    protected long mReleaseTime;
+    protected List<Event> mEventList;
+    protected int mOpenIndex;
+    /*
+    protected BatteryStatsImpl.Uid.Proc proc;
+    protected long mBaseUserTime;
+    protected long mBaseSysTime;
+    protected long mCurUserTime;
+    protected long mCurSysTime;*/
 
+    @Override
+    public void update(long startTime, long leaseTerm) {
+        for (Event e : mEventList) {
+            if (e.acquireTime > startTime || e.releaseTime < leaseTerm) {
+                if(e.acquireTime == e.releaseTime) {
+                    mHoldingTime += SystemClock.elapsedRealtime() - e.acquireTime;
+                }else if (e.acquireTime < startTime){
+                    mHoldingTime += e.releaseTime - startTime;
+                }else {
+                    mHoldingTime += e.acquireTime - e.releaseTime;
+                }
+                mFrequency++;
+            }
+        }
+        /*
+        mCurUserTime = proc.getUserTime(STATS_CURRENT);
+        mCurSysTime = proc.getSystemTime(STATS_CURRENT);
+        mUsageTime = mCurSysTime + mCurSysTime - mBaseUserTime - mBaseSysTime;*/
+    }
 
     public WakelockStat(long beginTime) {
         super(beginTime);
+        mEventList = new ArrayList<>();
+        mOpenIndex = -1;
+        mFrequency = 0;
+        mHoldingTime = 0;
+/*
+        mBaseUserTime = proc.getUserTime(STATS_CURRENT);
+        mBaseSysTime = proc.getSystemTime(STATS_CURRENT);*/
+    }
+
+    public void noteAcquire() {
+        Event e = new Event(SystemClock.elapsedRealtime());
+        mEventList.add(e);
+    }
+
+    public void noteRelease() {
+        if (mOpenIndex+1 >= mEventList.size())
+            return;
+        mOpenIndex++;
+        Event e = mEventList.get(mOpenIndex);
+        if (e.releaseTime > e.acquireTime)
+            return;
+        e.releaseTime = SystemClock.elapsedRealtime();
     }
 
     public void setEndTime(long endTime) {
         mEndTime = endTime;
     }
 
-    public void OpenWakelock(long openTime) {
-        mOpenTime = openTime;
-    }
+    public class Event {
+        public long acquireTime;
+        public long releaseTime;
 
-    public void releaseWakelock (long releaseTime) {
-        mReleaseTime = releaseTime;
+        public Event(long acquireTime) {
+            this.acquireTime = acquireTime;
+            releaseTime = acquireTime;
+        }
     }
-
 
     @Override
     public long getConsumption(){

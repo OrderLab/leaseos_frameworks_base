@@ -41,10 +41,10 @@ public class Lease {
     public static final int INVALID_LEASE = -1;
 
     //The identifier of lease
-    protected long mLeaseid;
+    protected long mLeaseId;
 
     //The identifier of the owner of lease. This variable usually means the UID
-    protected long mOwnerid;
+    protected long mOwnerId;
 
     //The token of the request from user process
     protected IBinder mToken;
@@ -68,7 +68,7 @@ public class Lease {
     protected long mEndTime;
 
     //The number of current lease term
-    protected int mLeaseTerm;
+    protected int mRenewal;
 
     private ServiceThread mHandlerThread;
     private Handler mHandler;
@@ -76,8 +76,8 @@ public class Lease {
     private static final String TAG = "LeaseManagerService";
 
     public Lease(long lid, long Oid, ResourceType type, ResourceStatManager RStatManager) {
-        mLeaseid = lid;
-        mOwnerid = Oid;
+        mLeaseId = lid;
+        mOwnerId = Oid;
         mType = type;
         mStatus = LeaseStatus.INVALID;
         mRStatManager = RStatManager;
@@ -88,7 +88,7 @@ public class Lease {
      * Create a new lease and the corresponding resource manager
      */
     public void create() {
-        mLeaseTerm = 0;
+        mRenewal = 0;
         mStatus = LeaseStatus.ACTIVE;
         mLength = 5;
         mBeginTime = SystemClock.elapsedRealtime();
@@ -137,7 +137,7 @@ public class Lease {
      * @return Lease id
      */
     public long getId() {
-        return mLeaseid;
+        return mLeaseId;
     }
 
     /**
@@ -146,7 +146,11 @@ public class Lease {
      * @return Owner id
      */
     public long getOwner() {
-        return mOwnerid;
+        return mOwnerId;
+    }
+
+    public long getBeginTime() {
+        return mBeginTime;
     }
 
     /**
@@ -173,7 +177,7 @@ public class Lease {
      * @return true if the lease is successfully expired
      */
     public boolean expire() {
-        mEndTime = System.currentTimeMillis();
+        mEndTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.EXPIRED;
         boolean success = false;
         return success;
@@ -182,6 +186,7 @@ public class Lease {
     private Runnable mExpireRunnable = new Runnable() {
         @Override
         public void run() {
+            mRStatManager.update(mLeaseId, mBeginTime, mLength);
             expire();
             cancelChecks();
         }
@@ -215,23 +220,23 @@ public class Lease {
             return false;
         }
 
-        mLeaseTerm++;
-        mBeginTime = System.currentTimeMillis();
+        mRenewal++;
+        mBeginTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.ACTIVE;
         // create a new stat for the new lease term
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
                 WakelockStat wStat = new WakelockStat(mBeginTime);
-                success = mRStatManager.setResourceStat(this, wStat);
+                success = mRStatManager.setResourceStat(mLeaseId, wStat);
                 break;
             case Location:
                 LocationStat lStat = new LocationStat(mBeginTime);
-                success = mRStatManager.setResourceStat(this, lStat);
+                success = mRStatManager.setResourceStat(mLeaseId, lStat);
                 break;
             case Sensor:
                 SensorStat sStat = new SensorStat(mBeginTime);
-                success = mRStatManager.setResourceStat(this, sStat);
+                success = mRStatManager.setResourceStat(mLeaseId, sStat);
                 break;
         }
 

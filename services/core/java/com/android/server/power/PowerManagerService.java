@@ -511,6 +511,7 @@ public final class PowerManagerService extends SystemService
     /*** LeaseOS changes ***/
     private LeaseManager mLeaseManager;
     private Hashtable <IBinder, Long> mLeasetable;
+    private ResourceStatManager mRStatManager;
    /************************/
     // True if we are currently in VR Mode.
     private boolean mIsVrModeEnabled;
@@ -920,15 +921,21 @@ public final class PowerManagerService extends SystemService
 
                 /***LeaseOS changes***/
                 if (mLeaseManager != null) {
-                    if (mLeasetable.get(lock) == null) {
+                    Long leaseid = mLeasetable.get(lock);
+                    if (leaseid == null) {
                         Slog.i(TAG, "create new lease");
-                        long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
+                        leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
                         if (leaseid == Lease.INVALID_LEASE) {
                             Slog.i(TAG,"Skip lease for system service");
                         } else {
                             mLeasetable.put(lock,leaseid);
                             Slog.d(TAG, "The lenght of the lease table is " + mLeasetable.size());
                         }
+                    }
+                    ResourceStat resourceStat=  mRStatManager.getCurrentStat(leaseid);
+                    if (resourceStat != null) {
+                        WakelockStat wakelockStat = (WakelockStat) resourceStat;
+                        wakelockStat.noteAcquire();
                     }
                 } else {
                     Slog.i(TAG, "LeaseManager is not ready");
@@ -1003,10 +1010,15 @@ public final class PowerManagerService extends SystemService
             if (mLeaseManager != null) {
                 Slog.i(TAG, "remove the lease");
                 long leaseid = mLeasetable.get(lock);
-                if (leaseid != Lease.INVALID_LEASE) {
-                    mLeaseManager.remove(leaseid);
+                ResourceStat resourceStat=  mRStatManager.getCurrentStat(leaseid);
+                if (resourceStat != null) {
+                    WakelockStat wakelockStat = (WakelockStat) resourceStat;
+                    wakelockStat.noteRelease();
                 }
                 if (finalized) {
+                    if (leaseid != Lease.INVALID_LEASE) {
+                        mLeaseManager.remove(leaseid);
+                    }
                     Slog.i(TAG, "Final remove of lease " + leaseid);
                     mLeasetable.remove(lock);
                 }

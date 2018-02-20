@@ -24,7 +24,7 @@ package android.lease;
 /**
  *
  */
-abstract class ResourceStat {
+public abstract class ResourceStat {
 
     public int mStatNumber;
 
@@ -49,6 +49,7 @@ abstract class ResourceStat {
     //The number of system damage caused by this lease term
     protected long mSystemdamage;
 
+    public abstract void update(long startTime, long leaseTerm);
 
     public ResourceStat(long BeginTime) {
           mBeginTime = BeginTime;
@@ -79,7 +80,6 @@ abstract class ResourceStat {
     public long getEfficiency() {
         return getWork() / getConsumption();
     }
-
 
     public long getUtility() {
         return getWork() / (getConsumption() * getEfficientRatio());
