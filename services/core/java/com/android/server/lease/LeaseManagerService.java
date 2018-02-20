@@ -22,13 +22,18 @@ package com.android.server.lease;
 
 import android.content.Context;
 import java.util.Hashtable;
-import android.lease.*;
+
+import android.lease.ILeaseManager;
+import android.lease.ResourceStatManager;
+import android.lease.ResourceType;
+import android.lease.StatHistory;
+import android.lease.WakelockStat;
 import android.util.Log;
 
 /**
  * The central lease manager service
  */
-public class LeaseManagerService extends ILeaseManager.Stub{
+public class LeaseManagerService extends ILeaseManager.Stub {
 
     private static final String TAG = "LeaseManagerService";
 
@@ -153,42 +158,8 @@ public class LeaseManagerService extends ILeaseManager.Stub{
         }
         //TODO: how to handler the logic of true or false
         lease.expire();
-        mRStatManager.removeStatHistory(lease);
+        mRStatManager.removeStatHistory(lease.mLeaseId);
         mLeases.remove(leaseid, lease);
         return true;
     }
-
-    /**
-     * Verify the type parameter is vaild
-     *
-     * @param RType The resource type of the lease
-     * @return true if the type is valid
-     */
-    /*
-    public static boolean validateTypeParameters(String RType) {
-        for (ResourceType type : ResourceType.values()) {
-            if (type.toString() == RType) {
-                return true;
-            }
-        }
-        return false;
-    }*/
-
-    /**
-     * Find the lease index by the Leaseid
-     *
-     * @param Leaseid The identifier of lease
-     * @return The lease index or -1 if can not find the lease
-     */
-    /*
-    private int findLeaseIndex(int Leaseid) {
-        final int count = mLeases.size();
-        for (int i = 0; i < count; i++) {
-            if (mLeases.get(i).mLeaseId == Leaseid) {
-                return i;
-            }
-        }
-        return FAILED;
-    }
-*/
 }

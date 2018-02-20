@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong HU <hyigong1@jhu.edu>
  *
@@ -44,6 +43,9 @@ public class ResourceUsage {
 
     //time the resource is used
     public long usageTime;
+
+    // aggregate time of close to open
+    public long aggregateTime;
 
     // Number of times this resource was triggered (for alarm).
     public int triggerCount;

@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong HU <hyigong1@jhu.edu>
  *
@@ -21,13 +20,15 @@
  */
 package android.lease;
 
-
-import android.lease.ResourceStat;
-
 /**
  *
  */
 public class SensorStat extends ResourceStat {
+
+    @Override
+    public void update(long startTime, long leaseTerm) {
+
+    }
 
     public SensorStat(long BeginTime) {
         super(BeginTime);

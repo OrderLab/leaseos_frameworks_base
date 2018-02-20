@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong Hu <hyigong1@jhu.edu>
  *
@@ -22,14 +21,7 @@
 package android.lease;
 
 
-import android.lease.ResourceStat;
 import android.os.SystemClock;
-import android.os.BatteryStats;
-import static android.os.BatteryStats.STATS_CURRENT;
-
-import com.android.internal.os.BatteryStatsImpl;
-import com.android.phone.ProcessOutgoingCallTest;
-import com.android.server.lease.BehaviorType;
 
 import java.util.ArrayList;
 import java.util.List;

@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong HU <hyigong1@jhu.edu>
  *
@@ -19,7 +18,7 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.android.server.lease;
+package android.lease;
 
 /**
  *
@@ -29,7 +28,5 @@ public enum BehaviorType {
     LongHolding,
     LowUtility,
     HighDamage,
-    Normal;
-
-
+    Normal
 }

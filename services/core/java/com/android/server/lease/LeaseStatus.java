@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong Hu <hyigong1@jhu.edu>
  *
@@ -30,9 +29,9 @@ public enum LeaseStatus {
     EXPIRED("expired"), // the lease is expired
     ABORTED("aborted");// the lease is expired and can not be renewed
 
-    String status;
+    final String status;
 
-    private LeaseStatus(String status) {
+    LeaseStatus(String status) {
         this.status = status;
     }
 
@@ -42,18 +41,4 @@ public enum LeaseStatus {
     public String toString() {
         return status;
     }
-
-    /**
-     * Set the mStatus of the lease
-     */
-    public boolean setStatus(String status) {
-        if (status == "active" || status == "expired" || status == "invalid"
-                || status == "aborted") {
-            this.status = status;
-        } else {
-            return false;
-        }
-        return true;
-    }
-
 }

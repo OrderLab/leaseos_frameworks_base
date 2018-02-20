@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong Hu <hyigong1@jhu.edu>
  *
@@ -25,15 +24,13 @@ package android.lease;
 import android.os.Parcel;
 import android.os.Parcelable;
 
-import sun.misc.Resource;
-
 /**
  * which type of resource the lease is related to
  */
 public enum ResourceType implements Parcelable {
     Wakelock, // this lease is applied to Powermanager Service
     Location, // this lease is applied to Locationmanager Service
-    Sensor;     // this lease is applied to Sensormanager Service
+    Sensor;   // this lease is applied to Sensormanager Service
 
     private static ResourceType[] VALUES = ResourceType.values();
 
