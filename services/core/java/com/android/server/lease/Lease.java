@@ -31,7 +31,10 @@ import android.os.SystemClock;
 import com.android.server.ServiceThread;
 
 /**
- * The struct of lease
+ * The struct of lease.
+ *
+ * TODO: finish the workflow of use wakelock -> check -> policy -> renew part
+ *
  */
 public class Lease {
 
@@ -178,13 +181,14 @@ public class Lease {
     public boolean expire() {
         mEndTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.EXPIRED;
+        mRStatManager.update(mLeaseId, mBeginTime, mEndTime);
+        //TODO: release the resource and the policy for deciding the renew time
         return true;
     }
 
     private Runnable mExpireRunnable = new Runnable() {
         @Override
         public void run() {
-            mRStatManager.update(mLeaseId, mBeginTime, mLength);
             expire();
             cancelChecks();
         }
@@ -226,15 +230,15 @@ public class Lease {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
                 WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId);
-                success = mRStatManager.setResourceStat(mLeaseId, wStat);
+                success = mRStatManager.addResourceStat(mLeaseId, wStat);
                 break;
             case Location:
                 LocationStat lStat = new LocationStat(mBeginTime);
-                success = mRStatManager.setResourceStat(mLeaseId, lStat);
+                success = mRStatManager.addResourceStat(mLeaseId, lStat);
                 break;
             case Sensor:
                 SensorStat sStat = new SensorStat(mBeginTime);
-                success = mRStatManager.setResourceStat(mLeaseId, sStat);
+                success = mRStatManager.addResourceStat(mLeaseId, sStat);
                 break;
         }
 

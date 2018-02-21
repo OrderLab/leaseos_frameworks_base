@@ -30,6 +30,7 @@ import java.util.ArrayList;
  *
  */
 public class StatHistory {
+    //TODO: Use linked list
     protected ArrayList<ResourceStat> mStats;
 
     // Number of sessions (resource request OPEN, CLOSE pairs)

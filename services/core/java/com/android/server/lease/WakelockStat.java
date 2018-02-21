@@ -43,11 +43,12 @@ public class WakelockStat extends ResourceStat {
     protected long mCurCPUTime;
 
     @Override
-    public void update(long startTime, long leaseTerm) {
+    public void update(long startTime, long endTime) {
+        //TODO: remove the processed event list
         for (Event e : mEventList) {
-            if (e.acquireTime > startTime || e.releaseTime < leaseTerm) {
+            if (e.acquireTime > startTime || e.releaseTime < endTime) {
                 if(e.acquireTime == e.releaseTime) {
-                    mHoldingTime += SystemClock.elapsedRealtime() - e.acquireTime;
+                    mHoldingTime += endTime - e.acquireTime;
                 }else if (e.acquireTime < startTime){
                     mHoldingTime += e.releaseTime - startTime;
                 }else {
