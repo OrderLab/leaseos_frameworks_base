@@ -67,6 +67,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @return the lease id
      */
     public long newLease(ResourceType RType, int uid) {
+        //TODO: add a lock here
         if (uid < 1000) {
             return Lease.INVALID_LEASE;
         }
@@ -149,14 +150,13 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @throws Exception can not find a lease by the leaseid
      */
     public boolean remove(long leaseid) {
-
         Lease lease = mLeases.get(leaseid);
         if (lease == null) {
             Log.d(TAG, "remove: can not find lease for id:" + leaseid);
             return false;
         }
         //TODO: how to handler the logic of true or false
-        lease.expire();
+        lease.cancelChecks();
         mRStatManager.removeStatHistory(lease.mLeaseId);
         mLeases.remove(leaseid, lease);
         return true;

@@ -1,5 +1,5 @@
 /*
- *  @author Yigong HU <hyigong1@jhu.edu>
+ *  @author Yigong Hu <hyigong1@jhu.edu>
  *
  *  The LeaseOS Project
  *

@@ -40,14 +40,14 @@ public class ResourceStatManager {
         mStatsHistorys = new Hashtable<>();
     }
 
-    public boolean update(long leaseId, long startTime, long leaseTerm) {
+    public boolean update(long leaseId, long startTime, long endTime) {
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             Slog.e(TAG, "No statHistory for the lease " + leaseId);
             return false;
         }
         ResourceStat resourceStat = statHistory.getCurrentStat();
-        resourceStat.update(startTime, leaseTerm);
+        resourceStat.update(startTime, endTime);
         return true;
     }
 
@@ -77,7 +77,8 @@ public class ResourceStatManager {
      * @param rStat the new stat
      * @return true if successfully add one lease
      */
-    public boolean setResourceStat(long leaseId, ResourceStat rStat) {
+    public boolean addResourceStat(long leaseId, ResourceStat rStat) {
+        //TODO: add a bound of history length
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             return false;
