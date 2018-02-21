@@ -25,10 +25,6 @@ import java.util.Hashtable;
 
 import android.lease.ILeaseManager;
 import android.lease.ResourceType;
-<<<<<<< HEAD
-=======
-import android.lease.StatHistory;
->>>>>>> d50c0e417fb4a7df065a195ab8b48410d18d3274
 import android.util.Log;
 
 /**

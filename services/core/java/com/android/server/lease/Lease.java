@@ -37,6 +37,8 @@ public class Lease {
 
     public static final int INVALID_LEASE = -1;
 
+    public static final int DEFAULT_TERM_MS = 30000; // default 30 seconds, may need to reduce it
+
     //The identifier of lease
     protected long mLeaseId;
 
@@ -87,7 +89,7 @@ public class Lease {
     public void create() {
         mRenewal = 0;
         mStatus = LeaseStatus.ACTIVE;
-        mLength = 5;
+        mLength = DEFAULT_TERM_MS;
         mBeginTime = SystemClock.elapsedRealtime();
 
         mHandlerThread = new ServiceThread(TAG,

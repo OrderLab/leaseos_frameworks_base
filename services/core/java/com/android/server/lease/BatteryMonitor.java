@@ -22,8 +22,6 @@ package com.android.server.lease;
 
 
 import android.os.BatteryStats;
-import android.os.Parcel;
-import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.ArrayMap;
 import android.util.Slog;
@@ -31,8 +29,6 @@ import android.util.Slog;
 import com.android.internal.app.IBatteryStats;
 import com.android.internal.os.BatteryStatsHelper;
 import com.android.internal.os.BatteryStatsImpl;
-
-import java.util.Map;
 
 /**
  *
@@ -61,7 +57,7 @@ public class BatteryMonitor {
 
             // The BatteryStatsHelper's way of getting statistics from the IBatteryStats is to
             // use getStatisticsStream() instead of getStatistics(), which writing the data to
-            // a memory mapped file that GSam can then read from instead of trying to pass the data
+            // a memory mapped file that can then be read instead of trying to pass the data
             // through rpc that may run into size limits. So we directly leverage this helper function.
             mStats = BatteryStatsHelper.getStats(batteryInfo);
         }
