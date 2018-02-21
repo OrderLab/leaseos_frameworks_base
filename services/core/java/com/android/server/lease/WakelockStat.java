@@ -22,7 +22,7 @@ package com.android.server.lease;
 
 
 import android.lease.BehaviorType;
-import android.lease.ResourceStat;
+import com.android.server.lease.ResourceStat;
 import android.os.SystemClock;
 
 import java.util.ArrayList;
