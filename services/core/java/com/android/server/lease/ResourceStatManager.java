@@ -36,7 +36,15 @@ public class ResourceStatManager {
     protected Hashtable<Long, StatHistory> mStatsHistorys;
 
 
-    public ResourceStatManager(){
+    private static ResourceStatManager gInstance = null;
+
+    public static ResourceStatManager getInstance() {
+        if(gInstance == null)
+            gInstance = new ResourceStatManager();
+        return gInstance;
+    }
+
+    private ResourceStatManager(){
         mStatsHistorys = new Hashtable<>();
     }
 

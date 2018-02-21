@@ -77,6 +77,7 @@ import com.android.server.lease.*;
 import com.android.server.lights.Light;
 import com.android.server.lights.LightsManager;
 import com.android.server.vr.VrManagerService;
+
 import libcore.util.Objects;
 
 import java.io.FileDescriptor;
@@ -166,7 +167,7 @@ public final class PowerManagerService extends SystemService
     private static final int SCREEN_BRIGHTNESS_BOOST_TIMEOUT = 5 * 1000;
 
     // How long a partial wake lock must be held until we consider it a long wake lock.
-    static final long MIN_LONG_WAKE_CHECK_INTERVAL = 60*1000;
+    static final long MIN_LONG_WAKE_CHECK_INTERVAL = 60 * 1000;
 
     // Power hints defined in hardware/libhardware/include/hardware/power.h.
     private static final int POWER_HINT_LOW_POWER = 5;
@@ -181,7 +182,9 @@ public final class PowerManagerService extends SystemService
     /** Constants for {@link #shutdownOrRebootInternal} */
     @Retention(RetentionPolicy.SOURCE)
     @IntDef({HALT_MODE_SHUTDOWN, HALT_MODE_REBOOT, HALT_MODE_REBOOT_SAFE_MODE})
-    public @interface HaltMode {}
+    public @interface HaltMode {
+    }
+
     private static final int HALT_MODE_SHUTDOWN = 0;
     private static final int HALT_MODE_REBOOT = 1;
     private static final int HALT_MODE_REBOOT_SAFE_MODE = 2;
@@ -509,19 +512,24 @@ public final class PowerManagerService extends SystemService
 
     /*** LeaseOS changes ***/
     private LeaseManager mLeaseManager;
-    private Hashtable <IBinder, Long> mLeasetable;
+    private Hashtable<IBinder, Long> mLeasetable;
     private ResourceStatManager mRStatManager;
-   /************************/
+    /************************/
     // True if we are currently in VR Mode.
     private boolean mIsVrModeEnabled;
 
     private native void nativeInit();
 
     private static native void nativeAcquireSuspendBlocker(String name);
+
     private static native void nativeReleaseSuspendBlocker(String name);
+
     private static native void nativeSetInteractive(boolean enable);
+
     private static native void nativeSetAutoSuspend(boolean enable);
+
     private static native void nativeSendPowerHint(int hintId, int data);
+
     private static native void nativeSetFeature(int featureId, int data);
 
     public PowerManagerService(Context context) {
@@ -700,6 +708,7 @@ public final class PowerManagerService extends SystemService
             /*** LeaseOS changes***/
             mLeaseManager = (LeaseManager) mContext.getSystemService(Context.LEASE_SERVICE);
             mLeasetable = new Hashtable<>();
+            mRStatManager = ResourceStatManager.getInstance();
             /**********************/
         }
     }
@@ -774,7 +783,7 @@ public final class PowerManagerService extends SystemService
         if (mSupportsDoubleTapWakeConfig) {
             boolean doubleTapWakeEnabled = Settings.Secure.getIntForUser(resolver,
                     Settings.Secure.DOUBLE_TAP_TO_WAKE, DEFAULT_DOUBLE_TAP_TO_WAKE,
-                            UserHandle.USER_CURRENT) != 0;
+                    UserHandle.USER_CURRENT) != 0;
             if (doubleTapWakeEnabled != mDoubleTapWakeEnabled) {
                 mDoubleTapWakeEnabled = doubleTapWakeEnabled;
                 nativeSetFeature(POWER_FEATURE_DOUBLE_TAP_TO_WAKE, mDoubleTapWakeEnabled ? 1 : 0);
@@ -866,7 +875,7 @@ public final class PowerManagerService extends SystemService
                         listeners = new ArrayList<PowerManagerInternal.LowPowerModeListener>(
                                 mLowPowerModeListeners);
                     }
-                    for (int i=0; i<listeners.size(); i++) {
+                    for (int i = 0; i < listeners.size(); i++) {
                         listeners.get(i).onLowPowerModeChanged(lowPowerModeEnabled);
                     }
                     intent = new Intent(PowerManager.ACTION_POWER_SAVE_MODE_CHANGED);
@@ -874,7 +883,8 @@ public final class PowerManagerService extends SystemService
                     mContext.sendBroadcast(intent);
                     // Send internal version that requires signature permission.
                     mContext.sendBroadcastAsUser(new Intent(
-                            PowerManager.ACTION_POWER_SAVE_MODE_CHANGED_INTERNAL), UserHandle.ALL,
+                                    PowerManager.ACTION_POWER_SAVE_MODE_CHANGED_INTERNAL),
+                            UserHandle.ALL,
                             Manifest.permission.DEVICE_POWER);
                 }
             });
@@ -920,18 +930,18 @@ public final class PowerManagerService extends SystemService
 
                 /***LeaseOS changes***/
                 if (mLeaseManager != null) {
-                    Long leaseid = mLeasetable.get(lock);
-                    if (leaseid == null) {
+                    long leaseId = mLeasetable.get(lock);
+                    if (leaseId == null) {
                         Slog.i(TAG, "create new lease");
-                        leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
-                        if (leaseid == Lease.INVALID_LEASE) {
-                            Slog.i(TAG,"Skip lease for system service");
+                        leaseId = mLeaseManager.newLease(ResourceType.Wakelock, uid);
+                        if (leaseId == Lease.INVALID_LEASE) {
+                            Slog.i(TAG, "Skip lease for system service");
                         } else {
-                            mLeasetable.put(lock,leaseid);
+                            mLeasetable.put(lock, leaseId);
                             Slog.d(TAG, "The lenght of the lease table is " + mLeasetable.size());
                         }
                     }
-                    ResourceStat resourceStat=  mRStatManager.getCurrentStat(leaseid);
+                    ResourceStat resourceStat = mRStatManager.getCurrentStat(leaseId);
                     if (resourceStat != null) {
                         com.android.server.lease.WakelockStat
                                 wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
@@ -1009,18 +1019,21 @@ public final class PowerManagerService extends SystemService
             /***LeaseOS changes***/
             if (mLeaseManager != null) {
                 Slog.i(TAG, "remove the lease");
-                long leaseid = mLeasetable.get(lock);
-                ResourceStat resourceStat=  mRStatManager.getCurrentStat(leaseid);
-                if (resourceStat != null) {
-                    com.android.server.lease.WakelockStat
-                            wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
-                    wakelockStat.noteRelease();
-                }
-                if (finalized) {
-                    if (leaseid != Lease.INVALID_LEASE) {
-                        mLeaseManager.remove(leaseid);
+                Long leaseId = mLeasetable.get(lock);
+                {
+                    ResourceStat resourceStat = mRStatManager.getCurrentStat(leaseId);
+                    if (resourceStat != null) {
+                        com.android.server.lease.WakelockStat
+                                wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
+                        wakelockStat.noteRelease();
                     }
-                    Slog.i(TAG, "Final remove of lease " + leaseid);
+                }
+
+                if (finalized) {
+                    if (leaseId != 0) {
+                        mLeaseManager.remove(leaseId);
+                    }
+                    Slog.i(TAG, "Final remove of lease " + leaseId);
                     mLeasetable.remove(lock);
                 }
             } else {
@@ -1284,13 +1297,13 @@ public final class PowerManagerService extends SystemService
         try {
             switch (mWakefulness) {
                 case WAKEFULNESS_ASLEEP:
-                    Slog.i(TAG, "Waking up from sleep (uid " + reasonUid +")...");
+                    Slog.i(TAG, "Waking up from sleep (uid " + reasonUid + ")...");
                     break;
                 case WAKEFULNESS_DREAMING:
-                    Slog.i(TAG, "Waking up from dream (uid " + reasonUid +")...");
+                    Slog.i(TAG, "Waking up from dream (uid " + reasonUid + ")...");
                     break;
                 case WAKEFULNESS_DOZING:
-                    Slog.i(TAG, "Waking up from dozing (uid " + reasonUid +")...");
+                    Slog.i(TAG, "Waking up from dozing (uid " + reasonUid + ")...");
                     break;
             }
 
@@ -1337,25 +1350,25 @@ public final class PowerManagerService extends SystemService
             switch (reason) {
                 case PowerManager.GO_TO_SLEEP_REASON_DEVICE_ADMIN:
                     Slog.i(TAG, "Going to sleep due to device administration policy "
-                            + "(uid " + uid +")...");
+                            + "(uid " + uid + ")...");
                     break;
                 case PowerManager.GO_TO_SLEEP_REASON_TIMEOUT:
-                    Slog.i(TAG, "Going to sleep due to screen timeout (uid " + uid +")...");
+                    Slog.i(TAG, "Going to sleep due to screen timeout (uid " + uid + ")...");
                     break;
                 case PowerManager.GO_TO_SLEEP_REASON_LID_SWITCH:
-                    Slog.i(TAG, "Going to sleep due to lid switch (uid " + uid +")...");
+                    Slog.i(TAG, "Going to sleep due to lid switch (uid " + uid + ")...");
                     break;
                 case PowerManager.GO_TO_SLEEP_REASON_POWER_BUTTON:
-                    Slog.i(TAG, "Going to sleep due to power button (uid " + uid +")...");
+                    Slog.i(TAG, "Going to sleep due to power button (uid " + uid + ")...");
                     break;
                 case PowerManager.GO_TO_SLEEP_REASON_SLEEP_BUTTON:
-                    Slog.i(TAG, "Going to sleep due to sleep button (uid " + uid +")...");
+                    Slog.i(TAG, "Going to sleep due to sleep button (uid " + uid + ")...");
                     break;
                 case PowerManager.GO_TO_SLEEP_REASON_HDMI:
-                    Slog.i(TAG, "Going to sleep due to HDMI standby (uid " + uid +")...");
+                    Slog.i(TAG, "Going to sleep due to HDMI standby (uid " + uid + ")...");
                     break;
                 default:
-                    Slog.i(TAG, "Going to sleep by application request (uid " + uid +")...");
+                    Slog.i(TAG, "Going to sleep by application request (uid " + uid + ")...");
                     reason = PowerManager.GO_TO_SLEEP_REASON_APPLICATION;
                     break;
             }
@@ -1409,7 +1422,7 @@ public final class PowerManagerService extends SystemService
 
         Trace.traceBegin(Trace.TRACE_TAG_POWER, "nap");
         try {
-            Slog.i(TAG, "Nap time (uid " + uid +")...");
+            Slog.i(TAG, "Nap time (uid " + uid + ")...");
 
             mSandmanSummoned = true;
             setWakefulnessLocked(WAKEFULNESS_DREAMING, 0);
@@ -1433,7 +1446,7 @@ public final class PowerManagerService extends SystemService
 
         Trace.traceBegin(Trace.TRACE_TAG_POWER, "reallyGoToSleep");
         try {
-            Slog.i(TAG, "Sleeping (uid " + uid +")...");
+            Slog.i(TAG, "Sleeping (uid " + uid + ")...");
 
             setWakefulnessLocked(WAKEFULNESS_ASLEEP, PowerManager.GO_TO_SLEEP_REASON_TIMEOUT);
         } finally {
@@ -1506,7 +1519,7 @@ public final class PowerManagerService extends SystemService
             // by changes in wakefulness.
             final long now = SystemClock.uptimeMillis();
             int dirtyPhase2 = 0;
-            for (;;) {
+            for (; ; ) {
                 int dirtyPhase1 = mDirty;
                 dirtyPhase2 |= dirtyPhase1;
                 mDirty = 0;
@@ -1893,7 +1906,7 @@ public final class PowerManagerService extends SystemService
             timeout = Math.min(timeout, mMaximumScreenOffTimeoutFromDeviceAdmin);
         }
         if (mUserActivityTimeoutOverrideFromWindowManager >= 0) {
-            timeout = (int)Math.min(timeout, mUserActivityTimeoutOverrideFromWindowManager);
+            timeout = (int) Math.min(timeout, mUserActivityTimeoutOverrideFromWindowManager);
         }
         if (sleepTimeout >= 0) {
             timeout = Math.min(timeout, sleepTimeout);
@@ -1903,7 +1916,7 @@ public final class PowerManagerService extends SystemService
 
     private int getScreenDimDurationLocked(int screenOffTimeout) {
         return Math.min(mMaximumScreenDimDurationConfig,
-                (int)(screenOffTimeout * mMaximumScreenDimRatioConfig));
+                (int) (screenOffTimeout * mMaximumScreenDimRatioConfig));
     }
 
     /**
@@ -1943,7 +1956,7 @@ public final class PowerManagerService extends SystemService
     private boolean shouldNapAtBedTimeLocked() {
         return mDreamsActivateOnSleepSetting
                 || (mDreamsActivateOnDockSetting
-                        && mDockState != Intent.EXTRA_DOCK_STATE_UNDOCKED);
+                && mDockState != Intent.EXTRA_DOCK_STATE_UNDOCKED);
     }
 
     /**
@@ -1968,7 +1981,7 @@ public final class PowerManagerService extends SystemService
                 || mProximityPositive
                 || (mWakeLockSummary & WAKE_LOCK_STAY_AWAKE) != 0
                 || (mUserActivitySummary & (USER_ACTIVITY_SCREEN_BRIGHT
-                        | USER_ACTIVITY_SCREEN_DIM)) != 0
+                | USER_ACTIVITY_SCREEN_DIM)) != 0
                 || mScreenBrightnessBoostInProgress;
     }
 
@@ -2060,7 +2073,7 @@ public final class PowerManagerService extends SystemService
                 if (isDreaming && canDreamLocked()) {
                     if (mDreamsBatteryLevelDrainCutoffConfig >= 0
                             && mBatteryLevel < mBatteryLevelWhenDreamStarted
-                                    - mDreamsBatteryLevelDrainCutoffConfig
+                            - mDreamsBatteryLevelDrainCutoffConfig
                             && !isBeingKeptAwakeLocked()) {
                         // If the user activity timeout expired and the battery appears
                         // to be draining faster than it is charging then stop dreaming
@@ -2112,7 +2125,7 @@ public final class PowerManagerService extends SystemService
                 || !mDisplayPowerRequest.isBrightOrDim()
                 || mDisplayPowerRequest.isVr()
                 || (mUserActivitySummary & (USER_ACTIVITY_SCREEN_BRIGHT
-                        | USER_ACTIVITY_SCREEN_DIM | USER_ACTIVITY_SCREEN_DREAM)) == 0
+                | USER_ACTIVITY_SCREEN_DIM | USER_ACTIVITY_SCREEN_DREAM)) == 0
                 || !mBootCompleted) {
             return false;
         }
@@ -2233,7 +2246,7 @@ public final class PowerManagerService extends SystemService
                         + ", mBootCompleted=" + mBootCompleted
                         + ", mIsVrModeEnabled= " + mIsVrModeEnabled
                         + ", mScreenBrightnessBoostInProgress="
-                                + mScreenBrightnessBoostInProgress);
+                        + mScreenBrightnessBoostInProgress);
             }
         }
         return mDisplayReady && !oldDisplayReady;
@@ -2307,80 +2320,80 @@ public final class PowerManagerService extends SystemService
 
     private final DisplayManagerInternal.DisplayPowerCallbacks mDisplayPowerCallbacks =
             new DisplayManagerInternal.DisplayPowerCallbacks() {
-        private int mDisplayState = Display.STATE_UNKNOWN;
+                private int mDisplayState = Display.STATE_UNKNOWN;
 
-        @Override
-        public void onStateChanged() {
-            synchronized (mLock) {
-                mDirty |= DIRTY_ACTUAL_DISPLAY_POWER_STATE_UPDATED;
-                updatePowerStateLocked();
-            }
-        }
+                @Override
+                public void onStateChanged() {
+                    synchronized (mLock) {
+                        mDirty |= DIRTY_ACTUAL_DISPLAY_POWER_STATE_UPDATED;
+                        updatePowerStateLocked();
+                    }
+                }
 
-        @Override
-        public void onProximityPositive() {
-            synchronized (mLock) {
-                mProximityPositive = true;
-                mDirty |= DIRTY_PROXIMITY_POSITIVE;
-                updatePowerStateLocked();
-            }
-        }
+                @Override
+                public void onProximityPositive() {
+                    synchronized (mLock) {
+                        mProximityPositive = true;
+                        mDirty |= DIRTY_PROXIMITY_POSITIVE;
+                        updatePowerStateLocked();
+                    }
+                }
 
-        @Override
-        public void onProximityNegative() {
-            synchronized (mLock) {
-                mProximityPositive = false;
-                mDirty |= DIRTY_PROXIMITY_POSITIVE;
-                userActivityNoUpdateLocked(SystemClock.uptimeMillis(),
-                        PowerManager.USER_ACTIVITY_EVENT_OTHER, 0, Process.SYSTEM_UID);
-                updatePowerStateLocked();
-            }
-        }
+                @Override
+                public void onProximityNegative() {
+                    synchronized (mLock) {
+                        mProximityPositive = false;
+                        mDirty |= DIRTY_PROXIMITY_POSITIVE;
+                        userActivityNoUpdateLocked(SystemClock.uptimeMillis(),
+                                PowerManager.USER_ACTIVITY_EVENT_OTHER, 0, Process.SYSTEM_UID);
+                        updatePowerStateLocked();
+                    }
+                }
 
-        @Override
-        public void onDisplayStateChange(int state) {
-            // This method is only needed to support legacy display blanking behavior
-            // where the display's power state is coupled to suspend or to the power HAL.
-            // The order of operations matters here.
-            synchronized (mLock) {
-                if (mDisplayState != state) {
-                    mDisplayState = state;
-                    if (state == Display.STATE_OFF) {
-                        if (!mDecoupleHalInteractiveModeFromDisplayConfig) {
-                            setHalInteractiveModeLocked(false);
-                        }
-                        if (!mDecoupleHalAutoSuspendModeFromDisplayConfig) {
-                            setHalAutoSuspendModeLocked(true);
-                        }
-                    } else {
-                        if (!mDecoupleHalAutoSuspendModeFromDisplayConfig) {
-                            setHalAutoSuspendModeLocked(false);
-                        }
-                        if (!mDecoupleHalInteractiveModeFromDisplayConfig) {
-                            setHalInteractiveModeLocked(true);
+                @Override
+                public void onDisplayStateChange(int state) {
+                    // This method is only needed to support legacy display blanking behavior
+                    // where the display's power state is coupled to suspend or to the power HAL.
+                    // The order of operations matters here.
+                    synchronized (mLock) {
+                        if (mDisplayState != state) {
+                            mDisplayState = state;
+                            if (state == Display.STATE_OFF) {
+                                if (!mDecoupleHalInteractiveModeFromDisplayConfig) {
+                                    setHalInteractiveModeLocked(false);
+                                }
+                                if (!mDecoupleHalAutoSuspendModeFromDisplayConfig) {
+                                    setHalAutoSuspendModeLocked(true);
+                                }
+                            } else {
+                                if (!mDecoupleHalAutoSuspendModeFromDisplayConfig) {
+                                    setHalAutoSuspendModeLocked(false);
+                                }
+                                if (!mDecoupleHalInteractiveModeFromDisplayConfig) {
+                                    setHalInteractiveModeLocked(true);
+                                }
+                            }
                         }
                     }
                 }
-            }
-        }
 
-        @Override
-        public void acquireSuspendBlocker() {
-            mDisplaySuspendBlocker.acquire();
-        }
+                @Override
+                public void acquireSuspendBlocker() {
+                    mDisplaySuspendBlocker.acquire();
+                }
 
-        @Override
-        public void releaseSuspendBlocker() {
-            mDisplaySuspendBlocker.release();
-        }
+                @Override
+                public void releaseSuspendBlocker() {
+                    mDisplaySuspendBlocker.release();
+                }
 
-        @Override
-        public String toString() {
-            synchronized (this) {
-                return "state=" + Display.stateToString(mDisplayState);
-            }
-        }
-    };
+                @Override
+                public String toString() {
+                    synchronized (this) {
+                        return "state=" + Display.stateToString(mDisplayState);
+                    }
+                }
+            };
 
     private boolean shouldUseProximitySensorLocked() {
         return !mIsVrModeEnabled && (mWakeLockSummary & WAKE_LOCK_PROXIMITY_SCREEN_OFF) != 0;
@@ -2762,7 +2775,7 @@ public final class PowerManagerService extends SystemService
                 return;
             }
 
-            Slog.i(TAG, "Brightness boost activated (uid " + uid +")...");
+            Slog.i(TAG, "Brightness boost activated (uid " + uid + ")...");
             mLastScreenBrightnessBoostTime = eventTime;
             if (!mScreenBrightnessBoostInProgress) {
                 mScreenBrightnessBoostInProgress = true;
@@ -3059,9 +3072,11 @@ public final class PowerManagerService extends SystemService
 
             pw.println();
             pw.println("UID states:");
-            for (int i=0; i<mUidState.size(); i++) {
-                pw.print("  UID "); UserHandle.formatUid(pw, mUidState.keyAt(i));
-                pw.print(": "); pw.println(mUidState.valueAt(i));
+            for (int i = 0; i < mUidState.size(); i++) {
+                pw.print("  UID ");
+                UserHandle.formatUid(pw, mUidState.keyAt(i));
+                pw.print(": ");
+                pw.println(mUidState.valueAt(i));
             }
 
             pw.println();
@@ -3296,7 +3311,7 @@ public final class PowerManagerService extends SystemService
             }
             if (mNotifiedAcquired) {
                 sb.append(" ACQ=");
-                TimeUtils.formatDuration(mAcquireTime-SystemClock.uptimeMillis(), sb);
+                TimeUtils.formatDuration(mAcquireTime - SystemClock.uptimeMillis(), sb);
             }
             if (mNotifiedLong) {
                 sb.append(" LONG");
@@ -3537,8 +3552,8 @@ public final class PowerManagerService extends SystemService
             if (mContext.checkCallingOrSelfPermission(android.Manifest.permission.DEVICE_POWER)
                     != PackageManager.PERMISSION_GRANTED
                     && mContext.checkCallingOrSelfPermission(
-                            android.Manifest.permission.USER_ACTIVITY)
-                            != PackageManager.PERMISSION_GRANTED) {
+                    android.Manifest.permission.USER_ACTIVITY)
+                    != PackageManager.PERMISSION_GRANTED) {
                 // Once upon a time applications could call userActivity().
                 // Now we require the DEVICE_POWER permission.  Log a warning and ignore the
                 // request instead of throwing a SecurityException so we don't break old apps.
@@ -3678,8 +3693,8 @@ public final class PowerManagerService extends SystemService
          * Reboots the device.
          *
          * @param confirm If true, shows a reboot confirmation dialog.
-         * @param reason The reason for the reboot, or null if none.
-         * @param wait If true, this call waits for the reboot to complete and does not return.
+         * @param reason  The reason for the reboot, or null if none.
+         * @param wait    If true, this call waits for the reboot to complete and does not return.
          */
         @Override // Binder call
         public void reboot(boolean confirm, String reason, boolean wait) {
@@ -3701,7 +3716,7 @@ public final class PowerManagerService extends SystemService
          * Reboots the device into safe mode
          *
          * @param confirm If true, shows a reboot confirmation dialog.
-         * @param wait If true, this call waits for the reboot to complete and does not return.
+         * @param wait    If true, this call waits for the reboot to complete and does not return.
          */
         @Override // Binder call
         public void rebootSafeMode(boolean confirm, boolean wait) {
@@ -3720,7 +3735,7 @@ public final class PowerManagerService extends SystemService
          * Shuts down the device.
          *
          * @param confirm If true, shows a shutdown confirmation dialog.
-         * @param wait If true, this call waits for the shutdown to complete and does not return.
+         * @param wait    If true, this call waits for the shutdown to complete and does not return.
          */
         @Override // Binder call
         public void shutdown(boolean confirm, String reason, boolean wait) {
@@ -3762,7 +3777,7 @@ public final class PowerManagerService extends SystemService
          * Used by "adb shell svc power stayon ..."
          *
          * @param val an {@code int} containing the bits that specify which power sources
-         * should cause the device to stay on.
+         *            should cause the device to stay on.
          */
         @Override // Binder call
         public void setStayOnSetting(int val) {
@@ -3792,7 +3807,6 @@ public final class PowerManagerService extends SystemService
          * The override will be canceled when the setting value is next updated.
          *
          * @param brightness The overridden brightness.
-         *
          * @see android.provider.Settings.System#SCREEN_BRIGHTNESS
          */
         @Override // Binder call
@@ -3817,7 +3831,6 @@ public final class PowerManagerService extends SystemService
          * The override will be canceled when the setting value is next updated.
          *
          * @param adj The overridden brightness, or Float.NaN to disable the override.
-         *
          * @see android.provider.Settings.System#SCREEN_AUTO_BRIGHTNESS_ADJ
          */
         @Override // Binder call
@@ -3997,7 +4010,6 @@ public final class PowerManagerService extends SystemService
             powerHintInternal(hintId, data);
         }
     }
-
 
 
 }

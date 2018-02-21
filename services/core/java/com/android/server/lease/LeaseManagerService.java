@@ -39,7 +39,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public static final int FAILED = -1;
 
     // Table of all leases acquired by services.
-    //TODO: change the hash tableeasaseeaseM
     private final Hashtable<Long, Lease> mLeases = new Hashtable();
 
     //The identifier of the last lease
@@ -53,7 +52,11 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         super();
         Log.i(TAG, "LeaseManagerService: hahaha");
         mContext = context;
-        mRStatManager = new ResourceStatManager();
+        mRStatManager = ResourceStatManager.getInstance();
+    }
+
+    public ResourceStat getCurrentStat(long leaseId) {
+        return mRStatManager.getCurrentStat(leaseId);
     }
 
     /**
@@ -65,7 +68,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     public long newLease(ResourceType RType, int uid) {
         //TODO: add a lock here
-        if (uid < 1000) {
+        if (uid <= 1000) {
             return Lease.INVALID_LEASE;
         }
         Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
