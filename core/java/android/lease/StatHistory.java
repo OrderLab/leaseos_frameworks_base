@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong HU <hyigong1@jhu.edu>
  *
@@ -20,8 +19,6 @@
  *  limitations under the License.
  */
 package android.lease;
-
-import com.android.server.lease.BehaviorType;
 
 import java.util.ArrayList;
 

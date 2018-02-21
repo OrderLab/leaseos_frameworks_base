@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong HU <hyigong1@jhu.edu>
  *
@@ -28,7 +27,7 @@ import android.util.Log;
 /**
  *The manager class for Lease, the wrapper of LeaseManagerServices
  */
-public class LeaseManager {
+public final class LeaseManager {
     private static final String TAG = "LeaseManager";
 
     private ILeaseManager mService;
@@ -60,7 +59,7 @@ public class LeaseManager {
      * @param leaseId lease id
      * @return true if the lease is active
      */
-    public boolean check(long leaseId){
+    public boolean check(long leaseId) {
         boolean success = false;
         try {
              success  = mService.check(leaseId);
@@ -75,7 +74,7 @@ public class LeaseManager {
      * @param leaseId lease id
      * @return ture if the lease is successfully expired
      */
-    public boolean expire(long leaseId){
+    public boolean expire(long leaseId) {
         boolean success= false;
         try{
             success = mService.expire(leaseId);
@@ -105,7 +104,7 @@ public class LeaseManager {
      * @param leaseId lease id
      * @return true if the lease is successfully removed
      */
-    public boolean remove(long leaseId){
+    public boolean remove(long leaseId) {
         boolean success = false;
         try {
             success = mService.remove(leaseId);

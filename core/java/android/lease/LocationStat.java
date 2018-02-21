@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong Hu <hyigong1@jhu.edu>
  *
@@ -21,14 +20,16 @@
  */
 package android.lease;
 
-
-import android.lease.ResourceStat;
-
 /**
  *
  */
 public class LocationStat extends ResourceStat {
 
+
+    @Override
+    public void update(long startTime, long leaseTerm) {
+
+    }
 
     public LocationStat(long BeginTime) {
         super(BeginTime);

@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong Hu <hyigong1@jhu.edu>
  *
@@ -23,9 +22,6 @@ package android.lease;
 
 
 import android.util.Slog;
-
-import com.android.server.lease.BehaviorType;
-import com.android.server.lease.Lease;
 
 import java.util.Hashtable;
 
@@ -88,13 +84,13 @@ public class ResourceStatManager {
         return statHistory.addItem(rStat);
     }
 
-    public boolean removeStatHistory(Lease lease){
-        StatHistory statHistory = mStatsHistorys.get(lease);
+    public boolean removeStatHistory(long leaseId){
+        StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             return false;
         }
         statHistory.remove();
-        return mStatsHistorys.remove(lease, statHistory);
+        return mStatsHistorys.remove(leaseId, statHistory);
     }
 
 
@@ -102,6 +98,4 @@ public class ResourceStatManager {
     public BehaviorType judge() {
         return BehaviorType.FrequencyAsking;
     }
-
-
 }

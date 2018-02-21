@@ -1,4 +1,3 @@
-    
 /*
  *  @author Yigong HU <hyigong1@jhu.edu>
  *

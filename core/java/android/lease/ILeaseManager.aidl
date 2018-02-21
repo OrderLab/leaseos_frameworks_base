@@ -20,8 +20,6 @@
  */
 package android.lease;
 
-
-//import android.lease.LeaseManager;
 import android.lease.ResourceType;
 
 /**
