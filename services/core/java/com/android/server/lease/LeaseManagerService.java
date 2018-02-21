@@ -25,6 +25,7 @@ import java.util.Hashtable;
 
 import android.lease.ILeaseManager;
 import android.lease.ResourceType;
+import android.os.Process;
 import android.util.Log;
 
 /**
@@ -65,7 +66,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     public long newLease(ResourceType RType, int uid) {
         //TODO: add a lock here
-        if (uid < 1000) {
+        if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
             return Lease.INVALID_LEASE;
         }
         Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
