@@ -30,6 +30,8 @@ import android.util.Log;
 public final class LeaseManager {
     private static final String TAG = "LeaseManager";
 
+    public static final long LEASE_ID_START = 1000;
+
     private ILeaseManager mService;
     private Context mContext;
 
@@ -60,6 +62,8 @@ public final class LeaseManager {
      * @return true if the lease is active
      */
     public boolean check(long leaseId) {
+        if (leaseId < LEASE_ID_START)
+            return false;
         boolean success = false;
         try {
              success  = mService.check(leaseId);
@@ -75,6 +79,8 @@ public final class LeaseManager {
      * @return ture if the lease is successfully expired
      */
     public boolean expire(long leaseId) {
+        if (leaseId < LEASE_ID_START)
+            return false;
         boolean success= false;
         try{
             success = mService.expire(leaseId);
@@ -90,6 +96,8 @@ public final class LeaseManager {
      * @return ture if the lease is successfully renewed
      */
     public boolean renew(long leaseId) {
+        if (leaseId < LEASE_ID_START)
+            return false;
         boolean success = false;
         try {
             success = mService.renew(leaseId);
@@ -105,6 +113,8 @@ public final class LeaseManager {
      * @return true if the lease is successfully removed
      */
     public boolean remove(long leaseId) {
+        if (leaseId < LEASE_ID_START)
+            return false;
         boolean success = false;
         try {
             success = mService.remove(leaseId);
