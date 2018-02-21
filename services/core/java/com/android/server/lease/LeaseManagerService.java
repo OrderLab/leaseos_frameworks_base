@@ -61,7 +61,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
      * @param uid   the identifier of caller
      * @return the lease id
      */
-    public long newLease(ResourceType RType, long uid) {
+    public long newLease(ResourceType RType, int uid) {
 
         if (uid < 1000) {
             return Lease.INVALID_LEASE;
@@ -76,7 +76,7 @@ public class LeaseManagerService extends ILeaseManager.Stub{
         statHistory = new StatHistory();
         switch (RType) {
             case Wakelock:
-                WakelockStat wStat = new WakelockStat(lease.mBeginTime);
+                WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid);
                 statHistory.addItem(wStat);
                 mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
                 break;

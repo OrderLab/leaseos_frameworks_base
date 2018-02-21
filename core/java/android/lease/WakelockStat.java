@@ -29,6 +29,7 @@ import static android.os.BatteryStats.STATS_CURRENT;
 
 import com.android.internal.os.BatteryStatsImpl;
 import com.android.phone.ProcessOutgoingCallTest;
+import com.android.server.lease.BatteryMonitor;
 import com.android.server.lease.BehaviorType;
 
 import java.util.ArrayList;
@@ -44,12 +45,10 @@ public class WakelockStat extends ResourceStat {
     protected long mExceptionFrequency;
     protected List<Event> mEventList;
     protected int mOpenIndex;
-    /*
-    protected BatteryStatsImpl.Uid.Proc proc;
-    protected long mBaseUserTime;
-    protected long mBaseSysTime;
-    protected long mCurUserTime;
-    protected long mCurSysTime;*/
+
+    protected BatteryMonitor mBatteryMonitor;
+    protected long mBaseCPUTime;
+    protected long mCurCPUTime;
 
     @Override
     public void update(long startTime, long leaseTerm) {
@@ -65,21 +64,19 @@ public class WakelockStat extends ResourceStat {
                 mFrequency++;
             }
         }
-        /*
-        mCurUserTime = proc.getUserTime(STATS_CURRENT);
-        mCurSysTime = proc.getSystemTime(STATS_CURRENT);
-        mUsageTime = mCurSysTime + mCurSysTime - mBaseUserTime - mBaseSysTime;*/
+
+        mCurCPUTime = mBatteryMonitor.getCPUTime();
+        mUsageTime = mCurCPUTime- mBaseCPUTime;
     }
 
-    public WakelockStat(long beginTime) {
+    public WakelockStat(long beginTime, int uid) {
         super(beginTime);
         mEventList = new ArrayList<>();
         mOpenIndex = -1;
         mFrequency = 0;
         mHoldingTime = 0;
-/*
-        mBaseUserTime = proc.getUserTime(STATS_CURRENT);
-        mBaseSysTime = proc.getSystemTime(STATS_CURRENT);*/
+        mBatteryMonitor = new BatteryMonitor(uid);
+        mBaseCPUTime = mBatteryMonitor.getCPUTime();
     }
 
     public void noteAcquire() {

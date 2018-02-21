@@ -44,7 +44,7 @@ public class Lease {
     protected long mLeaseId;
 
     //The identifier of the owner of lease. This variable usually means the UID
-    protected long mOwnerId;
+    protected int mOwnerId;
 
     //The token of the request from user process
     protected IBinder mToken;
@@ -75,7 +75,7 @@ public class Lease {
     private boolean mScheduled;
     private static final String TAG = "LeaseManagerService";
 
-    public Lease(long lid, long Oid, ResourceType type, ResourceStatManager RStatManager) {
+    public Lease(long lid, int Oid, ResourceType type, ResourceStatManager RStatManager) {
         mLeaseId = lid;
         mOwnerId = Oid;
         mType = type;
@@ -145,7 +145,7 @@ public class Lease {
      *
      * @return Owner id
      */
-    public long getOwner() {
+    public int getOwner() {
         return mOwnerId;
     }
 

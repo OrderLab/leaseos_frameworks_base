@@ -41,12 +41,14 @@ import java.util.Map;
 public class BatteryMonitor {
     private static final String TAG = "BatterMonitor";
     private BatteryStatsImpl mInstance;
+    private int muid;
 
-    public BatteryMonitor() {
+    public BatteryMonitor(int uid) {
         mInstance = null;
+        muid = uid;
     }
 
-    public BatteryStatsImpl.Uid getBatteryUid(int uid) {
+    public BatteryStatsImpl.Uid getBatteryUid() {
         try{
             IBatteryStats om = IBatteryStats.Stub.asInterface(ServiceManager.getService(BatteryStats.SERVICE_NAME));
             byte[] data = om.getStatistics();
@@ -55,23 +57,23 @@ public class BatteryMonitor {
             parcel.setDataPosition(0);
             mInstance = BatteryStatsImpl.CREATOR.createFromParcel(parcel);
             if (mInstance == null) {
-                Slog.e(TAG, "There is no BatteryStatImpl instance for the uid: " + uid);
+                Slog.e(TAG, "There is no BatteryStatImpl instance for the uid: " + muid);
                 return null;
             }
-            return mInstance.getUidStatsLocked(uid);
+            return mInstance.getUidStatsLocked(muid);
         } catch (RemoteException e) {
             e.printStackTrace();
         }
         return null;
     }
 
-    public long getUserTime(int uid) {
+    public long getUserTime() {
         BatteryStatsImpl.Uid Uid;
         BatteryStatsImpl.Uid.Proc Proc;
         ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = new ArrayMap<>();
         long userTime = 0;
 
-        Uid = getBatteryUid(uid);
+        Uid = getBatteryUid();
         processStats = Uid.getProcessStats();
         if (processStats.size() > 0) {
             for (Map.Entry<String, ? extends BatteryStats.Uid.Proc> ent : processStats.entrySet()) {
@@ -83,13 +85,13 @@ public class BatteryMonitor {
         return userTime;
     }
 
-    public long getSystemTime(int uid) {
+    public long getSystemTime() {
         BatteryStatsImpl.Uid Uid;
         BatteryStatsImpl.Uid.Proc Proc;
         ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = new ArrayMap<>();
         long systemTime = 0;
 
-        Uid = getBatteryUid(uid);
+        Uid = getBatteryUid();
         processStats = Uid.getProcessStats();
         if (processStats.size() > 0) {
             for (Map.Entry<String, ? extends BatteryStats.Uid.Proc> ent : processStats.entrySet()) {
@@ -101,8 +103,8 @@ public class BatteryMonitor {
         return systemTime;
     }
 
-    public long getCPUTime(int uid) {
-        return getUserTime(uid) + getSystemTime(uid);
+    public long getCPUTime() {
+        return getUserTime() + getSystemTime();
     }
 
 }

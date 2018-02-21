@@ -34,7 +34,7 @@ interface ILeaseManager {
      /**
      *  create a lease
      **/
-    long newLease(in ResourceType RType, long uid);
+    long newLease(in ResourceType RType, int uid);
 
     /**
     *  check whether the lease is active or not
