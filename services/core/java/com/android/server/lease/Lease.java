@@ -224,7 +224,7 @@ public class Lease {
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime, 1000);
+                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId);
                 success = mRStatManager.setResourceStat(mLeaseId, wStat);
                 break;
             case Location:

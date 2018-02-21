@@ -759,7 +759,7 @@ public final class BatteryStatsHelper {
         }
     }
 
-    private static BatteryStatsImpl getStats(IBatteryStats service) {
+    public static BatteryStatsImpl getStats(IBatteryStats service) {
         try {
             ParcelFileDescriptor pfd = service.getStatisticsStream();
             if (pfd != null) {
