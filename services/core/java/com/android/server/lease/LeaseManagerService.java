@@ -25,6 +25,10 @@ import java.util.Hashtable;
 
 import android.lease.ILeaseManager;
 import android.lease.ResourceType;
+<<<<<<< HEAD
+=======
+import android.lease.StatHistory;
+>>>>>>> d50c0e417fb4a7df065a195ab8b48410d18d3274
 import android.util.Log;
 
 /**
@@ -64,7 +68,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @return the lease id
      */
     public long newLease(ResourceType RType, int uid) {
-
         if (uid < 1000) {
             return Lease.INVALID_LEASE;
         }

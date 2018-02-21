@@ -1,6 +1,5 @@
-    
 /*
- *  @author Yigong HU <hyigong1@jhu.edu>
+ *  @author Yigong Hu <hyigong1@jhu.edu>
  *
  *  The LeaseOS Project
  *
@@ -22,16 +21,16 @@
 package com.android.server.lease;
 
 
-import com.android.internal.app.IBatteryStats;
-import com.android.internal.os.BatteryStatsImpl;
-
 import android.os.BatteryStats;
 import android.os.Parcel;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.ArrayMap;
-import android.util.Log;
 import android.util.Slog;
+
+import com.android.internal.app.IBatteryStats;
+import com.android.internal.os.BatteryStatsHelper;
+import com.android.internal.os.BatteryStatsImpl;
 
 import java.util.Map;
 
@@ -40,71 +39,47 @@ import java.util.Map;
  */
 public class BatteryMonitor {
     private static final String TAG = "BatterMonitor";
-    private BatteryStatsImpl mInstance;
-    private int muid;
+    private static BatteryMonitor gInstance = null;
 
-    public BatteryMonitor(int uid) {
-        mInstance = null;
-        muid = uid;
-    }
+    private BatteryStatsImpl mStats;
 
-    public BatteryStatsImpl.Uid getBatteryUid() {
-        try{
-            IBatteryStats om = IBatteryStats.Stub.asInterface(ServiceManager.getService(BatteryStats.SERVICE_NAME));
-            byte[] data = om.getStatistics();
-            Parcel parcel = Parcel.obtain();
-            parcel.unmarshall(data, 0, data.length);
-            parcel.setDataPosition(0);
-            mInstance = BatteryStatsImpl.CREATOR.createFromParcel(parcel);
-            if (mInstance == null) {
-                Slog.e(TAG, "There is no BatteryStatImpl instance for the uid: " + muid);
-                return null;
-            }
-            return mInstance.getUidStatsLocked(muid);
-        } catch (RemoteException e) {
-            e.printStackTrace();
+    public static BatteryMonitor getInstance() {
+        if (gInstance == null) {
+            gInstance = new BatteryMonitor();
         }
-        return null;
+        return gInstance;
     }
 
-    public long getUserTime() {
-        BatteryStatsImpl.Uid Uid;
-        BatteryStatsImpl.Uid.Proc Proc;
-        ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = new ArrayMap<>();
-        long userTime = 0;
+    private BatteryMonitor() {
+        mStats = null;
+    }
 
-        Uid = getBatteryUid();
-        processStats = Uid.getProcessStats();
-        if (processStats.size() > 0) {
-            for (Map.Entry<String, ? extends BatteryStats.Uid.Proc> ent : processStats.entrySet()) {
-                Slog.d(TAG, "ProcessStat name = " + ent.getKey());
-                Proc = (BatteryStatsImpl.Uid.Proc)ent.getValue();
-                userTime += Proc.getUserTime(BatteryStatsImpl.STATS_CURRENT);
-            }
+    public BatteryStatsImpl getStats() {
+        if (mStats == null) {
+            IBatteryStats batteryInfo = IBatteryStats.Stub.asInterface(
+                    ServiceManager.getService(BatteryStats.SERVICE_NAME));
+
+            // The BatteryStatsHelper's way of getting statistics from the IBatteryStats is to
+            // use getStatisticsStream() instead of getStatistics(), which writing the data to
+            // a memory mapped file that GSam can then read from instead of trying to pass the data
+            // through rpc that may run into size limits. So we directly leverage this helper function.
+            mStats = BatteryStatsHelper.getStats(batteryInfo);
         }
-        return userTime;
+        return mStats;
     }
 
-    public long getSystemTime() {
-        BatteryStatsImpl.Uid Uid;
-        BatteryStatsImpl.Uid.Proc Proc;
-        ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = new ArrayMap<>();
-        long systemTime = 0;
-
-        Uid = getBatteryUid();
-        processStats = Uid.getProcessStats();
-        if (processStats.size() > 0) {
-            for (Map.Entry<String, ? extends BatteryStats.Uid.Proc> ent : processStats.entrySet()) {
-                Slog.d(TAG, "ProcessStat name = " + ent.getKey());
-                Proc = (BatteryStatsImpl.Uid.Proc)ent.getValue();
-                systemTime += Proc.getSystemTime(BatteryStatsImpl.STATS_CURRENT);
-            }
+    public long getCPUTime(int uid) {
+        long totalTime = 0;
+        BatteryStatsImpl.Uid u = getStats().getUidStatsLocked(uid);
+        ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = u.getProcessStats();
+        int NP = processStats.size();
+        for (int ip=0; ip<NP; ip++) {
+            Slog.d(TAG, "ProcessStat name = " + processStats.keyAt(ip));
+            BatteryStatsImpl.Uid.Proc ps = (BatteryStatsImpl.Uid.Proc) processStats.valueAt(ip);
+            totalTime += ps.getUserTime(BatteryStatsImpl.STATS_CURRENT);
+            totalTime += ps.getSystemTime(BatteryStatsImpl.STATS_CURRENT);
         }
-        return systemTime;
-    }
-
-    public long getCPUTime() {
-        return getUserTime() + getSystemTime();
+        return totalTime;
     }
 
 }

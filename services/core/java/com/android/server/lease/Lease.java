@@ -21,6 +21,8 @@
 package com.android.server.lease;
 
 import android.lease.ResourceType;
+
+
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Process;
@@ -174,8 +176,7 @@ public class Lease {
     public boolean expire() {
         mEndTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.EXPIRED;
-        boolean success = false;
-        return success;
+        return true;
     }
 
     private Runnable mExpireRunnable = new Runnable() {

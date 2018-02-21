@@ -21,9 +21,9 @@
 package com.android.server.lease;
 
 
-import android.os.SystemClock;
-
 import android.lease.BehaviorType;
+import android.lease.ResourceStat;
+import android.os.SystemClock;
 
 import java.util.ArrayList;
 import java.util.List;
@@ -38,8 +38,8 @@ public class WakelockStat extends ResourceStat {
     protected long mExceptionFrequency;
     protected List<Event> mEventList;
     protected int mOpenIndex;
+    protected int mUid;
 
-    protected BatteryMonitor mBatteryMonitor;
     protected long mBaseCPUTime;
     protected long mCurCPUTime;
 
@@ -57,8 +57,7 @@ public class WakelockStat extends ResourceStat {
                 mFrequency++;
             }
         }
-
-        mCurCPUTime = mBatteryMonitor.getCPUTime();
+        mCurCPUTime = BatteryMonitor.getInstance().getCPUTime(mUid);
         mUsageTime = mCurCPUTime- mBaseCPUTime;
     }
 
@@ -68,8 +67,8 @@ public class WakelockStat extends ResourceStat {
         mOpenIndex = -1;
         mFrequency = 0;
         mHoldingTime = 0;
-        mBatteryMonitor = new BatteryMonitor(uid);
-        mBaseCPUTime = mBatteryMonitor.getCPUTime();
+        mUid = uid;
+        mBaseCPUTime = BatteryMonitor.getInstance().getCPUTime(mUid);
     }
 
     public void noteAcquire() {
