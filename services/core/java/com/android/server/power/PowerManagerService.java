@@ -72,7 +72,8 @@ import com.android.server.ServiceThread;
 import com.android.server.SystemService;
 import com.android.server.Watchdog;
 import com.android.server.am.BatteryStatsService;
-import android.lease.Lease;
+
+import com.android.server.lease.*;
 import com.android.server.lights.Light;
 import com.android.server.lights.LightsManager;
 import com.android.server.vr.VrManagerService;
@@ -932,7 +933,8 @@ public final class PowerManagerService extends SystemService
                     }
                     ResourceStat resourceStat=  mRStatManager.getCurrentStat(leaseid);
                     if (resourceStat != null) {
-                        WakelockStat wakelockStat = (WakelockStat) resourceStat;
+                        com.android.server.lease.WakelockStat
+                                wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
                         wakelockStat.noteAcquire();
                     }
                 } else {
@@ -1010,7 +1012,8 @@ public final class PowerManagerService extends SystemService
                 long leaseid = mLeasetable.get(lock);
                 ResourceStat resourceStat=  mRStatManager.getCurrentStat(leaseid);
                 if (resourceStat != null) {
-                    WakelockStat wakelockStat = (WakelockStat) resourceStat;
+                    com.android.server.lease.WakelockStat
+                            wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
                     wakelockStat.noteRelease();
                 }
                 if (finalized) {

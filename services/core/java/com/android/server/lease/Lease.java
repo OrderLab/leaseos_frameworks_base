@@ -24,7 +24,6 @@ import android.lease.LocationStat;
 import android.lease.ResourceStatManager;
 import android.lease.ResourceType;
 import android.lease.SensorStat;
-import android.lease.WakelockStat;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Process;
@@ -178,8 +177,7 @@ public class Lease {
     public boolean expire() {
         mEndTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.EXPIRED;
-        boolean success = false;
-        return success;
+        return true;
     }
 
     private Runnable mExpireRunnable = new Runnable() {
@@ -226,7 +224,7 @@ public class Lease {
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime);
+                WakelockStat wStat = new WakelockStat(mBeginTime, 1000);
                 success = mRStatManager.setResourceStat(mLeaseId, wStat);
                 break;
             case Location:

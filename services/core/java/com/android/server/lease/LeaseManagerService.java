@@ -27,7 +27,6 @@ import android.lease.ILeaseManager;
 import android.lease.ResourceStatManager;
 import android.lease.ResourceType;
 import android.lease.StatHistory;
-import android.lease.WakelockStat;
 import android.util.Log;
 
 /**
@@ -67,7 +66,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @return the lease id
      */
     public long newLease(ResourceType RType, int uid) {
-
         if (uid < 1000) {
             return Lease.INVALID_LEASE;
         }

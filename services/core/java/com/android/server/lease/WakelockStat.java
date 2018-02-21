@@ -18,13 +18,12 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package android.lease;
+package com.android.server.lease;
 
 
+import android.lease.BehaviorType;
+import android.lease.ResourceStat;
 import android.os.SystemClock;
-
-import com.android.server.lease.BatteryMonitor;
-import com.android.server.lease.BehaviorType;
 
 import java.util.ArrayList;
 import java.util.List;
