@@ -512,7 +512,7 @@ public final class PowerManagerService extends SystemService
 
     /*** LeaseOS changes ***/
     private LeaseManager mLeaseManager;
-    private Hashtable<IBinder, Long> mLeasetable;
+    private Hashtable <IBinder, WakelockLease> mLeasetable;
     private ResourceStatManager mRStatManager;
     /************************/
     // True if we are currently in VR Mode.
@@ -930,22 +930,30 @@ public final class PowerManagerService extends SystemService
 
                 /***LeaseOS changes***/
                 if (mLeaseManager != null) {
-                    long leaseId = mLeasetable.get(lock);
-                    if (leaseId == null) {
+                    WakelockLease lease = mLeasetable.get(lock);
+                    if (lease == null) {
                         Slog.i(TAG, "create new lease");
-                        leaseId = mLeaseManager.newLease(ResourceType.Wakelock, uid);
-                        if (leaseId == Lease.INVALID_LEASE) {
-                            Slog.i(TAG, "Skip lease for system service");
+                        long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
+                        if (leaseid == Lease.INVALID_LEASE) {
+                            Slog.i(TAG,"Skip lease for system service");
                         } else {
-                            mLeasetable.put(lock, leaseId);
+                            lease = new WakelockLease(lock, leaseid);
+                            try {
+                                lock.linkToDeath(lease, 0);
+                            } catch (RemoteException ex) {
+                                throw new IllegalArgumentException("Wake lock is already dead.");
+                            }
+                            mLeasetable.put(lock, lease);
                             Slog.d(TAG, "The lenght of the lease table is " + mLeasetable.size());
                         }
                     }
-                    ResourceStat resourceStat = mRStatManager.getCurrentStat(leaseId);
-                    if (resourceStat != null) {
-                        com.android.server.lease.WakelockStat
-                                wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
-                        wakelockStat.noteAcquire();
+                    if (lease != null) {
+                        ResourceStat resourceStat=  mRStatManager.getCurrentStat(lease.mLeaseId);
+                        if (resourceStat != null) {
+                            com.android.server.lease.WakelockStat
+                                    wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
+                            wakelockStat.noteAcquire();
+                        }
                     }
                 } else {
                     Slog.i(TAG, "LeaseManager is not ready");
@@ -1019,32 +1027,54 @@ public final class PowerManagerService extends SystemService
             /***LeaseOS changes***/
             if (mLeaseManager != null) {
                 Slog.i(TAG, "remove the lease");
-                Long leaseId = mLeasetable.get(lock);
-                {
-                    ResourceStat resourceStat = mRStatManager.getCurrentStat(leaseId);
+
+                WakelockLease lease = mLeasetable.get(lock);
+                if (lease != null) {
+                    ResourceStat resourceStat=  mRStatManager.getCurrentStat(lease.mLeaseId);
                     if (resourceStat != null) {
                         com.android.server.lease.WakelockStat
                                 wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
                         wakelockStat.noteRelease();
                     }
-                }
 
-                if (finalized) {
-                    if (leaseId != 0) {
-                        mLeaseManager.remove(leaseId);
+                    if (finalized) {
+                        mLeaseManager.remove(lease.mLeaseId);
+                        Slog.i(TAG, "Final remove of lease " + lease.mLeaseId);
+                        mLeasetable.remove(lock);
                     }
-                    Slog.i(TAG, "Final remove of lease " + leaseId);
-                    mLeasetable.remove(lock);
+
                 }
             } else {
                 Slog.i(TAG, "LeaseManager is not ready");
             }
             /*********************/
-
             wakeLock.mLock.unlinkToDeath(wakeLock, 0);
             removeWakeLockLocked(wakeLock, index);
         }
     }
+
+    /***LeaseOS changes***/
+    private class WakelockLease implements IBinder.DeathRecipient {
+        public final IBinder mLock;
+        public final long mLeaseId;
+
+        public WakelockLease(IBinder lock, long lid) {
+            mLock = lock;
+            mLeaseId = lid;
+        }
+
+        @Override
+        public void binderDied() {
+            // Wake lock requester is dead. We need to clean up.
+            // The reason that we didn't use the WakeLock's death recipient method is that upon the
+            // release, power manager service will call unlinkToDeath, which will deregister the
+            // recipient. But the lease table lives longer than the release period.
+            mLeaseManager.remove(mLeaseId);
+            Slog.i(TAG, "Death of wakelock. Remove lease " + mLeaseId);
+            mLeasetable.remove(mLock);
+        }
+    }
+    /*********************/
 
     private void handleWakeLockDeath(WakeLock wakeLock) {
         synchronized (mLock) {

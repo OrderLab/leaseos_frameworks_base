@@ -24,7 +24,9 @@ import android.content.Context;
 import java.util.Hashtable;
 
 import android.lease.ILeaseManager;
+import android.lease.LeaseManager;
 import android.lease.ResourceType;
+import android.os.Process;
 import android.util.Log;
 
 /**
@@ -39,10 +41,11 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public static final int FAILED = -1;
 
     // Table of all leases acquired by services.
+
     private final Hashtable<Long, Lease> mLeases = new Hashtable();
 
     //The identifier of the last lease
-    private long mLastLeaseId = 1000;
+    private long mLastLeaseId = LeaseManager.LEASE_ID_START;
 
     private ResourceStatManager mRStatManager;
 
@@ -68,7 +71,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     public long newLease(ResourceType RType, int uid) {
         //TODO: add a lock here
-        if (uid <= 1000) {
+        if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
             return Lease.INVALID_LEASE;
         }
         Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
