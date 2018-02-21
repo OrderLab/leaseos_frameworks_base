@@ -20,11 +20,7 @@
  */
 package com.android.server.lease;
 
-import android.lease.LocationStat;
-import android.lease.ResourceStatManager;
 import android.lease.ResourceType;
-import android.lease.SensorStat;
-import android.lease.WakelockStat;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Process;
@@ -226,7 +222,7 @@ public class Lease {
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime);
+                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId);
                 success = mRStatManager.setResourceStat(mLeaseId, wStat);
                 break;
             case Location:

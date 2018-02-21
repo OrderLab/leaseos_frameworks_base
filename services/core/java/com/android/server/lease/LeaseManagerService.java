@@ -24,10 +24,7 @@ import android.content.Context;
 import java.util.Hashtable;
 
 import android.lease.ILeaseManager;
-import android.lease.ResourceStatManager;
 import android.lease.ResourceType;
-import android.lease.StatHistory;
-import android.lease.WakelockStat;
 import android.util.Log;
 
 /**

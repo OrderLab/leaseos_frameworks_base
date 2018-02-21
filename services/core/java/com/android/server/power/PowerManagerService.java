@@ -72,7 +72,11 @@ import com.android.server.ServiceThread;
 import com.android.server.SystemService;
 import com.android.server.Watchdog;
 import com.android.server.am.BatteryStatsService;
-import android.lease.Lease;
+import com.android.server.lease.Lease;
+
+import com.android.server.lease.ResourceStat;
+import com.android.server.lease.ResourceStatManager;
+import com.android.server.lease.WakelockStat;
 import com.android.server.lights.Light;
 import com.android.server.lights.LightsManager;
 import com.android.server.vr.VrManagerService;
