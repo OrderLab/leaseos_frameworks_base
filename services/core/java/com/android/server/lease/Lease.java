@@ -20,11 +20,15 @@
  */
 package com.android.server.lease;
 
+import android.content.Context;
+import android.databinding.tool.util.L;
+import android.lease.LeaseManager;
 import android.lease.ResourceType;
 
 
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemClock;
 
@@ -34,7 +38,6 @@ import com.android.server.ServiceThread;
  * The struct of lease.
  *
  * TODO: finish the workflow of use wakelock -> check -> policy -> renew part
- *
  */
 public class Lease {
 
@@ -77,7 +80,7 @@ public class Lease {
     private boolean mScheduled;
     private static final String TAG = "LeaseManagerService";
 
-    public Lease(long lid, int Oid, ResourceType type, ResourceStatManager RStatManager) {
+    public Lease(long lid, int Oid, ResourceType type, ResourceStatManager RStatManager, Context context) {
         mLeaseId = lid;
         mOwnerId = Oid;
         mType = type;
@@ -121,6 +124,9 @@ public class Lease {
     }
 
     public boolean isActive() {
+        if (mStatus == LeaseStatus.EXPIRED) {
+            startRenewPolicy();
+        }
         return mStatus != LeaseStatus.ACTIVE;
     }
 
@@ -182,9 +188,17 @@ public class Lease {
         mEndTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.EXPIRED;
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime);
-        //mRStatManager.isActivateEvent(mLeaseId);
+        if (mRStatManager.isActivateEvent(mLeaseId)) {
+            startRenewPolicy();
+        }
         //TODO: release the resource and the policy for deciding the renew time
         return true;
+    }
+
+    public void startRenewPolicy() {
+        //TODO: finish the policy later
+        renew();
+        scheduleChecks();
     }
 
     private Runnable mExpireRunnable = new Runnable() {

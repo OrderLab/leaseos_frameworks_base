@@ -22,7 +22,9 @@ package com.android.server.lease;
 
 import android.content.Context;
 import java.util.Hashtable;
+import java.util.concurrent.locks.Lock;
 
+import android.databinding.tool.util.L;
 import android.lease.ILeaseManager;
 import android.lease.LeaseManager;
 import android.lease.ResourceType;
@@ -39,7 +41,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     //Operation failed
     public static final int FAILED = -1;
-
+    private final Object mLock = new Object();
     // Table of all leases acquired by services.
 
     private final Hashtable<Long, Lease> mLeases = new Hashtable();
@@ -50,6 +52,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private ResourceStatManager mRStatManager;
 
     private Context mContext;
+    private Lock mlock;
 
     public LeaseManagerService(Context context) {
         super();
@@ -70,33 +73,34 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @return the lease id
      */
     public long newLease(ResourceType RType, int uid) {
-        //TODO: add a lock here
-        if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
-            return Lease.INVALID_LEASE;
-        }
-        Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager);
-        StatHistory statHistory;
+        synchronized (mLock) {
+            if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
+                return Lease.INVALID_LEASE;
+            }
+            Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager, mContext);
+            StatHistory statHistory;
 
-        Log.i(TAG, "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
+            Log.i(TAG, "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
 
-        mLeases.put(mLastLeaseId, lease);
-        lease.create();
-        statHistory = new StatHistory();
-        switch (RType) {
-            case Wakelock:
-                WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid);
-                statHistory.addItem(wStat);
-                mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
-                break;
-            case Location:
-                mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
-                break;
-            case Sensor:
-                mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
-                break;
+            mLeases.put(mLastLeaseId, lease);
+            lease.create();
+            statHistory = new StatHistory();
+            switch (RType) {
+                case Wakelock:
+                    WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid);
+                    statHistory.addItem(wStat);
+                    mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
+                    break;
+                case Location:
+                    mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
+                    break;
+                case Sensor:
+                    mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
+                    break;
+            }
+            mLastLeaseId++;
+            return lease.mLeaseId;
         }
-        mLastLeaseId++;
-        return lease.mLeaseId;
     }
 
     /**

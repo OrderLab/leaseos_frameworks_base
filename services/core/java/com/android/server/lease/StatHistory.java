@@ -79,6 +79,7 @@ public class StatHistory {
             }
             index++;
         }
+
         Collections.reverse(staleEventsIndex);
         for (int staleIndex : staleEventsIndex) {
             mEventList.remove(staleIndex);
@@ -87,6 +88,10 @@ public class StatHistory {
         ResourceStat resourceStat = getCurrentStat();
         resourceStat.update(holdingTime, frequency);
 
+    }
+
+    public boolean isActivateEvent () {
+        return mEventList.isEmpty();
     }
 
     public boolean addItem(ResourceStat resourceStat) {

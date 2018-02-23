@@ -948,6 +948,7 @@ public final class PowerManagerService extends SystemService
                         }
                     }
                     if (lease != null) {
+                        mLeaseManager.check(lease.mLeaseId);
                         StatHistory statHistory=  mRStatManager.getStatsHistory(lease.mLeaseId);
                         if (statHistory != null) {
                             statHistory.noteAcquire();

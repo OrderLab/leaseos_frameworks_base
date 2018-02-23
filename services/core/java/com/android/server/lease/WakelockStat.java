@@ -43,6 +43,7 @@ public class WakelockStat extends ResourceStat {
         mFrequency = frequency;
         mCurCPUTime = BatteryMonitor.getInstance().getCPUTime(mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
+
     }
 
     public WakelockStat(long beginTime, int uid) {
