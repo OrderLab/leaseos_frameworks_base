@@ -948,11 +948,9 @@ public final class PowerManagerService extends SystemService
                         }
                     }
                     if (lease != null) {
-                        ResourceStat resourceStat=  mRStatManager.getCurrentStat(lease.mLeaseId);
-                        if (resourceStat != null) {
-                            com.android.server.lease.WakelockStat
-                                    wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
-                            wakelockStat.noteAcquire();
+                        StatHistory statHistory=  mRStatManager.getStatsHistory(lease.mLeaseId);
+                        if (statHistory != null) {
+                            statHistory.noteAcquire();
                         }
                     }
                 } else {
@@ -1030,11 +1028,9 @@ public final class PowerManagerService extends SystemService
 
                 WakelockLease lease = mLeasetable.get(lock);
                 if (lease != null) {
-                    ResourceStat resourceStat=  mRStatManager.getCurrentStat(lease.mLeaseId);
-                    if (resourceStat != null) {
-                        com.android.server.lease.WakelockStat
-                                wakelockStat = (com.android.server.lease.WakelockStat) resourceStat;
-                        wakelockStat.noteRelease();
+                    StatHistory statHistory=  mRStatManager.getStatsHistory(lease.mLeaseId);
+                    if (statHistory != null) {
+                        statHistory.noteRelease();
                     }
 
                     if (finalized) {

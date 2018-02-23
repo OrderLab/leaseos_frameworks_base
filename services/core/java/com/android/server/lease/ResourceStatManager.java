@@ -39,12 +39,13 @@ public class ResourceStatManager {
     private static ResourceStatManager gInstance = null;
 
     public static ResourceStatManager getInstance() {
-        if(gInstance == null)
+        if (gInstance == null) {
             gInstance = new ResourceStatManager();
+        }
         return gInstance;
     }
 
-    private ResourceStatManager(){
+    private ResourceStatManager() {
         mStatsHistorys = new Hashtable<>();
     }
 
@@ -54,8 +55,7 @@ public class ResourceStatManager {
             Slog.e(TAG, "No statHistory for the lease " + leaseId);
             return false;
         }
-        ResourceStat resourceStat = statHistory.getCurrentStat();
-        resourceStat.update(startTime, endTime);
+        statHistory.update(startTime, endTime);
         return true;
     }
 
@@ -68,9 +68,13 @@ public class ResourceStatManager {
         return statHistory.getCurrentStat();
     }
 
+    public StatHistory getStatsHistory(long leaseId) {
+        return mStatsHistorys.get(leaseId);
+    }
     /**
      * Set a new Resource  statHistory
-     * @param leaseId the related lease
+     *
+     * @param leaseId     the related lease
      * @param statHistory the new stat
      * @return true if successfully add one lease
      */
@@ -81,8 +85,9 @@ public class ResourceStatManager {
 
     /**
      * Set a new Resource stat into the statHistory
+     *
      * @param leaseId the related lease
-     * @param rStat the new stat
+     * @param rStat   the new stat
      * @return true if successfully add one lease
      */
     public boolean addResourceStat(long leaseId, ResourceStat rStat) {
@@ -94,7 +99,7 @@ public class ResourceStatManager {
         return statHistory.addItem(rStat);
     }
 
-    public boolean removeStatHistory(long leaseId){
+    public boolean removeStatHistory(long leaseId) {
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             return false;

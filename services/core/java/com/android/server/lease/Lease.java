@@ -182,6 +182,7 @@ public class Lease {
         mEndTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.EXPIRED;
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime);
+        //mRStatManager.isActivateEvent(mLeaseId);
         //TODO: release the resource and the policy for deciding the renew time
         return true;
     }

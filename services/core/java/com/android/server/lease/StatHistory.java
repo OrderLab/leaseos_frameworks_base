@@ -21,10 +21,12 @@
 package com.android.server.lease;
 
 import android.lease.BehaviorType;
+import android.os.SystemClock;
 
 import com.android.server.lease.ResourceStat;
 
 import java.util.ArrayList;
+import java.util.List;
 
 /**
  *
@@ -32,23 +34,47 @@ import java.util.ArrayList;
 public class StatHistory {
     //TODO: Use linked list
     protected ArrayList<ResourceStat> mStats;
+    protected List<Event> mEventList;
+    protected int mOpenIndex;
 
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
 
     public StatHistory() {
         mStats = new ArrayList<ResourceStat>();
+        mEventList = new ArrayList<>();
+        mOpenIndex = -1;
     }
 
     public ResourceStat getCurrentStat() {
         if (mStats.size() == 0) {
             return null;
         }
-        return mStats.get(mStats.size()-1);
+        return mStats.get(mStats.size() - 1);
+    }
+
+    public void update(long startTime, long endTime) {
+        long holdingTime = 0;
+        int frequency = 0;
+        //TODO: remove the processed event list
+        for (Event e : mEventList) {
+            if (e.acquireTime > startTime || e.releaseTime < endTime) {
+                if (e.acquireTime == e.releaseTime) {
+                    holdingTime += endTime - e.acquireTime;
+                } else if (e.acquireTime < startTime) {
+                    holdingTime += e.releaseTime - startTime;
+                } else {
+                    holdingTime += e.acquireTime - e.releaseTime;
+                }
+                frequency++;
+            }
+            ResourceStat resourceStat = getCurrentStat();
+            resourceStat.update(holdingTime, frequency);
+        }
     }
 
     public boolean addItem(ResourceStat resourceStat) {
-       return mStats.add(resourceStat);
+        return mStats.add(resourceStat);
     }
 
     public void remove() {
@@ -60,6 +86,31 @@ public class StatHistory {
         return BehaviorType.FrequencyAsking;
     }
 
+    public void noteAcquire() {
+        Event e = new Event(SystemClock.elapsedRealtime());
+        mEventList.add(e);
+    }
 
+    public void noteRelease() {
+        if (mOpenIndex + 1 >= mEventList.size()) {
+            return;
+        }
+        mOpenIndex++;
+        Event e = mEventList.get(mOpenIndex);
+        if (e.releaseTime > e.acquireTime) {
+            return;
+        }
+        e.releaseTime = SystemClock.elapsedRealtime();
+    }
+
+    public class Event {
+        public long acquireTime;
+        public long releaseTime;
+
+        public Event(long acquireTime) {
+            this.acquireTime = acquireTime;
+            releaseTime = acquireTime;
+        }
+    }
 
 }

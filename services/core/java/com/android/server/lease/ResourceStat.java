@@ -48,7 +48,7 @@ public abstract class ResourceStat {
     //The number of system damage caused by this lease term
     protected long mSystemdamage;
 
-    public abstract void update(long startTime, long endTime);
+    public abstract void update(long holdingTime, int frequency);
 
     public ResourceStat(long BeginTime) {
           mBeginTime = BeginTime;
