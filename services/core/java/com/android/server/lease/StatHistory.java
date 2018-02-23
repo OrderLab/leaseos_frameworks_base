@@ -23,27 +23,25 @@ package com.android.server.lease;
 import android.lease.BehaviorType;
 import android.os.SystemClock;
 
-import com.android.server.lease.ResourceStat;
-
 import java.util.ArrayList;
-import java.util.List;
+import java.util.LinkedList;
 
 /**
  *
  */
 public class StatHistory {
-    //TODO: Use linked list
-    protected ArrayList<ResourceStat> mStats;
-    protected List<Event> mEventList;
+    protected LinkedList<ResourceStat> mStats;
+    protected LinkedList<Event> mEventList;
     protected int mOpenIndex;
-
+    //TODO: remove the old stats
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
 
     public StatHistory() {
-        mStats = new ArrayList<ResourceStat>();
-        mEventList = new ArrayList<>();
+        mStats = new LinkedList<>();
+        mEventList = new LinkedList<>();
         mOpenIndex = -1;
+        frequencyCount = 0;
     }
 
     public ResourceStat getCurrentStat() {
@@ -56,21 +54,38 @@ public class StatHistory {
     public void update(long startTime, long endTime) {
         long holdingTime = 0;
         int frequency = 0;
-        //TODO: remove the processed event list
+        ArrayList<Integer> staleEventsIndex = new ArrayList<>();
         for (Event e : mEventList) {
             if (e.acquireTime > startTime || e.releaseTime < endTime) {
                 if (e.acquireTime == e.releaseTime) {
                     holdingTime += endTime - e.acquireTime;
+                    frequency++;
                 } else if (e.acquireTime < startTime) {
+                    int index = mEventList.indexOf(e);
+                    staleEventsIndex.add(index);
+                    if (index <= mOpenIndex ) {
+                        mOpenIndex --;
+                    }
                     holdingTime += e.releaseTime - startTime;
                 } else {
+                    int index = mEventList.indexOf(e);
+                    staleEventsIndex.add(index);
+                    if (index <= mOpenIndex ) {
+                        mOpenIndex --;
+                    }
                     holdingTime += e.acquireTime - e.releaseTime;
+                    frequency++;
                 }
-                frequency++;
             }
-            ResourceStat resourceStat = getCurrentStat();
-            resourceStat.update(holdingTime, frequency);
         }
+
+        for (int staleIndex : staleEventsIndex) {
+            mEventList.remove(staleIndex);
+        }
+
+        ResourceStat resourceStat = getCurrentStat();
+        resourceStat.update(holdingTime, frequency);
+
     }
 
     public boolean addItem(ResourceStat resourceStat) {
@@ -101,6 +116,7 @@ public class StatHistory {
             return;
         }
         e.releaseTime = SystemClock.elapsedRealtime();
+        frequencyCount ++;
     }
 
     public class Event {
