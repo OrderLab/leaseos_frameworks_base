@@ -24,6 +24,7 @@ import android.lease.BehaviorType;
 import android.os.SystemClock;
 
 import java.util.ArrayList;
+import java.util.Collections;
 import java.util.LinkedList;
 
 /**
@@ -55,20 +56,19 @@ public class StatHistory {
         long holdingTime = 0;
         int frequency = 0;
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
+        int index = 0;
         for (Event e : mEventList) {
             if (e.acquireTime > startTime || e.releaseTime < endTime) {
                 if (e.acquireTime == e.releaseTime) {
                     holdingTime += endTime - e.acquireTime;
                     frequency++;
                 } else if (e.acquireTime < startTime) {
-                    int index = mEventList.indexOf(e);
                     staleEventsIndex.add(index);
                     if (index <= mOpenIndex ) {
                         mOpenIndex --;
                     }
                     holdingTime += e.releaseTime - startTime;
                 } else {
-                    int index = mEventList.indexOf(e);
                     staleEventsIndex.add(index);
                     if (index <= mOpenIndex ) {
                         mOpenIndex --;
@@ -77,8 +77,9 @@ public class StatHistory {
                     frequency++;
                 }
             }
+            index++;
         }
-
+        Collections.reverse(staleEventsIndex);
         for (int staleIndex : staleEventsIndex) {
             mEventList.remove(staleIndex);
         }
