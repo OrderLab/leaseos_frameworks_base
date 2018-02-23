@@ -26,7 +26,7 @@ package com.android.server.lease;
 public class SensorStat extends ResourceStat {
 
     @Override
-    public void update(long startTime, long leaseTerm) {
+    public void update(long holdingTime, int frequency) {
 
     }
 

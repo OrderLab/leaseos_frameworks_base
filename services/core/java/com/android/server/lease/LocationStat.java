@@ -27,7 +27,7 @@ public class LocationStat extends ResourceStat {
 
 
     @Override
-    public void update(long startTime, long leaseTerm) {
+    public void update(long holdingTime, int frequency) {
 
     }
 
