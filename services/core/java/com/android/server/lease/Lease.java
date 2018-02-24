@@ -21,14 +21,9 @@
 package com.android.server.lease;
 
 import android.content.Context;
-import android.databinding.tool.util.L;
-import android.lease.LeaseManager;
 import android.lease.ResourceType;
-
-
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemClock;
 
@@ -44,50 +39,49 @@ public class Lease {
     public static final int INVALID_LEASE = -1;
 
     public static final int DEFAULT_TERM_MS = 30000; // default 30 seconds, may need to reduce it
-
+    private static final String TAG = "LeaseManagerService";
     //The identifier of lease
     protected long mLeaseId;
-
     //The identifier of the owner of lease. This variable usually means the UID
     protected int mOwnerId;
-
     //The token of the request from user process
     protected IBinder mToken;
-
     //The type of resource the lease is assigned
     protected ResourceType mType;
-
     //The status of the lease
     protected LeaseStatus mStatus;
-
     //The record of the history lease term for this lease
     protected ResourceStatManager mRStatManager;
-
     //The length of this lease term
     protected int mLength; // in millisecond
-
     //The BeginTime of this lease term
     protected long mBeginTime;
-
     //The EndTime of this lease term
     protected long mEndTime;
-
     //The number of current lease term
     protected int mRenewal;
-
+    protected Context mContext;
     private ServiceThread mHandlerThread;
     private Handler mHandler;
     private boolean mScheduled;
-    private static final String TAG = "LeaseManagerService";
+    private Runnable mExpireRunnable = new Runnable() {
+        @Override
+        public void run() {
+            expire();
+            cancelChecks();
+        }
+    };
 
-    public Lease(long lid, int Oid, ResourceType type, ResourceStatManager RStatManager, Context context) {
+
+    public Lease(long lid, int Oid, ResourceType type, ResourceStatManager RStatManager,
+            Context context) {
         mLeaseId = lid;
         mOwnerId = Oid;
         mType = type;
         mStatus = LeaseStatus.INVALID;
         mRStatManager = RStatManager;
+        mContext = context;
     }
-
 
     /**
      * Create a new lease and the corresponding resource manager
@@ -187,7 +181,7 @@ public class Lease {
     public boolean expire() {
         mEndTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.EXPIRED;
-        mRStatManager.update(mLeaseId, mBeginTime, mEndTime);
+        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (mRStatManager.isActivateEvent(mLeaseId)) {
             startRenewPolicy();
         }
@@ -200,14 +194,6 @@ public class Lease {
         renew();
         scheduleChecks();
     }
-
-    private Runnable mExpireRunnable = new Runnable() {
-        @Override
-        public void run() {
-            expire();
-            cancelChecks();
-        }
-    };
 
     public void scheduleChecks() {
         if (!mScheduled) {

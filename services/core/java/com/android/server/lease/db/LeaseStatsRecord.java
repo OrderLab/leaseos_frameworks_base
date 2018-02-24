@@ -1,5 +1,5 @@
 /*
- *  @author Yigong HU <hyigong1@jhu.edu>
+ *  @author Yigong Hu <hyigong1@jhu.edu>
  *
  *  The LeaseOS Project
  *
@@ -18,47 +18,32 @@
  *  See the License for the specific language governing permissions and
  *  limitations under the License.
  */
-package com.android.server.lease;
-
-import android.content.Context;
+package com.android.server.lease.db;
 
 /**
  *
  */
-public class SensorStat extends ResourceStat {
+public class LeaseStatsRecord {
+    public int uid;
 
-    @Override
-    public void update(long holdingTime, int frequency, Context context, int uid) {
+    public int wakelockCount;
+    public long wakelockTime;
 
+    public int processStarts;
+    public long processUserTime;
+    public long processSysTime;
+
+    public long bytesSent;
+    public long bytesReceived;
+
+    public long alarmWakeups;
+    public long alarmRunningTime;
+    public long alarmTotalCount;
+
+    public long gpsTime;
+    public long sensorTime;
+
+
+    public LeaseStatsRecord() {
     }
-
-    public SensorStat(long BeginTime) {
-        super(BeginTime);
-    }
-
-    @Override
-    public long getConsumption() {
-        return 0;
-    }
-
-    @Override
-    public long getWork() {
-        return 0;
-    }
-
-    @Override
-    public long getFrequency() {
-        return 0;
-    }
-
-    @Override
-    public long getEfficientRatio() {
-        return 0;
-    }
-
-    @Override
-    public long getDamage() {
-        return 0;
-    }
-
 }

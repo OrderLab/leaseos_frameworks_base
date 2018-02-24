@@ -20,6 +20,7 @@
  */
 package com.android.server.lease;
 
+import android.content.Context;
 import android.lease.BehaviorType;
 import android.os.SystemClock;
 
@@ -52,7 +53,7 @@ public class StatHistory {
         return mStats.get(mStats.size() - 1);
     }
 
-    public void update(long startTime, long endTime) {
+    public void update(long startTime, long endTime, Context context, int uid) {
         long holdingTime = 0;
         int frequency = 0;
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
@@ -86,7 +87,7 @@ public class StatHistory {
         }
 
         ResourceStat resourceStat = getCurrentStat();
-        resourceStat.update(holdingTime, frequency);
+        resourceStat.update(holdingTime, frequency, context, uid);
 
     }
 

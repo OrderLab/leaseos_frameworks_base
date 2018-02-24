@@ -21,26 +21,23 @@
 package com.android.server.lease;
 
 import android.content.Context;
-import java.util.Hashtable;
-import java.util.concurrent.locks.Lock;
-
-import android.databinding.tool.util.L;
 import android.lease.ILeaseManager;
 import android.lease.LeaseManager;
 import android.lease.ResourceType;
 import android.os.Process;
 import android.util.Log;
 
+import java.util.Hashtable;
+import java.util.concurrent.locks.Lock;
+
 /**
  * The central lease manager service
  */
 public class LeaseManagerService extends ILeaseManager.Stub {
 
-    private static final String TAG = "LeaseManagerService";
-
-
     //Operation failed
     public static final int FAILED = -1;
+    private static final String TAG = "LeaseManagerService";
     private final Object mLock = new Object();
     // Table of all leases acquired by services.
 
@@ -58,7 +55,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         super();
         Log.i(TAG, "LeaseManagerService: hahaha");
         mContext = context;
-        mRStatManager = ResourceStatManager.getInstance();
+        mRStatManager = ResourceStatManager.getInstance(mContext);
     }
 
     public ResourceStat getCurrentStat(long leaseId) {
@@ -80,7 +77,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager, mContext);
             StatHistory statHistory;
 
-            Log.i(TAG, "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
+            Log.i(TAG,
+                    "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
 
             mLeases.put(mLastLeaseId, lease);
             lease.create();
@@ -110,7 +108,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @return True if the lease is valid
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean check(long leaseid)  {
+    public boolean check(long leaseid) {
         Lease lease = mLeases.get(leaseid);
         if (lease == null) {
             return false;
@@ -126,7 +124,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @return Ture if the lease expire
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean expire(long leaseid){
+    public boolean expire(long leaseid) {
         Lease lease = mLeases.get(leaseid);
         if (lease == null) {
             return false;
@@ -142,7 +140,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @throws Exception can not find a lease by the leaseid
      */
     public boolean renew(long leaseid) {
-       Lease lease = mLeases.get(leaseid);
+        Lease lease = mLeases.get(leaseid);
         if (lease == null) {
             return false;
         }

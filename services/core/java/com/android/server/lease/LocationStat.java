@@ -20,6 +20,8 @@
  */
 package com.android.server.lease;
 
+import android.content.Context;
+
 /**
  *
  */
@@ -27,7 +29,7 @@ public class LocationStat extends ResourceStat {
 
 
     @Override
-    public void update(long holdingTime, int frequency) {
+    public void update(long holdingTime, int frequency, Context context, int uid) {
 
     }
 

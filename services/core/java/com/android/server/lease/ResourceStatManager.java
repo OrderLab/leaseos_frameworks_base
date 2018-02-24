@@ -21,8 +21,11 @@
 package com.android.server.lease;
 
 
+import android.content.Context;
 import android.lease.BehaviorType;
 import android.util.Slog;
+
+import com.android.server.lease.db.LeaseStatsStorage;
 
 import java.util.Hashtable;
 
@@ -34,28 +37,31 @@ public class ResourceStatManager {
     private static final String TAG = "ResourceStatManager";
 
     protected Hashtable<Long, StatHistory> mStatsHistorys;
+    protected LeaseStatsStorage mLeaseStatsStorage;
 
+    protected Context mContext;
 
     private static ResourceStatManager gInstance = null;
 
-    public static ResourceStatManager getInstance() {
+    public static ResourceStatManager getInstance(Context context) {
         if (gInstance == null) {
-            gInstance = new ResourceStatManager();
+            gInstance = new ResourceStatManager(context);
         }
         return gInstance;
     }
 
-    private ResourceStatManager() {
+    private ResourceStatManager(Context context) {
         mStatsHistorys = new Hashtable<>();
+        mContext = context;
     }
 
-    public boolean update(long leaseId, long startTime, long endTime) {
+    public boolean update(long leaseId, long startTime, long endTime, int uid) {
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             Slog.e(TAG, "No statHistory for the lease " + leaseId);
             return false;
         }
-        statHistory.update(startTime, endTime);
+        statHistory.update(startTime, endTime, mContext, uid);
         return true;
     }
 

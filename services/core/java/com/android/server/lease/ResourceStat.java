@@ -20,6 +20,8 @@
  */
 package com.android.server.lease;
 
+import android.content.Context;
+
 /**
  *
  */
@@ -40,7 +42,7 @@ public abstract class ResourceStat {
     protected long mWork;
 
     //The asking frequency
-    protected long mFrequency;
+    protected int mFrequency;
 
     //The ratio of useful work and useless work
     protected long mEfficientRatio;
@@ -48,7 +50,7 @@ public abstract class ResourceStat {
     //The number of system damage caused by this lease term
     protected long mSystemdamage;
 
-    public abstract void update(long holdingTime, int frequency);
+    public abstract void update(long holdingTime, int frequency, Context contextm, int uid);
 
     public ResourceStat(long BeginTime) {
           mBeginTime = BeginTime;
