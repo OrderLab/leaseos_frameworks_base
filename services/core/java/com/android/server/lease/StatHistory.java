@@ -23,6 +23,7 @@ package com.android.server.lease;
 import android.content.Context;
 import android.lease.BehaviorType;
 import android.os.SystemClock;
+import android.util.Slog;
 
 import java.util.ArrayList;
 import java.util.Collections;
@@ -32,6 +33,7 @@ import java.util.LinkedList;
  *
  */
 public class StatHistory {
+    public static final String TAG = "StatHistory";
     protected LinkedList<ResourceStat> mStats;
     protected LinkedList<Event> mEventList;
     protected int mOpenIndex;
@@ -62,6 +64,7 @@ public class StatHistory {
             if (e.acquireTime > startTime || e.releaseTime < endTime) {
                 if (e.acquireTime == e.releaseTime) {
                     holdingTime += endTime - e.acquireTime;
+                    Slog.d(TAG, "The lease has not been released yet. For process " + uid + ", the Holding time is " + holdingTime );
                     frequency++;
                 } else if (e.acquireTime < startTime) {
                     staleEventsIndex.add(index);
@@ -69,12 +72,14 @@ public class StatHistory {
                         mOpenIndex --;
                     }
                     holdingTime += e.releaseTime - startTime;
+                    Slog.d(TAG, "The lease has been acquired before this lease term. For process " + uid + ", the Holding time is " + holdingTime );
                 } else {
                     staleEventsIndex.add(index);
                     if (index <= mOpenIndex ) {
                         mOpenIndex --;
                     }
-                    holdingTime += e.acquireTime - e.releaseTime;
+                    holdingTime += e.releaseTime - e.acquireTime;
+                    Slog.d(TAG, "The lease has been released. For process " + uid + ", the Holding time is " + holdingTime );
                     frequency++;
                 }
             }
@@ -85,7 +90,7 @@ public class StatHistory {
         for (int staleIndex : staleEventsIndex) {
             mEventList.remove(staleIndex);
         }
-
+        Slog.d(TAG, "For process " + uid + ", the Holding time is " + holdingTime );
         ResourceStat resourceStat = getCurrentStat();
         resourceStat.update(holdingTime, frequency, context, uid);
 

@@ -26,6 +26,7 @@ import android.os.Handler;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.SystemClock;
+import android.util.Slog;
 
 import com.android.server.ServiceThread;
 
@@ -219,6 +220,7 @@ public class Lease {
     public boolean renew() {
         boolean success = false;
 
+        Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength/1000 + " second");
         if (mStatus == LeaseStatus.ACTIVE) {
             return false;
         }

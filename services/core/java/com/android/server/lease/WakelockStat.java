@@ -24,6 +24,7 @@ package com.android.server.lease;
 import android.content.ContentValues;
 import android.content.Context;
 import android.lease.BehaviorType;
+import android.util.Slog;
 
 import com.android.server.lease.db.LeaseStatsRecord;
 import com.android.server.lease.db.LeaseStatsRecordSchema;
@@ -56,6 +57,7 @@ public class WakelockStat extends ResourceStat {
         mCurCPUTime = BatteryMonitor.getInstance().getCPUTime(mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         mLeaseStatsStorage = new LeaseStatsStorage(context);
+        Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
         LeaseStatsRecord record = createRecord(uid);
         writeRecords(context, record);
     }
