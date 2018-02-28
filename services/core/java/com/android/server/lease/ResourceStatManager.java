@@ -75,13 +75,13 @@ public class ResourceStatManager {
         return statHistory.getCurrentStat();
     }
 
-    public boolean isActivateEvent (long leaseId) {
+    public boolean isNoActivateEvent (long leaseId) {
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             Slog.e(TAG, "No statHistory for the lease " + leaseId);
             return false;
         }
-        return statHistory.isActivateEvent();
+        return statHistory.isNoActivateEvent();
     }
 
     public StatHistory getStatsHistory(long leaseId) {

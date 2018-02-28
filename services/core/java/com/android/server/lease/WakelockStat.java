@@ -55,6 +55,7 @@ public class WakelockStat extends ResourceStat {
         mHoldingTime = holdingTime;
         mFrequency = frequency;
         mCurCPUTime = BatteryMonitor.getInstance().getCPUTime(mUid);
+        Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         mLeaseStatsStorage = new LeaseStatsStorage(context);
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
@@ -98,7 +99,7 @@ public class WakelockStat extends ResourceStat {
         values.put(LeaseStatsRecordSchema.COLUMN_ALARMTOTALCOUNT, record.alarmTotalCount);
         values.put(LeaseStatsRecordSchema.COLUMN_GPSTIME, record.gpsTime);
         values.put(LeaseStatsRecordSchema.COLUMN_SENSORTIME, record.sensorTime);
-        mLeaseStatsStorage.insert( values);
+       // mLeaseStatsStorage.insert( values);
     }
 
     public WakelockStat(long beginTime, int uid) {
@@ -107,6 +108,7 @@ public class WakelockStat extends ResourceStat {
         mHoldingTime = 0;
         mUid = uid;
         mBaseCPUTime = BatteryMonitor.getInstance().getCPUTime(mUid);
+        Slog.d(TAG,"The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
 
     public void setEndTime(long endTime) {

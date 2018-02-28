@@ -10174,6 +10174,7 @@ public class BatteryStatsImpl extends BatteryStats {
     public Uid getUidStatsLocked(int uid) {
         Uid u = mUidStats.get(uid);
         if (u == null) {
+            Slog.d(TAG, "Create a new Uid for process " + uid);
             u = new Uid(this, uid);
             mUidStats.put(uid, u);
         }

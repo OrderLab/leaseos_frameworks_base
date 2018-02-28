@@ -25,6 +25,7 @@ import android.os.BatteryStats;
 import android.os.ServiceManager;
 import android.util.ArrayMap;
 import android.util.Slog;
+import android.util.SparseArray;
 
 import com.android.internal.app.IBatteryStats;
 import com.android.internal.os.BatteryStatsHelper;
@@ -68,9 +69,11 @@ public class BatteryMonitor {
     public long getCPUTime(int uid) {
         long totalTime = 0;
         BatteryStatsImpl.Uid u = getStats().getUidStatsLocked(uid);
+        SparseArray<? extends BatteryStats.Uid> uidStats = getStats().getUidStats();
+        Slog.d(TAG,"The size of uidstats is " + uidStats.size());
         ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = u.getProcessStats();
         int NP = processStats.size();
-        Slog.d (TAG, "the processStat size is " + NP);
+        Slog.d (TAG, "the processStat size is " + NP + ", for uid " + u.getUid());
         for (int ip=0; ip<NP; ip++) {
             Slog.d(TAG, "ProcessStat name = " + processStats.keyAt(ip));
             BatteryStatsImpl.Uid.Proc ps = (BatteryStatsImpl.Uid.Proc) processStats.valueAt(ip);

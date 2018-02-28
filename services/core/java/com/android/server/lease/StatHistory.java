@@ -96,7 +96,7 @@ public class StatHistory {
 
     }
 
-    public boolean isActivateEvent () {
+    public boolean isNoActivateEvent () {
         return mEventList.isEmpty();
     }
 

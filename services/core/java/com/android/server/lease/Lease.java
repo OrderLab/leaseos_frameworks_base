@@ -68,8 +68,8 @@ public class Lease {
     private Runnable mExpireRunnable = new Runnable() {
         @Override
         public void run() {
-            expire();
             cancelChecks();
+            expire();
         }
     };
 
@@ -180,12 +180,14 @@ public class Lease {
      * @return true if the lease is successfully expired
      */
     public boolean expire() {
+        Slog.d(TAG, "Starting expire lease " + mLeaseId);
         mEndTime = SystemClock.elapsedRealtime();
         mStatus = LeaseStatus.EXPIRED;
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
-        if (mRStatManager.isActivateEvent(mLeaseId)) {
+        if (!mRStatManager.isNoActivateEvent(mLeaseId)) {
             startRenewPolicy();
         }
+        startRenewPolicy();
         //TODO: release the resource and the policy for deciding the renew time
         return true;
     }
@@ -193,7 +195,6 @@ public class Lease {
     public void startRenewPolicy() {
         //TODO: finish the policy later
         renew();
-        scheduleChecks();
     }
 
     public void scheduleChecks() {

@@ -34,6 +34,7 @@ import android.os.SystemClock;
 import android.os.UserHandle;
 import android.util.ArrayMap;
 import android.util.Log;
+import android.util.Slog;
 import android.util.SparseArray;
 
 import com.android.internal.app.IBatteryStats;
@@ -770,6 +771,7 @@ public final class BatteryStatsHelper {
                     parcel.setDataPosition(0);
                     BatteryStatsImpl stats = com.android.internal.os.BatteryStatsImpl.CREATOR
                             .createFromParcel(parcel);
+                    Slog.d(TAG, "Return stats");
                     return stats;
                 } catch (IOException e) {
                     Log.w(TAG, "Unable to read statistics stream", e);
@@ -778,6 +780,7 @@ public final class BatteryStatsHelper {
         } catch (RemoteException e) {
             Log.w(TAG, "RemoteException:", e);
         }
+        Slog.d(TAG, "Create a new BatteryStats");
         return new BatteryStatsImpl();
     }
 }
