@@ -48,8 +48,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     private ResourceStatManager mRStatManager;
 
-    private Context mContext;
-    private Lock mlock;
+    private final Context mContext;
 
     public LeaseManagerService(Context context) {
         super();
@@ -85,7 +84,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             statHistory = new StatHistory();
             switch (RType) {
                 case Wakelock:
-                    WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid);
+                    WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid, mContext);
                     statHistory.addItem(wStat);
                     mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
                     break;

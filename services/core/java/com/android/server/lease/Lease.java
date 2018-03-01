@@ -39,7 +39,7 @@ public class Lease {
 
     public static final int INVALID_LEASE = -1;
 
-    public static final int DEFAULT_TERM_MS = 30000; // default 30 seconds, may need to reduce it
+    public static final int DEFAULT_TERM_MS = 60 * 1000; // default 60 seconds, may need to reduce it
     private static final String TAG = "LeaseManagerService";
     //The identifier of lease
     protected long mLeaseId;
@@ -61,7 +61,7 @@ public class Lease {
     protected long mEndTime;
     //The number of current lease term
     protected int mRenewal;
-    protected Context mContext;
+    protected final Context mContext;
     private ServiceThread mHandlerThread;
     private Handler mHandler;
     private boolean mScheduled;
@@ -233,7 +233,7 @@ public class Lease {
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId);
+                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId, mContext);
                 success = mRStatManager.addResourceStat(mLeaseId, wStat);
                 break;
             case Location:
