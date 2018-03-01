@@ -376,11 +376,17 @@ public final class BatteryStatsService extends IBatteryStats.Stub
 
     public long getCPUTimeLOS(int uid) {
         if (mContext == null) {
+            Slog.e(TAG, "No context yet for getCPUTimeLOS");
             // Don't do any work yet.
             return -1;
         }
         long totalTime = 0;
         synchronized (mStats) {
+            mStats.addHistoryEventLocked(
+                    SystemClock.elapsedRealtime(),
+                    SystemClock.uptimeMillis(),
+                    BatteryStats.HistoryItem.EVENT_COLLECT_EXTERNAL_STATS,
+                    "getCPUTimeLOS", 0);
             mStats.updateCpuTimeLocked();
             mStats.updateKernelWakelocksLocked();
             BatteryStatsImpl.Uid u = mStats.getUidStatsLocked(uid);
