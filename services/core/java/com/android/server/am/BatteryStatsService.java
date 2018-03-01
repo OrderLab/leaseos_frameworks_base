@@ -374,27 +374,15 @@ public final class BatteryStatsService extends IBatteryStats.Stub
         }
     }
 
-    public long getCPUTime(int uid) {
+    public long getCPUTimeLOS(int uid) {
+        if (mContext == null) {
+            // Don't do any work yet.
+            return -1;
+        }
         long totalTime = 0;
-
-        mContext.enforceCallingOrSelfPermission(
-                Manifest.permission.BATTERY_STATS, null);
-        synchronized (mExternalStatsLock) {
-            if (mContext == null) {
-                // Don't do any work yet.
-                return 0;
-            }
-            synchronized (mStats) {
-                mStats.addHistoryEventLocked(
-                        SystemClock.elapsedRealtime(),
-                        SystemClock.uptimeMillis(),
-                        BatteryStats.HistoryItem.EVENT_COLLECT_EXTERNAL_STATS,
-                        "get-stats", 0);
-
-                mStats.updateCpuTimeLocked();
-                mStats.updateKernelWakelocksLocked();
-            }
-
+        synchronized (mStats) {
+            mStats.updateCpuTimeLocked();
+            mStats.updateKernelWakelocksLocked();
             BatteryStatsImpl.Uid u = mStats.getUidStatsLocked(uid);
             ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = u.getProcessStats();
             int NP = processStats.size();

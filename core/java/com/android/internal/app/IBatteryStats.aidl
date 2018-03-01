@@ -45,7 +45,6 @@ interface IBatteryStats {
     void noteResetCamera();
     void noteResetFlashlight();
 
-    long getCPUTime(int uid);
     // Remaining methods are only used in Java.
     byte[] getStatistics();
 
@@ -140,4 +139,7 @@ interface IBatteryStats {
     oneway void noteBluetoothControllerActivity(in BluetoothActivityEnergyInfo info);
     oneway void noteModemControllerActivity(in ModemActivityInfo info);
     oneway void noteWifiControllerActivity(in WifiActivityEnergyInfo info);
+
+    // LeaseOS changes
+    long getCPUTimeLOS(int uid);
 }
