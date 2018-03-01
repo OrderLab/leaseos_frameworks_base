@@ -118,8 +118,8 @@ public class BatteryMonitor {
        return 0;
 
     }
+    
 
-}
 /*
     public long getCPUTime(int uid, boolean force) {
         long totalTime = 0;

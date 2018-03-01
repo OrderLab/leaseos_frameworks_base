@@ -101,7 +101,7 @@ public class WakelockStat extends ResourceStat {
         values.put(LeaseStatsRecordSchema.COLUMN_ALARMTOTALCOUNT, record.alarmTotalCount);
         values.put(LeaseStatsRecordSchema.COLUMN_GPSTIME, record.gpsTime);
         values.put(LeaseStatsRecordSchema.COLUMN_SENSORTIME, record.sensorTime);
-       // mLeaseStatsStorage.insert( values);
+        mLeaseStatsStorage.insert( values);
     }
 
     public WakelockStat(long beginTime, int uid, Context context) {
