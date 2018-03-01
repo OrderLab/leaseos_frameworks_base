@@ -186,8 +186,9 @@ public class Lease {
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (!mRStatManager.isNoActivateEvent(mLeaseId)) {
             startRenewPolicy();
+        } else {
+            startRenewPolicy();
         }
-        startRenewPolicy();
         //TODO: release the resource and the policy for deciding the renew time
         return true;
     }
@@ -233,7 +234,7 @@ public class Lease {
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId);
+                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId, mContext);
                 success = mRStatManager.addResourceStat(mLeaseId, wStat);
                 break;
             case Location:

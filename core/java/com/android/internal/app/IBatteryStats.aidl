@@ -45,6 +45,7 @@ interface IBatteryStats {
     void noteResetCamera();
     void noteResetFlashlight();
 
+    long getCPUTime(int uid);
     // Remaining methods are only used in Java.
     byte[] getStatistics();
 

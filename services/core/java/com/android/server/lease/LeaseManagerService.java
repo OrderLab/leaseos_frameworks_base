@@ -26,6 +26,7 @@ import android.lease.LeaseManager;
 import android.lease.ResourceType;
 import android.os.Process;
 import android.util.Log;
+import android.util.Slog;
 
 import java.util.Hashtable;
 import java.util.concurrent.locks.Lock;
@@ -82,10 +83,14 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
             mLeases.put(mLastLeaseId, lease);
             lease.create();
+            Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
             statHistory = new StatHistory();
+            Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
             switch (RType) {
                 case Wakelock:
-                    WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid);
+                    Slog.d(TAG, "Start to Create a Wakelock Stat for the " + mLastLeaseId);
+                    WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid, mContext);
+                    Slog.d(TAG, "Start to add wakelock stat into the StatHistory" + mLastLeaseId);
                     statHistory.addItem(wStat);
                     mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
                     break;

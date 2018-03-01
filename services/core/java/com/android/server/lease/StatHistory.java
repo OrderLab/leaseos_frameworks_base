@@ -90,7 +90,7 @@ public class StatHistory {
         for (int staleIndex : staleEventsIndex) {
             mEventList.remove(staleIndex);
         }
-        Slog.d(TAG, "For process " + uid + ", the Holding time is " + holdingTime );
+
         ResourceStat resourceStat = getCurrentStat();
         resourceStat.update(holdingTime, frequency, context, uid);
 

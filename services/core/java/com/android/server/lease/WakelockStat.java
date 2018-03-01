@@ -50,11 +50,13 @@ public class WakelockStat extends ResourceStat {
 
     public LeaseStatsStorage mLeaseStatsStorage;
 
+    protected Context mContext;
+
     @Override
     public void update(long holdingTime, int frequency, Context context, int uid) {
         mHoldingTime = holdingTime;
         mFrequency = frequency;
-        mCurCPUTime = BatteryMonitor.getInstance().getCPUTime(mUid);
+        mCurCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
         Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         mLeaseStatsStorage = new LeaseStatsStorage(context);
@@ -102,12 +104,13 @@ public class WakelockStat extends ResourceStat {
        // mLeaseStatsStorage.insert( values);
     }
 
-    public WakelockStat(long beginTime, int uid) {
+    public WakelockStat(long beginTime, int uid, Context context) {
         super(beginTime);
+        mContext = context;
         mFrequency = 0;
         mHoldingTime = 0;
         mUid = uid;
-        mBaseCPUTime = BatteryMonitor.getInstance().getCPUTime(mUid);
+        mBaseCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
         Slog.d(TAG,"The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
 

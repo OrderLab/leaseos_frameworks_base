@@ -171,6 +171,8 @@ public abstract class BatteryStats implements Parcelable {
      */
     public static final int STATS_SINCE_UNPLUGGED = 2;
 
+    public static final int STATS_ABSOLUTE = 3;
+
     // NOTE: Update this list if you add/change any stats above.
     // These characters are supposed to represent "total", "last", "current", 
     // and "unplugged". They were shortened for efficiency sake.
