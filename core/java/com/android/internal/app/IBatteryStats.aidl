@@ -128,8 +128,8 @@ interface IBatteryStats {
             int chargeUAh);
     long getAwakeTimeBattery();
     long getAwakeTimePlugged();
-    long getCPUTime(int uid);
-    long getOldCPUTime(int uid);
+
+
 
     void noteBleScanStarted(in WorkSource ws);
     void noteBleScanStopped(in WorkSource ws);
@@ -141,4 +141,8 @@ interface IBatteryStats {
     oneway void noteBluetoothControllerActivity(in BluetoothActivityEnergyInfo info);
     oneway void noteModemControllerActivity(in ModemActivityInfo info);
     oneway void noteWifiControllerActivity(in WifiActivityEnergyInfo info);
+
+    // LeaseOS changes
+    long getCPUTimeLOS(int uid);
+    long getOldCPUTime(int uid);
 }

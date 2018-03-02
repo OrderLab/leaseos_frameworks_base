@@ -20,8 +20,10 @@
  */
 package com.android.server.lease.db;
 
+import android.content.ContentValues;
+
 /**
- *
+ * Record of stats related to lease
  */
 public class LeaseStatsRecord {
     public int uid;
@@ -45,5 +47,25 @@ public class LeaseStatsRecord {
 
 
     public LeaseStatsRecord() {
+
+    }
+
+    public ContentValues toContentValues() {
+        ContentValues values = new ContentValues();
+        values.put(LeaseStatsRecordSchema.COLUMN_TIME, System.currentTimeMillis());
+        values.put(LeaseStatsRecordSchema.COLUMN_APP, uid);
+        values.put(LeaseStatsRecordSchema.COLUMN_WAKELOCKTIME, wakelockTime);
+        values.put(LeaseStatsRecordSchema.COLUMN_WAKELOCKCOUNT, wakelockCount);
+        values.put(LeaseStatsRecordSchema.COLUMN_PROCESSSTARTS, processStarts);
+        values.put(LeaseStatsRecordSchema.COLUMN_PROCESSUSERTIME, processUserTime);
+        values.put(LeaseStatsRecordSchema.COLUMN_PROCESSSYSTIME, processSysTime);
+        values.put(LeaseStatsRecordSchema.COLUMN_BYTESRECEIVED, bytesReceived);
+        values.put(LeaseStatsRecordSchema.COLUMN_BYTESSENT, bytesSent);
+        values.put(LeaseStatsRecordSchema.COLUMN_ALARMWAKEUPS, alarmWakeups);
+        values.put(LeaseStatsRecordSchema.COLUMN_ALARMTIME, alarmRunningTime);
+        values.put(LeaseStatsRecordSchema.COLUMN_ALARMTOTALCOUNT, alarmTotalCount);
+        values.put(LeaseStatsRecordSchema.COLUMN_GPSTIME, gpsTime);
+        values.put(LeaseStatsRecordSchema.COLUMN_SENSORTIME, sensorTime);
+        return values;
     }
 }

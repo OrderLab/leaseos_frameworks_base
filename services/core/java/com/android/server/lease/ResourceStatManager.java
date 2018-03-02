@@ -25,7 +25,7 @@ import android.content.Context;
 import android.lease.BehaviorType;
 import android.util.Slog;
 
-import com.android.server.lease.db.LeaseStatsStorage;
+import com.android.server.lease.db.LeaseStatsDBHelper;
 
 import java.util.Hashtable;
 
@@ -37,7 +37,7 @@ public class ResourceStatManager {
     private static final String TAG = "ResourceStatManager";
 
     protected Hashtable<Long, StatHistory> mStatsHistorys;
-    protected LeaseStatsStorage mLeaseStatsStorage;
+    protected LeaseStatsDBHelper mLeaseStatsDBHelper;
 
     protected Context mContext;
 

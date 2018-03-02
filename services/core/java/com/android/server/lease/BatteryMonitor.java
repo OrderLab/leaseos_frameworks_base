@@ -29,9 +29,6 @@ import android.os.SystemClock;
 import android.util.Slog;
 
 import com.android.internal.app.IBatteryStats;
-import com.android.internal.os.BatteryStatsHelper;
-import com.android.internal.os.BatteryStatsImpl;
-import com.android.internal.os.PowerProfile;
 
 
 /**
@@ -42,14 +39,17 @@ public class BatteryMonitor {
     private static BatteryMonitor gInstance = null;
     private static final int REFRESH_BOUND_MS = 5 * 1000; // refresh if the data is 5 seconds old
 
-    private BatteryStatsImpl mStats;
     private final Object mLock = new Object();
 
     private final Context mContext;
+
     private long mLastRefreshTime = 0;
 
+    private IBatteryStats mService;
+
+
     public static BatteryMonitor getInstance(Context context) {
-        Slog.d (TAG, "Get the instance of BatteryMonitor");
+        Slog.d(TAG, "Get the instance of BatteryMonitor");
         if (gInstance == null) {
             gInstance = new BatteryMonitor(context);
         }
@@ -57,118 +57,43 @@ public class BatteryMonitor {
     }
 
     private BatteryMonitor(Context context) {
-        mStats = null;
         mLastRefreshTime = SystemClock.elapsedRealtime();
         mContext = context;
-
     }
 
 
-    private BatteryStatsImpl getStatsLocked() {
-        if (mStats == null) {
-            IBatteryStats batteryInfo = IBatteryStats.Stub.asInterface(
+    private boolean getService() {
+        if (mService == null) {
+            Slog.d(TAG, "Getting IBatteryStatsService");
+            mService = IBatteryStats.Stub.asInterface(
                     ServiceManager.getService(BatteryStats.SERVICE_NAME));
-            if (batteryInfo == null) {
-                Slog.d(TAG, "BatteryInfo is not ready yet");
-                return null;
-            }
-            // The BatteryStatsHelper's way of getting statistics from the IBatteryStats is to
-            // use getStatisticsStream() instead of getStatistics(), which writing the data to
-            // a memory mapped file that can then be read instead of trying to pass the data
-            // through rpc that may run into size limits. So we directly leverage this helper function.
-            Slog.i(TAG, "Starting get BatteryStats");
-            mStats = BatteryStatsHelper.getStats(batteryInfo);
-
-            Slog.d(TAG, "Obtained instance of BatteryStatsImpl, set a power profile");
-            mStats.setPowerProfile(new PowerProfile(mContext));
         }
-        return mStats;
+        return mService != null;
     }
 
     public long getCPUTime(int uid) {
-        long totalTime = 0;
         long now = 0;
-        try{
-            now = SystemClock.elapsedRealtime();
-            IBatteryStats batteryInfo = IBatteryStats.Stub.asInterface(
-                    ServiceManager.getService(BatteryStats.SERVICE_NAME));
+
+        if (!getService()) {
+            Slog.e(TAG, "Fail to get IBatteryStatsService");
+            return -1;
+        }
+
+        now = SystemClock.elapsedRealtime();
+        try {
             if ((now - mLastRefreshTime) > REFRESH_BOUND_MS) {
                 mLastRefreshTime = now;
-                totalTime = batteryInfo.getCPUTime(uid);
-                return totalTime;
+                return mService.getCPUTimeLOS(uid);
             } else {
-                totalTime = batteryInfo.getOldCPUTime(uid);
-                return totalTime;
+                return mService.getOldCPUTime(uid);
             }
         } catch (RemoteException e) {
-            Slog.e(TAG, "Failed to get CPU time: " + e);
-        }
-       return 0;
-
-    }
-
-
-/*
-    public long getCPUTime(int uid, boolean force) {
-        long totalTime = 0;
-
-        synchronized (mLock) {
-            BatteryStatsImpl stats = getStats(force);
-            stats.TAG = "BatteryMonitor-BatteryStatImpl";
-            stats.addHistoryEventLocked(
-                    SystemClock.elapsedRealtime(),
-                    SystemClock.uptimeMillis(),
-                    BatteryStats.HistoryItem.EVENT_COLLECT_EXTERNAL_STATS,
-                    "get-stats", 0);
-            stats.m
-            stats.updateCpuTimeLocked();
-            stats.updateKernelWakelocksLocked();
-
-        BatteryStatsImpl.Uid u  = stats.getUidStatsLocked(uid);
-        ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = u.getProcessStats();
-        int NP = processStats.size();
-        Slog.d (TAG, "the processStat size is " + NP + ", for uid " + u.getUid());
-        if (NP == 0) {
-            stats = getStats(true);
-            u = stats.getUidStatsLocked(uid);
-            processStats = u.getProcessStats();
-            NP = processStats.size();
-        }
-        Slog.d (TAG, "the processStat size is " + NP + ", for uid " + u.getUid());
-        for (int ip=0; ip<NP; ip++) {
-            Slog.d(TAG, "ProcessStat name = " + processStats.keyAt(ip));
-            BatteryStatsImpl.Uid.Proc ps = (BatteryStatsImpl.Uid.Proc) processStats.valueAt(ip);
-            totalTime += ps.getUserTime(BatteryStatsImpl.STATS_ABSOLUTE);
-            totalTime += ps.getSystemTime(BatteryStatsImpl.STATS_ABSOLUTE);
-
-        synchronized (mLock) {
-            if (getStatsLocked() == null) {
-                return -1;
-            }
-            long now = SystemClock.elapsedRealtime();
-            if ((now - mLastRefreshTime) > REFRESH_BOUND_MS) {
-                refreshLocked();
-            }
-            long totalTime = 0;
-            BatteryStatsImpl.Uid u = mStats.getUidStatsLocked(uid);
-            SparseArray<? extends BatteryStats.Uid> uidStats = mStats.getUidStats();
-            Slog.d(TAG,"The size of uidstats is " + uidStats.size());
-            ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = u.getProcessStats();
-            int NP = processStats.size();
-            Slog.d (TAG, "the processStat size is " + NP + ", for uid " + u.getUid());
-            for (int ip=0; ip<NP; ip++) {
-                BatteryStatsImpl.Uid.Proc ps = (BatteryStatsImpl.Uid.Proc) processStats.valueAt(ip);
-                totalTime += ps.getUserTime(BatteryStatsImpl.STATS_CURRENT);
-                totalTime += ps.getSystemTime(BatteryStatsImpl.STATS_CURRENT);
-                Slog.d(TAG, "ProcessStat name = " + processStats.keyAt(ip) + ", CPU time = " + totalTime);
-            }
-            return totalTime;
-
+            Slog.e(TAG, "Fail to getCPUTime for " + uid);
+            return -1;
         }
     }
-
-    }
-}*/
-
 }
+
+
+
 

@@ -26,9 +26,9 @@ import android.content.Context;
 import android.lease.BehaviorType;
 import android.util.Slog;
 
+import com.android.server.lease.db.LeaseStatsDBHelper;
 import com.android.server.lease.db.LeaseStatsRecord;
 import com.android.server.lease.db.LeaseStatsRecordSchema;
-import com.android.server.lease.db.LeaseStatsStorage;
 
 import java.sql.Timestamp;
 import java.util.Date;
@@ -48,8 +48,6 @@ public class WakelockStat extends ResourceStat {
     protected long mBaseCPUTime;
     protected long mCurCPUTime;
 
-    public LeaseStatsStorage mLeaseStatsStorage;
-
     protected Context mContext;
 
     @Override
@@ -59,49 +57,19 @@ public class WakelockStat extends ResourceStat {
         mCurCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
         Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
-        mLeaseStatsStorage = new LeaseStatsStorage(context);
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
         LeaseStatsRecord record = createRecord(uid);
-        writeRecords(context, record);
+        LeaseStatsDBHelper.getInstance(context).insert(record);
     }
 
     public LeaseStatsRecord createRecord(int uid) {
         LeaseStatsRecord record = new LeaseStatsRecord();
         record.wakelockCount = mFrequency;
         record.wakelockTime = mHoldingTime;
-        record.processStarts = 0;
         record.processUserTime = mUsageTime;
         record.processSysTime = mUsageTime;
-        record.alarmRunningTime = 0;
-        record.alarmTotalCount = 0;
-        record.alarmWakeups = 0;
-        record.bytesReceived = 0;
-        record.bytesSent = 0;
-        record.gpsTime = 0;
-        record.sensorTime = 0;
         record.uid = uid;
         return record;
-    }
-
-    public void writeRecords(Context context, LeaseStatsRecord record) {
-        ContentValues values = new ContentValues();
-        Date date = new Date();
-        Timestamp timestamp = new Timestamp(date.getTime());
-        values.put(LeaseStatsRecordSchema.COLUMN_TIME, String.valueOf(timestamp));
-        values.put(LeaseStatsRecordSchema.COLUMN_APP, record.uid);
-        values.put(LeaseStatsRecordSchema.COLUMN_WAKELOCKTIME, record.wakelockTime);
-        values.put(LeaseStatsRecordSchema.COLUMN_WAKELOCKCOUNT, record.wakelockCount);
-        values.put(LeaseStatsRecordSchema.COLUMN_PROCESSSTARTS, record.processStarts);
-        values.put(LeaseStatsRecordSchema.COLUMN_PROCESSUSERTIME, record.processUserTime);
-        values.put(LeaseStatsRecordSchema.COLUMN_PROCESSSYSTIME, record.processSysTime);
-        values.put(LeaseStatsRecordSchema.COLUMN_BYTESRECEIVED, record.bytesReceived);
-        values.put(LeaseStatsRecordSchema.COLUMN_BYTESSENT, record.bytesSent);
-        values.put(LeaseStatsRecordSchema.COLUMN_ALARMWAKEUPS, record.alarmWakeups);
-        values.put(LeaseStatsRecordSchema.COLUMN_ALARMTIME, record.alarmRunningTime);
-        values.put(LeaseStatsRecordSchema.COLUMN_ALARMTOTALCOUNT, record.alarmTotalCount);
-        values.put(LeaseStatsRecordSchema.COLUMN_GPSTIME, record.gpsTime);
-        values.put(LeaseStatsRecordSchema.COLUMN_SENSORTIME, record.sensorTime);
-        mLeaseStatsStorage.insert( values);
     }
 
     public WakelockStat(long beginTime, int uid, Context context) {

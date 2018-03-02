@@ -31,60 +31,11 @@ import java.util.HashMap;
 /**
  *
  */
-public class LeaseStatsStorage {
-
-    public static final String TAG = "LeaseStatsStorage";
-
-    public Context mContext;
-
-    public static final String DBNAME = "leasestats.db";
+public class LeaseStatsDBHelper extends SQLiteOpenHelper{
+    private static final String TAG = "LeaseStatsDBHelper";
+    private static final String DBNAME = "leasestats.db";
     private static final int DATABASE_VERSION = 1;
-
-    private OpenDatabaseHelper mOpenDBHelper;
-    private static final HashMap<String, String> sAppStatsProjectionMap;
-
-    static {
-        sAppStatsProjectionMap = new HashMap<String, String>();
-        for (String str : LeaseStatsRecordSchema.DEFAULT_ENTRY_PROJECTION) {
-            sAppStatsProjectionMap.put(str, str);
-        }
-    }
-
-    public LeaseStatsStorage(Context context) {
-        mContext = context;
-        mOpenDBHelper = new OpenDatabaseHelper(mContext);
-    }
-
-
-    public void insert(ContentValues values) {
-        ContentValues initValues = values;
-        SQLiteDatabase db = mOpenDBHelper.getWritableDatabase();
-        if (initValues == null) {
-            initValues = new ContentValues();
-        }
-        setDefaultStatsContent(initValues);
-        db.beginTransaction();
-        try {
-            db.insert(LeaseStatsRecordSchema.TABLE_NAME, LeaseStatsRecordSchema.COLUMN_APP,
-                    initValues);
-            db.setTransactionSuccessful();
-        } finally {
-            db.endTransaction();
-        }
-    }
-
-    public void setDefaultStatsContent(ContentValues values) {
-        if (!values.containsKey(LeaseStatsRecordSchema.COLUMN_TIME)) {
-            values.put(LeaseStatsRecordSchema.COLUMN_TIME, System.currentTimeMillis());
-        }
-
-    }
-
-    void closeDatabase() {
-        mOpenDBHelper.close();
-    }
-
-    private static final String SQL_CREATE_APPSTATS =
+    private static final String SQL_CREATE_LEASE_STATS =
             "CREATE TABLE " + LeaseStatsRecordSchema.TABLE_NAME + " ("
                     + LeaseStatsRecordSchema._ID + " INTEGER PRIMARY KEY,"
                     + LeaseStatsRecordSchema.COLUMN_TIME + " INTEGER,"
@@ -105,23 +56,52 @@ public class LeaseStatsStorage {
                     + LeaseStatsRecordSchema.COLUMN_SENSORTIME + " INTEGER"
                     + ");";
 
-    protected static final class OpenDatabaseHelper extends SQLiteOpenHelper {
+    private static final HashMap<String, String> sAppStatsProjectionMap;
 
-        OpenDatabaseHelper(Context context) {
-            super(context, DBNAME, null, DATABASE_VERSION);
+    static {
+        sAppStatsProjectionMap = new HashMap<>();
+        for (String str : LeaseStatsRecordSchema.DEFAULT_ENTRY_PROJECTION) {
+            sAppStatsProjectionMap.put(str, str);
         }
+    }
 
-        @Override
-        public void onCreate(SQLiteDatabase db) {
-            db.execSQL(SQL_CREATE_APPSTATS);
-            Log.d(TAG, "LeaseStats table created");
-        }
+    private static LeaseStatsDBHelper sInstance;
 
-        @Override
-        public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
-            db.execSQL("DROP TABLE IF EXISTS " + LeaseStatsRecordSchema.TABLE_NAME);
-            onCreate(db);
-            Log.d(TAG, "AppStats table upgraded");
+    public Context mContext;
+
+    private LeaseStatsDBHelper(Context context) {
+        super(context, DBNAME, null, DATABASE_VERSION);
+        mContext = context;
+    }
+
+    public static synchronized LeaseStatsDBHelper getInstance(Context context) {
+        if (sInstance == null) {
+            return new LeaseStatsDBHelper(context);
         }
+        return sInstance;
+    }
+
+    public void insert(LeaseStatsRecord record) {
+        ContentValues values = record.toContentValues();
+        synchronized (this) {
+            final SQLiteDatabase db = getWritableDatabase();
+            if (db.insert(LeaseStatsRecordSchema.TABLE_NAME, LeaseStatsRecordSchema.COLUMN_APP,
+                    values) < 0) {
+                Log.e(TAG, "Error inserting LeaseStatsRecord " + record);
+            }
+        }
+    }
+
+    @Override
+    public void onCreate(SQLiteDatabase db) {
+        db.execSQL(SQL_CREATE_LEASE_STATS);
+        Log.d(TAG, "LeaseStats table created");
+    }
+
+    @Override
+    public void onUpgrade(SQLiteDatabase db, int oldVersion, int newVersion) {
+        db.execSQL("DROP TABLE IF EXISTS " + LeaseStatsRecordSchema.TABLE_NAME);
+        onCreate(db);
+        Log.d(TAG, "LeaseStats table upgraded");
     }
 }
