@@ -27,7 +27,8 @@ public enum LeaseStatus {
     INVALID("invalid"), //the lease is not activated
     ACTIVE("active"), // the lease is in its lease term
     EXPIRED("expired"), // the lease is expired
-    ABORTED("aborted");// the lease is expired and can not be renewed
+    ABORTED("aborted"),// the lease is expired and can not be renewed
+    CHARGING("charging");
 
     final String status;
 

@@ -55,15 +55,15 @@ public class ResourceStatManager {
         mContext = context;
     }
 
-    public boolean update(long leaseId, long startTime, long endTime, int uid) {
+    public LeaseStatus update(long leaseId, long startTime, long endTime, int uid) {
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             Slog.e(TAG, "No statHistory for the lease " + leaseId);
-            return false;
+            return null;
         }
-        Slog.d(TAG, "Starting update lease " + leaseId + ", the startTime is " + startTime +", the endTime is " + endTime);
-        statHistory.update(startTime, endTime, mContext, uid);
-        return true;
+        Slog.d(TAG, "Starting update lease " + leaseId + ", the startTime is " + startTime
+                + ", the endTime is " + endTime);
+        return statHistory.update(startTime, endTime, mContext, uid);
     }
 
     public ResourceStat getCurrentStat(long leaseId) {
@@ -75,7 +75,7 @@ public class ResourceStatManager {
         return statHistory.getCurrentStat();
     }
 
-    public boolean isNoActivateEvent (long leaseId) {
+    public boolean isNoActivateEvent(long leaseId) {
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             Slog.e(TAG, "No statHistory for the lease " + leaseId);
@@ -87,6 +87,7 @@ public class ResourceStatManager {
     public StatHistory getStatsHistory(long leaseId) {
         return mStatsHistorys.get(leaseId);
     }
+
     /**
      * Set a new Resource  statHistory
      *

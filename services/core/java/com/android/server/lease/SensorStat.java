@@ -28,8 +28,9 @@ import android.content.Context;
 public class SensorStat extends ResourceStat {
 
     @Override
-    public void update(long holdingTime, int frequency, Context context, int uid) {
+    public LeaseStatus update(long holdingTime, int frequency, Context context, int uid) {
 
+        return null;
     }
 
     public SensorStat(long BeginTime) {

@@ -79,8 +79,12 @@ public class BatteryMonitor {
             return -1;
         }
 
-        now = SystemClock.elapsedRealtime();
         try {
+            if (mService.isCharging()) {
+                return StatHistory.IN_CHARGING;
+            }
+
+            now = SystemClock.elapsedRealtime();
             if ((now - mLastRefreshTime) > REFRESH_BOUND_MS) {
                 mLastRefreshTime = now;
                 return mService.getCPUTimeLOS(uid);

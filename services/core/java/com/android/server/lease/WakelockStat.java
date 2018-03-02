@@ -50,16 +50,24 @@ public class WakelockStat extends ResourceStat {
 
     protected Context mContext;
 
+    protected LeaseStatus mStatus;
+
     @Override
-    public void update(long holdingTime, int frequency, Context context, int uid) {
+    public LeaseStatus update(long holdingTime, int frequency, Context context, int uid) {
         mHoldingTime = holdingTime;
         mFrequency = frequency;
         mCurCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
         Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
+        if (mBaseCPUTime == StatHistory.IN_CHARGING) {
+            mStatus = LeaseStatus.CHARGING;
+        } else {
+            mStatus = null;
+        }
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
         LeaseStatsRecord record = createRecord(uid);
         LeaseStatsDBHelper.getInstance(context).insert(record);
+        return mStatus;
     }
 
     public LeaseStatsRecord createRecord(int uid) {
@@ -79,11 +87,19 @@ public class WakelockStat extends ResourceStat {
         mHoldingTime = 0;
         mUid = uid;
         mBaseCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
+        if (mBaseCPUTime == StatHistory.IN_CHARGING) {
+            mStatus = LeaseStatus.CHARGING;
+        } else {
+            mStatus = null;
+        }
         Slog.d(TAG,"The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
-
     public void setEndTime(long endTime) {
         mEndTime = endTime;
+    }
+
+    public String getStatusStr() {
+        return mStatus.toString();
     }
 
     @Override

@@ -39,7 +39,8 @@ public class Lease {
 
     public static final int INVALID_LEASE = -1;
 
-    public static final int DEFAULT_TERM_MS = 60 * 1000; // default 60 seconds, may need to reduce it
+    public static final int DEFAULT_TERM_MS = 60 * 1000;
+            // default 60 seconds, may need to reduce it
     private static final String TAG = "LeaseManagerService";
     //The identifier of lease
     protected long mLeaseId;
@@ -182,9 +183,17 @@ public class Lease {
     public boolean expire() {
         Slog.d(TAG, "Starting expire lease " + mLeaseId);
         mEndTime = SystemClock.elapsedRealtime();
-        mStatus = LeaseStatus.EXPIRED;
-        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
-        if (!mRStatManager.isNoActivateEvent(mLeaseId)) {
+        if(mStatus != LeaseStatus.CHARGING) {
+            mStatus = LeaseStatus.EXPIRED;
+        }
+        LeaseStatus status = mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
+        if (status == LeaseStatus.CHARGING) {
+            mStatus = LeaseStatus.CHARGING;
+        }
+        if(mStatus == LeaseStatus.CHARGING) {
+            Slog.d(TAG,"The phone is in charing. Directly renew the lease");
+            startRenewPolicy();
+        } else if (!mRStatManager.isNoActivateEvent(mLeaseId)) {
             startRenewPolicy();
         } else {
             startRenewPolicy();
@@ -222,19 +231,23 @@ public class Lease {
     public boolean renew() {
         boolean success = false;
 
-        Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength/1000 + " second");
+        Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
         if (mStatus == LeaseStatus.ACTIVE) {
             return false;
         }
 
         mRenewal++;
         mBeginTime = SystemClock.elapsedRealtime();
-        mStatus = LeaseStatus.ACTIVE;
         // create a new stat for the new lease term
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
                 WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId, mContext);
+                if (wStat.mStatus == LeaseStatus.CHARGING) {
+                    mStatus = LeaseStatus.CHARGING;
+                } else {
+                    mStatus = LeaseStatus.ACTIVE;
+                }
                 success = mRStatManager.addResourceStat(mLeaseId, wStat);
                 break;
             case Location:

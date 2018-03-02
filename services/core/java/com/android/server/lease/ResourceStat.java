@@ -50,7 +50,7 @@ public abstract class ResourceStat {
     //The number of system damage caused by this lease term
     protected long mSystemdamage;
 
-    public abstract void update(long holdingTime, int frequency, Context contextm, int uid);
+    public abstract LeaseStatus update(long holdingTime, int frequency, Context contextm, int uid);
 
     public ResourceStat(long BeginTime) {
           mBeginTime = BeginTime;

@@ -41,6 +41,8 @@ public class StatHistory {
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
 
+    protected final static int IN_CHARGING = -2;
+
     public StatHistory() {
         mStats = new LinkedList<>();
         mEventList = new LinkedList<>();
@@ -55,7 +57,7 @@ public class StatHistory {
         return mStats.get(mStats.size() - 1);
     }
 
-    public void update(long startTime, long endTime, Context context, int uid) {
+    public LeaseStatus update(long startTime, long endTime, Context context, int uid) {
         long holdingTime = 0;
         int frequency = 0;
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
@@ -92,7 +94,7 @@ public class StatHistory {
         }
 
         ResourceStat resourceStat = getCurrentStat();
-        resourceStat.update(holdingTime, frequency, context, uid);
+        return resourceStat.update(holdingTime, frequency, context, uid);
 
     }
 

@@ -88,6 +88,9 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             switch (RType) {
                 case Wakelock:
                     WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid, mContext);
+                    if( wStat.mStatus == LeaseStatus.CHARGING) {
+                        lease.mStatus = LeaseStatus.CHARGING;
+                    }
                     statHistory.addItem(wStat);
                     mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
                     break;
