@@ -99,7 +99,7 @@ public class BatteryStatsImpl extends BatteryStats {
     private static final boolean DEBUG = false;
     public static final boolean DEBUG_ENERGY = true;
     private static final boolean DEBUG_ENERGY_CPU = DEBUG_ENERGY;
-    private static final boolean DEBUG_HISTORY = false;
+    private static final boolean DEBUG_HISTORY = true;
     private static final boolean USE_OLD_HISTORY = false;   // for debugging.
 
     // TODO: remove "tcp" from network methods, since we measure total stats.

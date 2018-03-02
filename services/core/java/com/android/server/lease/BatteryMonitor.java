@@ -40,22 +40,13 @@ import com.android.internal.os.PowerProfile;
 public class BatteryMonitor {
     private static final String TAG = "BatterMonitor";
     private static BatteryMonitor gInstance = null;
-    private static final int REFRESH_RATE_MS = 5 * 1000; // refresh if the data is 5 seconds old
+    private static final int REFRESH_BOUND_MS = 5 * 1000; // refresh if the data is 5 seconds old
 
     private BatteryStatsImpl mStats;
     private final Object mLock = new Object();
 
     private final Context mContext;
-    private long mLastRefreshTime;
-
-    private Runnable mRefresher = new Runnable() {
-        @Override
-        public void run() {
-            synchronized (mLock) {
-                refreshLocked();
-            }
-        }
-    };
+    private long mLastRefreshTime = 0;
 
     public static BatteryMonitor getInstance(Context context) {
         Slog.d (TAG, "Get the instance of BatteryMonitor");
@@ -67,20 +58,9 @@ public class BatteryMonitor {
 
     private BatteryMonitor(Context context) {
         mStats = null;
-        mLastRefreshTime = -1;
-        mContext = context;
-    }
-
-    private void refreshLocked() {
-        Slog.d(TAG, "Refreshing data of BatteryStatsImpl");
-        mStats.addHistoryEventLocked(
-                SystemClock.elapsedRealtime(),
-                SystemClock.uptimeMillis(),
-                BatteryStats.HistoryItem.EVENT_COLLECT_EXTERNAL_STATS,
-                "get-stats", 0);
-        mStats.updateCpuTimeLocked();
-        mStats.updateKernelWakelocksLocked();
         mLastRefreshTime = SystemClock.elapsedRealtime();
+        mContext = context;
+
     }
 
 
@@ -107,18 +87,26 @@ public class BatteryMonitor {
 
     public long getCPUTime(int uid) {
         long totalTime = 0;
+        long now = 0;
         try{
+            now = SystemClock.elapsedRealtime();
             IBatteryStats batteryInfo = IBatteryStats.Stub.asInterface(
                     ServiceManager.getService(BatteryStats.SERVICE_NAME));
-            totalTime = batteryInfo.getCPUTime(uid);
-            return totalTime;
+            if ((now - mLastRefreshTime) > REFRESH_BOUND_MS) {
+                mLastRefreshTime = now;
+                totalTime = batteryInfo.getCPUTime(uid);
+                return totalTime;
+            } else {
+                totalTime = batteryInfo.getOldCPUTime(uid);
+                return totalTime;
+            }
         } catch (RemoteException e) {
             Slog.e(TAG, "Failed to get CPU time: " + e);
         }
        return 0;
 
     }
-    
+
 
 /*
     public long getCPUTime(int uid, boolean force) {
@@ -158,7 +146,7 @@ public class BatteryMonitor {
                 return -1;
             }
             long now = SystemClock.elapsedRealtime();
-            if ((now - mLastRefreshTime) > REFRESH_RATE_MS) {
+            if ((now - mLastRefreshTime) > REFRESH_BOUND_MS) {
                 refreshLocked();
             }
             long totalTime = 0;

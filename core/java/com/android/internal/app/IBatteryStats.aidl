@@ -45,7 +45,6 @@ interface IBatteryStats {
     void noteResetCamera();
     void noteResetFlashlight();
 
-    long getCPUTime(int uid);
     // Remaining methods are only used in Java.
     byte[] getStatistics();
 
@@ -129,6 +128,8 @@ interface IBatteryStats {
             int chargeUAh);
     long getAwakeTimeBattery();
     long getAwakeTimePlugged();
+    long getCPUTime(int uid);
+    long getOldCPUTime(int uid);
 
     void noteBleScanStarted(in WorkSource ws);
     void noteBleScanStopped(in WorkSource ws);
