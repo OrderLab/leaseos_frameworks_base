@@ -71,6 +71,15 @@ public class BatteryMonitor {
         return mService != null;
     }
 
+    public boolean isCharging() {
+        try {
+            return mService.isCharging();
+        } catch (RemoteException e) {
+            e.printStackTrace();
+        }
+        return false;
+    }
+
     public long getCPUTime(int uid) {
         long now = 0;
 
@@ -80,11 +89,6 @@ public class BatteryMonitor {
         }
 
         try {
-            //TODO: make a seprated api
-            if (mService.isCharging()) {
-                return StatHistory.IN_CHARGING;
-            }
-
             now = SystemClock.elapsedRealtime();
             if (mLastRefreshTime < 0 || (now - mLastRefreshTime) > REFRESH_BOUND_MS) {
                 mLastRefreshTime = now;
