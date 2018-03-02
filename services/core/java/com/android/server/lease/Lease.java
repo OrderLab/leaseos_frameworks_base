@@ -196,7 +196,7 @@ public class Lease {
         } else if (!mRStatManager.isNoActivateEvent(mLeaseId)) {
             startRenewPolicy();
         } else {
-            startRenewPolicy();
+            Slog.i(TAG, "The lease is expired. Wait for the process " + mOwnerId + "to use Wakelock again");
         }
         //TODO: release the resource and the policy for deciding the renew time
         return true;

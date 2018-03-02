@@ -143,6 +143,6 @@ interface IBatteryStats {
     oneway void noteWifiControllerActivity(in WifiActivityEnergyInfo info);
 
     // LeaseOS changes
-    long getCPUTimeLOS(int uid);
-    long getOldCPUTime(int uid);
+    long getCPUTimeLOS(int uid, boolean force);
+
 }

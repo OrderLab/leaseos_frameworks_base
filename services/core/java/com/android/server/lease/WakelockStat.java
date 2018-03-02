@@ -56,6 +56,7 @@ public class WakelockStat extends ResourceStat {
     public LeaseStatus update(long holdingTime, int frequency, Context context, int uid) {
         mHoldingTime = holdingTime;
         mFrequency = frequency;
+        //TODO: Do not updat the CPU if the phone is in charge
         mCurCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
         Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         if (mBaseCPUTime == StatHistory.IN_CHARGING) {

@@ -930,7 +930,6 @@ public final class PowerManagerService extends SystemService
 
                 /***LeaseOS changes***/
                 if (mLeaseManager != null) {
-                    //TODO: there is a bug that the service will create leases for same process for many times
                     WakelockLease lease = mLeasetable.get(lock);
                     if (lease == null) {
                         Slog.i(TAG, "create new lease");

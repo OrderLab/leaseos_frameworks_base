@@ -43,7 +43,7 @@ public class BatteryMonitor {
 
     private final Context mContext;
 
-    private long mLastRefreshTime = 0;
+    private long mLastRefreshTime = -1;
 
     private IBatteryStats mService;
 
@@ -80,16 +80,18 @@ public class BatteryMonitor {
         }
 
         try {
+            //TODO: make a seprated api
             if (mService.isCharging()) {
                 return StatHistory.IN_CHARGING;
             }
 
             now = SystemClock.elapsedRealtime();
-            if ((now - mLastRefreshTime) > REFRESH_BOUND_MS) {
+            if (mLastRefreshTime < 0 || (now - mLastRefreshTime) > REFRESH_BOUND_MS) {
                 mLastRefreshTime = now;
-                return mService.getCPUTimeLOS(uid);
+                //TODO: merge two api to one
+                return mService.getCPUTimeLOS(uid, true);
             } else {
-                return mService.getOldCPUTime(uid);
+                return mService.getCPUTimeLOS(uid, false);
             }
         } catch (RemoteException e) {
             Slog.e(TAG, "Fail to getCPUTime for " + uid);
