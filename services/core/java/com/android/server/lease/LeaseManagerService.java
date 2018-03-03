@@ -22,14 +22,17 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.ILeaseManager;
+import android.lease.ILeaseProxy;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.ResourceType;
 import android.os.Process;
+import android.os.RemoteException;
+import android.util.LongSparseArray;
 import android.util.Slog;
 
-import java.util.Hashtable;
-import java.util.concurrent.locks.Lock;
+import java.util.HashMap;
+import java.util.Map;
 
 /**
  * The central lease manager service
@@ -40,9 +43,11 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public static final int FAILED = -1;
     private static final String TAG = "LeaseManagerService";
     private final Object mLock = new Object();
-    // Table of all leases acquired by services.
 
-    private final Hashtable<Long, Lease> mLeases = new Hashtable();
+    // Table of all leases acquired by services.
+    private final LongSparseArray<Lease> mLeases = new LongSparseArray<>();
+
+
 
     //The identifier of the last lease
     private long mLastLeaseId = LeaseManager.LEASE_ID_START;
@@ -78,7 +83,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             StatHistory statHistory;
             Slog.i(TAG,
                     "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
-
             mLeases.put(mLastLeaseId, lease);
             lease.create();
             Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
@@ -108,45 +112,46 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     /**
      * Check the validation of the lease
      *
-     * @param leaseid The identifier of lease
+     * @param leaseId The identifier of lease
      * @return True if the lease is valid
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean check(long leaseid) {
-        Lease lease = mLeases.get(leaseid);
-        if (lease == null) {
-            return false;
+    public boolean check(long leaseId) {
+        synchronized (mLock) {
+            Lease lease = mLeases.get(leaseId);
+            return lease != null && lease.isActive();
         }
-        return lease.isActive();
     }
 
 
     /**
      * Expire the lease
      *
-     * @param leaseid The identifier of lease
+     * @param leaseId The identifier of lease
      * @return Ture if the lease expire
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean expire(long leaseid) {
-        Lease lease = mLeases.get(leaseid);
-        if (lease == null) {
-            return false;
+    public boolean expire(long leaseId) {
+        synchronized (mLock) {
+            Lease lease = mLeases.get(leaseId);
+            return lease != null && lease.expire();
         }
-        return lease.expire();
     }
 
     /**
      * Renew the lease
      *
-     * @param leaseid The identifier of lease
+     * @param leaseId The identifier of lease
      * @return Ture if the lease is renewed
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean renew(long leaseid) {
-        Lease lease = mLeases.get(leaseid);
-        if (lease == null) {
-            return false;
+    public boolean renew(long leaseId) {
+        Lease lease;
+        synchronized (mLock) {
+            lease = mLeases.get(leaseId);
+            if (lease == null) {
+                return false;
+            }
         }
         return lease.startRenewPolicy();
     }
@@ -154,33 +159,39 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     /**
      * Remove the lease
      *
-     * @param leaseid The identifier of lease
+     * @param leaseId The identifier of lease
      * @return Ture if the lease is removed from lease table
      * @throws Exception can not find a lease by the leaseid
      */
-    public boolean remove(long leaseid) {
-        Lease lease = mLeases.get(leaseid);
-        if (lease == null) {
-            Slog.d(TAG, "remove: can not find lease for id:" + leaseid);
-            return false;
+    public boolean remove(long leaseId) {
+        Lease lease;
+        synchronized (mLock) {
+            lease = mLeases.get(leaseId);
+            if (lease == null) {
+                Slog.d(TAG, "remove: can not find lease for id:" + leaseId);
+                return false;
+            }
         }
         //TODO: how to handler the logic of true or false
         lease.cancelChecks();
         mRStatManager.removeStatHistory(lease.mLeaseId);
-        mLeases.remove(leaseid);
+        mLeases.remove(leaseId);
         return true;
     }
 
     public void noteEvent(long leaseId, LeaseEvent event) {
-        Lease lease = mLeases.get(leaseId);
-        if (lease == null || !lease.isActive()) {
-            // if lease is no longer active, ignore the event
-            return;
-        }
-        StatHistory statHistory = mRStatManager.getStatsHistory(leaseId);
-        if (statHistory == null) {
-            Slog.e(TAG, "No stat history exist for lease " + leaseId + ", possibly a bug");
-            return;
+        StatHistory statHistory;
+        synchronized (mLock) {
+            Lease lease = mLeases.get(leaseId);
+            if (lease == null || !lease.isActive()) {
+                // if lease is no longer active, ignore the event
+                return;
+            }
+            statHistory = mRStatManager.getStatsHistory(leaseId);
+            if (statHistory == null) {
+                Slog.e(TAG, "No stat history exist for lease " + leaseId + ", possibly a bug");
+                return;
+            }
         }
         switch (event) {
             case WAKELOCK_ACQUIRE:
@@ -192,5 +203,10 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             default:
                 Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
         }
+    }
+
+    @Override
+    public boolean registerProxy(int type, String name, ILeaseProxy proxy) throws RemoteException {
+        return false;
     }
 }
