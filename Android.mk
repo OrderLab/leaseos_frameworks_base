@@ -197,6 +197,7 @@ LOCAL_SRC_FILES += \
 	core/java/android/hardware/soundtrigger/IRecognitionStatusCallback.aidl \
 	core/java/android/hardware/usb/IUsbManager.aidl \
 	core/java/android/lease/ILeaseManager.aidl \
+	core/java/android/lease/ILeaseProxy.aidl \
 	core/java/android/net/ICaptivePortal.aidl \
 	core/java/android/net/IConnectivityManager.aidl \
 	core/java/android/net/IConnectivityMetricsLogger.aidl \

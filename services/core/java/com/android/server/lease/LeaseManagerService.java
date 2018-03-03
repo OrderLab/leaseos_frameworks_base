@@ -69,7 +69,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @param uid   the identifier of caller
      * @return the lease id
      */
-    public long newLease(ResourceType RType, int uid) {
+    public long create(ResourceType RType, int uid) {
         synchronized (mLock) {
             if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
                 return Lease.INVALID_LEASE;

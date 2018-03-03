@@ -29,28 +29,18 @@ import android.lease.ResourceType;
  */
 interface ILeaseManager {
 
-     /**
-     *  create a lease
-     **/
-    long newLease(in ResourceType RType, int uid);
+    /* create a lease */
+    long create(in ResourceType RType, int uid);
 
-    /**
-    *  check whether the lease is active or not
-    **/
+    /* check whether the lease is active or not */
     boolean check(long leaseId);
 
-    /**
-    * expire the lease
-    **/
+    /*  expire the lease */
     boolean expire(long leaseId);
 
-    /**
-    * renew the lease
-    **/
+    /* renew the lease */
     boolean renew(long leaseId);
 
-    /**
-    * remove the lease
-    **/
+    /* remove the lease */
     boolean remove(long leaseId);
 }

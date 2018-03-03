@@ -30,6 +30,7 @@ import android.util.Log;
 public final class LeaseManager {
     private static final String TAG = "LeaseManager";
 
+    public static final int INVALID_LEASE = -1;
     public static final long LEASE_ID_START = 1000;
 
     private ILeaseManager mService;
@@ -46,10 +47,10 @@ public final class LeaseManager {
      * @param uid the owner id
      * @return lease id
      */
-    public long newLease(ResourceType RType, int uid) {
+    public long create(ResourceType RType, int uid) {
         long leaseId = -1;
         try {
-           leaseId = mService.newLease(RType, uid);
+           leaseId = mService.create(RType, uid);
         } catch (RemoteException e) {
             Log.wtf(TAG, "Fail to create new lease");
         }

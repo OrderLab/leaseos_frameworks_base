@@ -511,9 +511,8 @@ public final class PowerManagerService extends SystemService
             = new ArrayList<PowerManagerInternal.LowPowerModeListener>();
 
     /*** LeaseOS changes ***/
-    private LeaseManager mLeaseManager;
-    private Hashtable <IBinder, WakelockLease> mLeasetable;
-    private ResourceStatManager mRStatManager;
+    private WakelockLeaseProxy mLeaseProxy;
+
     /************************/
     // True if we are currently in VR Mode.
     private boolean mIsVrModeEnabled;
@@ -705,10 +704,8 @@ public final class PowerManagerService extends SystemService
             mDirty |= DIRTY_BATTERY_STATE;
             updatePowerStateLocked();
 
-            /*** LeaseOS changes***/
-            mLeaseManager = (LeaseManager) mContext.getSystemService(Context.LEASE_SERVICE);
-            mLeasetable = new Hashtable<>();
-            mRStatManager = ResourceStatManager.getInstance(mContext);
+            /*** LeaseOS changes ***/
+            mLeaseProxy = new WakelockLeaseProxy(mContext);
             /**********************/
         }
     }
@@ -928,35 +925,15 @@ public final class PowerManagerService extends SystemService
                 setWakeLockDisabledStateLocked(wakeLock);
                 notifyAcquire = true;
 
-                /***LeaseOS changes***/
-                if (mLeaseManager != null) {
-                    //TODO: there is a bug that the service will create leases for same process for many times
-                    WakelockLease lease = mLeasetable.get(lock);
-                    if (lease == null) {
-                        Slog.i(TAG, "create new lease");
-                        long leaseid = mLeaseManager.newLease(ResourceType.Wakelock, uid);
-                        if (leaseid == Lease.INVALID_LEASE) {
-                            Slog.i(TAG,"Skip lease for system service");
-                        } else {
-                            lease = new WakelockLease(lock, leaseid);
-                            try {
-                                lock.linkToDeath(lease, 0);
-                            } catch (RemoteException ex) {
-                                throw new IllegalArgumentException("Wake lock is already dead.");
-                            }
-                            mLeasetable.put(lock, lease);
-                            Slog.d(TAG, "The lenght of the lease table is " + mLeasetable.size());
-                        }
-                    }
-                    if (lease != null) {
-                        mLeaseManager.check(lease.mLeaseId);
-                        StatHistory statHistory=  mRStatManager.getStatsHistory(lease.mLeaseId);
-                        if (statHistory != null) {
-                            statHistory.noteAcquire();
-                        }
-                    }
+                /*** LeaseOS changes ***/
+                if (mLeaseProxy.exempt(packageName, uid)) {
+                    Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                 } else {
-                    Slog.i(TAG, "LeaseManager is not ready");
+                    //TODO: there is a bug that the service will create leases for same process for many times
+                    WakelockLease lease = mLeaseProxy.getOrCreateLease(lock, uid);
+                    if (lease != null) {
+                        // TODO: invoke check and notify ResourceStatManager
+                    }
                 }
                 /*********************/
             }
@@ -1025,25 +1002,15 @@ public final class PowerManagerService extends SystemService
                 mRequestWaitForNegativeProximity = true;
             }
             /***LeaseOS changes***/
-            if (mLeaseManager != null) {
-                Slog.i(TAG, "remove the lease");
 
-                WakelockLease lease = mLeasetable.get(lock);
-                if (lease != null) {
-                    StatHistory statHistory=  mRStatManager.getStatsHistory(lease.mLeaseId);
-                    if (statHistory != null) {
-                        statHistory.noteRelease();
-                    }
-
-                    if (finalized) {
-                        mLeaseManager.remove(lease.mLeaseId);
-                        Slog.i(TAG, "Final remove of lease " + lease.mLeaseId);
-                        mLeasetable.remove(lock);
-                    }
-
+            WakelockLease lease = mLeaseProxy.getLease(lock);
+            if (lease != null) {
+                Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
+                // TODO: notify ResourceStatManager about the release event
+                if (finalized) {
+                    Slog.i(TAG, "Final removal of lease " + lease.mLeaseId);
+                    mLeaseProxy.removeLease(lease);
                 }
-            } else {
-                Slog.i(TAG, "LeaseManager is not ready");
             }
             /*********************/
             wakeLock.mLock.unlinkToDeath(wakeLock, 0);
@@ -1051,14 +1018,11 @@ public final class PowerManagerService extends SystemService
         }
     }
 
-    /***LeaseOS changes***/
-    private class WakelockLease implements IBinder.DeathRecipient {
-        public final IBinder mLock;
-        public final long mLeaseId;
+    /*** LeaseOS changes ***/
+    private class WakelockLease extends LeaseDescriptor<IBinder> implements IBinder.DeathRecipient {
 
         public WakelockLease(IBinder lock, long lid) {
-            mLock = lock;
-            mLeaseId = lid;
+            super(lock, lid);
         }
 
         @Override
@@ -1067,9 +1031,35 @@ public final class PowerManagerService extends SystemService
             // The reason that we didn't use the WakeLock's death recipient method is that upon the
             // release, power manager service will call unlinkToDeath, which will deregister the
             // recipient. But the lease table lives longer than the release period.
-            mLeaseManager.remove(mLeaseId);
+            mLeaseProxy.removeLease(this);
             Slog.i(TAG, "Death of wakelock. Remove lease " + mLeaseId);
-            mLeasetable.remove(mLock);
+        }
+    }
+
+    private class WakelockLeaseProxy extends LeaseProxy<IBinder, WakelockLease> {
+        public WakelockLeaseProxy(Context context) {
+            super(context);
+        }
+
+        @Override
+        public WakelockLease newLease(IBinder key, long leaseId) {
+            WakelockLease lease = new WakelockLease(key, leaseId);
+            try {
+                key.linkToDeath(lease, 0);
+            } catch (RemoteException ex) {
+                throw new IllegalArgumentException("Wake lock is already dead.");
+            }
+            return lease;
+        }
+
+        @Override
+        public void expire(long leaseId) throws RemoteException {
+            // TODO: implement the expire method
+        }
+
+        @Override
+        public void renew(long leaseId) throws RemoteException {
+            // TODO: implement the renewmethod
         }
     }
     /*********************/
