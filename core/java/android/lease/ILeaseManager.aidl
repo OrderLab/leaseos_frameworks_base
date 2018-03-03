@@ -22,6 +22,7 @@ package android.lease;
 
 import android.lease.ResourceType;
 import android.lease.LeaseEvent;
+import android.lease.ILeaseProxy;
 
 /**
  * Lease manager interfaces
@@ -47,4 +48,7 @@ interface ILeaseManager {
 
     /* report an event about lease with id leaseId */
     void noteEvent(long leaseId, in LeaseEvent event);
+
+    /* register a lease proxy with the lease manager service */
+    boolean registerProxy(int type, String name, ILeaseProxy proxy);
 }

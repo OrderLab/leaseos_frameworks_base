@@ -28,8 +28,14 @@ package android.lease;
  */
 oneway interface ILeaseProxy {
     /* perform the actual expiration for a specific type of lease */
-    void expire(long leaseId);
+    void onExpire(long leaseId);
 
     /* perform the actual renewal for a specific type of lease */
-    void renew(long leaseId);
+    void onRenew(long leaseId);
+
+    /* Reject any new lease request through this proxy for a given UID */
+    void onReject(int uid);
+
+    /* Freeze a given UID from any new lease request through this proxy for a given period */
+    void onFreeze(int uid, long freezeDuration, int freeCount);
 }

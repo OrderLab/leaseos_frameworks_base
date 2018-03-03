@@ -42,7 +42,6 @@ import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.LeaseProxy;
 import android.lease.RequestFreezer;
-import android.lease.ResourceType;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.BatteryManagerInternal;
@@ -83,9 +82,6 @@ import com.android.server.ServiceThread;
 import com.android.server.SystemService;
 import com.android.server.Watchdog;
 import com.android.server.am.BatteryStatsService;
-import com.android.server.lease.Lease;
-import com.android.server.lease.ResourceStatManager;
-import com.android.server.lease.StatHistory;
 import com.android.server.lights.Light;
 import com.android.server.lights.LightsManager;
 import com.android.server.vr.VrManagerService;
@@ -955,6 +951,8 @@ public final class PowerManagerService extends SystemService
                         //TODO: there is a bug that the service will create leases for same process for many times
                         WakelockLease lease = mLeaseProxy.getOrCreateLease(lock, uid);
                         if (lease != null) {
+                            // hold the internal data structure in case we need it later
+                            lease.mLeaseValue = wakeLock;
                             // TODO: invoke check and notify ResourceStatManager
                             mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                         }
@@ -1048,9 +1046,10 @@ public final class PowerManagerService extends SystemService
 
     /*** LeaseOS changes ***/
     private class WakelockLease extends LeaseDescriptor<IBinder> implements IBinder.DeathRecipient {
+        public WakeLock mLeaseValue;
 
-        public WakelockLease(IBinder lock, long lid) {
-            super(lock, lid);
+        public WakelockLease(IBinder key, long lid) {
+            super(key, lid);
         }
 
         @Override
@@ -1065,10 +1064,9 @@ public final class PowerManagerService extends SystemService
     }
 
     private class WakelockLeaseProxy extends LeaseProxy<IBinder, WakelockLease> {
-        protected Hashtable<IBinder, RequestFreezer> mFreezerTable;
 
         public WakelockLeaseProxy(Context context) {
-            super(context);
+            super(LeaseManager.WAKELOCK_LEASE_PROXY, "PMS_PROXY", context);
         }
 
         @Override
@@ -1083,13 +1081,56 @@ public final class PowerManagerService extends SystemService
         }
 
         @Override
-        public void expire(long leaseId) throws RemoteException {
-            // TODO: implement the expire method
+        public void onExpire(long leaseId) throws RemoteException {
+            Slog.d(TAG, "LeaseManagerService instruct me to expire lease " + leaseId);
+            WakelockLease lease = mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                synchronized (mLock) {
+                    WakeLock lock = lease.mLeaseValue;
+                    if (lock == null) {
+                        int index = findWakeLockIndexLocked(lease.mLeaseKey);
+                        if (index >= 0) {
+                            lock = mWakeLocks.get(index);
+                            lease.mLeaseValue = lock;
+                            Slog.e(TAG, "Found wakelock object for lease " + leaseId);
+                        } else {
+                            Slog.e(TAG, "No wakelock object found for lease " + leaseId);
+                        }
+                    }
+                    if (lock != null) {
+                        Slog.e(TAG, "Release wakelock object for lease " + leaseId);
+                        releaseWakeLockInternal(lock.mLock, lock.mFlags, false);
+                    }
+                }
+            }
         }
 
         @Override
-        public void renew(long leaseId) throws RemoteException {
-            // TODO: implement the renew method
+        public void onRenew(long leaseId) throws RemoteException {
+            Slog.d(TAG, "LeaseManagerService instruct me to renew lease " + leaseId);
+            WakelockLease lease = mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                synchronized (mLock) {
+                    WakeLock lock = lease.mLeaseValue;
+                    if (lock == null) {
+                        Slog.e(TAG, "Cannot renew because no wakelock object is found for lease " + leaseId);
+                    } else {
+                        // reacquire the lock
+                        acquireWakeLockInternal(lock.mLock, lock.mFlags, lock.mTag, lock.mPackageName,
+                                lock.mWorkSource, lock.mHistoryTag, lock.mOwnerUid, lock.mOwnerPid);
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void onReject(int uid) throws RemoteException {
+            // TODO: reject a lease create request for this UID for one time
+        }
+
+        @Override
+        public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
+            // TODO: implement freezing using request freezer.
         }
     }
     /*********************/

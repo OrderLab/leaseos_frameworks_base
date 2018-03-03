@@ -26,6 +26,8 @@ import android.lease.ILeaseProxy;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.ResourceType;
+import android.os.Binder;
+import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
 import android.util.LongSparseArray;
@@ -47,12 +49,13 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     // Table of all leases acquired by services.
     private final LongSparseArray<Lease> mLeases = new LongSparseArray<>();
 
-
-
     //The identifier of the last lease
     private long mLastLeaseId = LeaseManager.LEASE_ID_START;
 
     private ResourceStatManager mRStatManager;
+
+    // All registered lease proxies
+    private final HashMap<IBinder, LeaseProxy> mProxies = new HashMap<>();
 
     private final Context mContext;
 
@@ -205,8 +208,99 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
+    private LeaseProxy newProxyLocked(ILeaseProxy proxy, int type, String name) {
+        IBinder binder = proxy.asBinder();
+        LeaseProxy wrapper = new LeaseProxy(proxy, type, name);
+        mProxies.put(binder, wrapper);
+        try {
+            binder.linkToDeath(wrapper, 0);
+        } catch (RemoteException e) {
+            Slog.e(TAG, "linkToDeath failed:", e);
+            return null;
+        }
+        Slog.d(TAG, "Lease proxy " + wrapper + " registered");
+        return wrapper;
+    }
+
+    /**
+     * Get the internal lease proxy
+     *
+     * @param proxy
+     * @return
+     */
+    private LeaseProxy getProxyLocked(ILeaseProxy proxy) {
+        IBinder binder = proxy.asBinder();
+        return mProxies.get(binder);
+    }
+
+    /**
+     * Remove an internal lease proxy
+     *
+     * @param proxy
+     */
+    private void removeProxyLocked(LeaseProxy proxy) {
+        mProxies.remove(proxy.mKey);
+    }
+
+
     @Override
     public boolean registerProxy(int type, String name, ILeaseProxy proxy) throws RemoteException {
-        return false;
+        Slog.d(TAG, "Registering lease proxy " + name);
+        long identity = Binder.clearCallingIdentity();
+        try {
+            synchronized (mLock) {
+                LeaseProxy wrapper = getProxyLocked(proxy);
+                if (wrapper != null) {
+                    // Guardian already existed, silently ignore
+                    Slog.d(TAG, "proxy " + name + " is already registered");
+                    return false;
+                }
+                wrapper = newProxyLocked(proxy, type, name);
+                return wrapper != null;
+            }
+        }
+        finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+
+    }
+
+    /**
+     * Called when a lease proxy died.
+     *
+     * @param proxy
+     */
+    private void handleProxyDeath(LeaseProxy proxy) {
+        synchronized (mLock) {
+            Slog.d(TAG, "Lease proxy " + proxy + " died ...>.<...");
+            removeProxyLocked(proxy);
+        }
+    }
+
+    /**
+     * Wrapper class around an ILeaseProxy object to make call back to lease proxy
+     */
+    private class LeaseProxy implements IBinder.DeathRecipient {
+        public final ILeaseProxy mProxy;
+        public final int mType;
+        public final String mName;
+        public final IBinder mKey;
+
+        public LeaseProxy(ILeaseProxy proxy, int type, String name) {
+            mProxy = proxy;
+            mType = type;
+            mName = name;
+            mKey = proxy.asBinder();
+        }
+
+        @Override
+        public void binderDied() {
+            handleProxyDeath(this);
+        }
+
+        @Override
+        public String toString() {
+            return "<" + LeaseManager.getProxyTypeString(mType) + ">" + mName;
+        }
     }
 }

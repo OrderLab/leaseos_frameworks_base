@@ -30,7 +30,33 @@ import android.util.Log;
 public final class LeaseManager {
     private static final String TAG = "LeaseManager";
 
-    public static final int INVALID_LEASE = -1;
+    public static final int WAKELOCK_LEASE_PROXY= 0x00000100;
+    public static final int LOCATION_LEASE_PROXY = 0x00000200;
+    public static final int ALARM_LEASE_PROXY= 0x00000300;
+    public static final int SENSOR_LEASE_PROXY = 0x00000400;
+    public static final int NETWORK_LEASE_PROXY = 0x00000500;
+    public static final int NOTIFICATION_LEASE_PROXY = 0x00000600;
+    public static final int CPU_LEASE_PROXY = 0x00000700;
+    public static final int STORAGE_LEASE_PROXY = 0x00000800;
+    public static final int BLUETOOTH_LEASE_PROXY = 0x00000900;
+    public static final int LIGHT_LEASE_PROXY = 0x00000a00;
+    public static final int CAMERA_LEASE_PROXY = 0x00000b00;
+    public static final int IO_LEASE_PROXY = 0x00000c00;
+
+    public static final String UNKNOWN_PROXY_STR = "Unknown";
+    public static final String WAKELOCK_PROXY_STR = "WakelockLeaseProxy";
+    public static final String LOCATION_PROXY_STR = "GPSLeaseProxy";
+    public static final String ALARM_PROXY_STR = "AlarmLeaseProxy";
+    public static final String SENSOR_PROXY_STR = "SensorLeaseProxy";
+    public static final String NETWORK_PROXY_STR = "NetworkLeaseProxy";
+    public static final String NOTIFICATION_PROXY_STR = "NotificationLeaseProxy";
+    public static final String CPU_PROXY_STR = "CPULeaseProxy";
+    public static final String STORAGE_PROXY_STR = "StorageLeaseProxy";
+    public static final String BLUETOOTH_PROXY_STR = "BluetoothLeaseProxy";
+    public static final String LIGHT_PROXY_STR = "LightLeaseProxy";
+    public static final String CAMERA_PROXY_STR = "CameraLeaseProxy";
+    public static final String IO_PROXY_STR = "IOLeaseProxy";
+
     public static final long LEASE_ID_START = 1000;
 
     private ILeaseManager mService;
@@ -145,5 +171,59 @@ public final class LeaseManager {
             Log.wtf(TAG, "Fail to remove the lease");
         }
         return;
+    }
+
+    /**
+     * Register a lease proxy with lease manager service
+     *
+     * @param type
+     * @param name
+     * @param proxy
+     * @return
+     */
+    public boolean registerProxy(int type, String name, ILeaseProxy proxy) {
+        try {
+            return mService.registerProxy(type, name, proxy);
+        } catch (RemoteException e) {
+            Log.wtf(TAG, "Fail to register lease proxy");
+            return false;
+        }
+    }
+
+    /**
+     * Return the string representation of the given type
+     *
+     * @param type
+     * @return
+     */
+    public static String getProxyTypeString(int type) {
+        switch(type) {
+            case WAKELOCK_LEASE_PROXY:
+                return WAKELOCK_PROXY_STR;
+            case LOCATION_LEASE_PROXY:
+                return LOCATION_PROXY_STR;
+            case ALARM_LEASE_PROXY:
+                return ALARM_PROXY_STR;
+            case SENSOR_LEASE_PROXY:
+                return SENSOR_PROXY_STR;
+            case NETWORK_LEASE_PROXY:
+                return NETWORK_PROXY_STR;
+            case NOTIFICATION_LEASE_PROXY:
+                return NOTIFICATION_PROXY_STR;
+            case CPU_LEASE_PROXY:
+                return CPU_PROXY_STR;
+            case STORAGE_LEASE_PROXY:
+                return STORAGE_PROXY_STR;
+            case BLUETOOTH_LEASE_PROXY:
+                return BLUETOOTH_PROXY_STR;
+            case LIGHT_LEASE_PROXY:
+                return LIGHT_PROXY_STR;
+            case CAMERA_LEASE_PROXY:
+                return CAMERA_PROXY_STR;
+            case IO_LEASE_PROXY:
+                return IO_PROXY_STR;
+            default:
+                return UNKNOWN_PROXY_STR;
+        }
     }
 }

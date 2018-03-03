@@ -23,6 +23,7 @@ package android.lease;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.util.LongSparseArray;
 import android.util.Slog;
 
 import java.util.HashSet;
@@ -39,22 +40,29 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
     private static final String TAG = "LeaseProxy";
 
     protected final Object mLock = new Object();
+    protected int mType;
+    protected String mName;
     protected Context mContext;
     protected boolean mReady;
     protected boolean mSystemAppQueried;
+
     protected final HashSet<Integer> mSystemAppUids;
     protected final LeaseWhiteList mWhiteList;
+    protected final Hashtable<S, T> mLeaseTable;
+    protected final LongSparseArray<T> mLeaseDescriptors;
 
     protected LeaseManager mLeaseManager;
-    protected Hashtable<S, T> mLeaseTable;
 
-    public LeaseProxy(Context context) {
+    public LeaseProxy(int type, String name, Context context) {
+        mType = type;
+        mName = name;
         mContext = context;
         mSystemAppQueried = false;
         mReady = false;
         mSystemAppUids = new HashSet<>();
         mWhiteList = new LeaseWhiteList(LeaseWhiteList.WHITELIST_DEFAULT);
         mLeaseTable = new Hashtable<>();
+        mLeaseDescriptors =  new LongSparseArray<>();
     }
 
     public LeaseManager getManager() {
@@ -69,7 +77,10 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
     public boolean start() {
         mLeaseManager = (LeaseManager) mContext.getSystemService(Context.LEASE_SERVICE);
         updateSystemAppsLocked();
-        mReady = (mLeaseManager != null);
+        if (mLeaseManager != null) {
+            mLeaseManager.registerProxy(mType, mName, this);
+            mReady = true;
+        }
         return mReady;
     }
 
@@ -95,6 +106,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
             }
             lease = newLease(key, leaseId);
             mLeaseTable.put(key, lease);
+            mLeaseDescriptors.put(leaseId, lease);
             Slog.i(TAG, "Created new lease " + leaseId + ". The lease table size is "
                     + mLeaseTable.size());
             return lease;
@@ -110,6 +122,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         if (mLeaseManager != null) {
             mLeaseManager.remove(descriptor.mLeaseId);
             mLeaseTable.remove(descriptor.mLeaseKey);
+            mLeaseDescriptors.remove(descriptor.mLeaseId);
         }
     }
 
