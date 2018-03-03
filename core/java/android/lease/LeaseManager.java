@@ -43,14 +43,15 @@ public final class LeaseManager {
 
     /**
      * Create a new lease instance, call LeaseManagerService
-     * @param RType the resource type
+     *
+     * @param rtype the resource type
      * @param uid the owner id
      * @return lease id
      */
-    public long create(ResourceType RType, int uid) {
+    public long create(ResourceType rtype, int uid) {
         long leaseId = -1;
         try {
-           leaseId = mService.create(RType, uid);
+           leaseId = mService.create(rtype, uid);
         } catch (RemoteException e) {
             Log.wtf(TAG, "Fail to create new lease");
         }
@@ -59,6 +60,7 @@ public final class LeaseManager {
 
     /**
      * Check the status of the lease
+     *
      * @param leaseId lease id
      * @return true if the lease is active
      */
@@ -75,7 +77,8 @@ public final class LeaseManager {
     }
 
     /**
-     * expire the lease
+     * Expire the lease
+     *
      * @param leaseId lease id
      * @return ture if the lease is successfully expired
      */
@@ -92,7 +95,8 @@ public final class LeaseManager {
     }
 
     /**
-     * renew the lease
+     * Renew the lease
+     *
      * @param leaseId lease id
      * @return ture if the lease is successfully renewed
      */
@@ -109,7 +113,8 @@ public final class LeaseManager {
     }
 
     /**
-     * remove the lease
+     * Remove the lease
+     *
      * @param leaseId lease id
      * @return true if the lease is successfully removed
      */
@@ -123,5 +128,22 @@ public final class LeaseManager {
             Log.wtf(TAG, "Fail to remove the lease");
         }
         return success;
+    }
+
+    /**
+     * Notify lease manager about an event for a lease id
+     *
+     * @param leaseId
+     * @param event
+     */
+    public void noteEvent(long leaseId, LeaseEvent event) {
+        if (leaseId < LEASE_ID_START)
+            return;
+        try {
+            mService.noteEvent(leaseId, event);
+        }catch (RemoteException e){
+            Log.wtf(TAG, "Fail to remove the lease");
+        }
+        return;
     }
 }

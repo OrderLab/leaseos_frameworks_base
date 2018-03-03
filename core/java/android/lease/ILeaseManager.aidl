@@ -21,6 +21,7 @@
 package android.lease;
 
 import android.lease.ResourceType;
+import android.lease.LeaseEvent;
 
 /**
  * Lease manager interfaces
@@ -30,7 +31,7 @@ import android.lease.ResourceType;
 interface ILeaseManager {
 
     /* create a lease */
-    long create(in ResourceType RType, int uid);
+    long create(in ResourceType rtype, int uid);
 
     /* check whether the lease is active or not */
     boolean check(long leaseId);
@@ -43,4 +44,7 @@ interface ILeaseManager {
 
     /* remove the lease */
     boolean remove(long leaseId);
+
+    /* report an event about lease with id leaseId */
+    void noteEvent(long leaseId, in LeaseEvent event);
 }

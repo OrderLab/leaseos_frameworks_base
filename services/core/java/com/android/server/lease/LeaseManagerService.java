@@ -22,10 +22,10 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.ILeaseManager;
+import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.ResourceType;
 import android.os.Process;
-import android.util.Log;
 import android.util.Slog;
 
 import java.util.Hashtable;
@@ -53,9 +53,9 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     public LeaseManagerService(Context context) {
         super();
-        Log.i(TAG, "LeaseManagerService: hahaha");
         mContext = context;
         mRStatManager = ResourceStatManager.getInstance(mContext);
+        Slog.i(TAG, "LeaseManagerService initialized");
     }
 
     public ResourceStat getCurrentStat(long leaseId) {
@@ -65,19 +65,18 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     /**
      * Create a new lease
      *
-     * @param RType The resource type of the lease
+     * @param rtype The resource type of the lease
      * @param uid   the identifier of caller
      * @return the lease id
      */
-    public long create(ResourceType RType, int uid) {
+    public long create(ResourceType rtype, int uid) {
         synchronized (mLock) {
             if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
                 return Lease.INVALID_LEASE;
             }
-            Lease lease = new Lease(mLastLeaseId, uid, RType, mRStatManager, mContext);
+            Lease lease = new Lease(mLastLeaseId, uid, rtype, mRStatManager, mContext);
             StatHistory statHistory;
-
-            Log.i(TAG,
+            Slog.i(TAG,
                     "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
 
             mLeases.put(mLastLeaseId, lease);
@@ -85,7 +84,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
             statHistory = new StatHistory();
             Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
-            switch (RType) {
+            switch (rtype) {
                 case Wakelock:
                     WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid, mContext);
                     if( wStat.mStatus == LeaseStatus.CHARGING) {
@@ -162,13 +161,36 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public boolean remove(long leaseid) {
         Lease lease = mLeases.get(leaseid);
         if (lease == null) {
-            Log.d(TAG, "remove: can not find lease for id:" + leaseid);
+            Slog.d(TAG, "remove: can not find lease for id:" + leaseid);
             return false;
         }
         //TODO: how to handler the logic of true or false
         lease.cancelChecks();
         mRStatManager.removeStatHistory(lease.mLeaseId);
-        mLeases.remove(leaseid, lease);
+        mLeases.remove(leaseid);
         return true;
+    }
+
+    public void noteEvent(long leaseId, LeaseEvent event) {
+        Lease lease = mLeases.get(leaseId);
+        if (lease == null || !lease.isActive()) {
+            // if lease is no longer active, ignore the event
+            return;
+        }
+        StatHistory statHistory = mRStatManager.getStatsHistory(leaseId);
+        if (statHistory == null) {
+            Slog.e(TAG, "No stat history exist for lease " + leaseId + ", possibly a bug");
+            return;
+        }
+        switch (event) {
+            case WAKELOCK_ACQUIRE:
+                statHistory.noteAcquire();
+                break;
+            case WAKELOCK_RELEASE:
+                statHistory.noteRelease();
+                break;
+            default:
+                Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
+        }
     }
 }

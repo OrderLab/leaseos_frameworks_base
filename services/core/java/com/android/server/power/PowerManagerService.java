@@ -933,6 +933,7 @@ public final class PowerManagerService extends SystemService
                     WakelockLease lease = mLeaseProxy.getOrCreateLease(lock, uid);
                     if (lease != null) {
                         // TODO: invoke check and notify ResourceStatManager
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                     }
                 }
                 /*********************/
@@ -1007,6 +1008,7 @@ public final class PowerManagerService extends SystemService
             if (lease != null) {
                 Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
                 // TODO: notify ResourceStatManager about the release event
+                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_RELEASE);
                 if (finalized) {
                     Slog.i(TAG, "Final removal of lease " + lease.mLeaseId);
                     mLeaseProxy.removeLease(lease);
