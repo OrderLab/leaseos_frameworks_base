@@ -70,7 +70,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         mLeaseManager = (LeaseManager) mContext.getSystemService(Context.LEASE_SERVICE);
         updateSystemAppsLocked();
         mReady = (mLeaseManager != null);
-        return true;
+        return mReady;
     }
 
     /**
@@ -141,6 +141,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
      */
     protected void updateSystemAppsLocked() {
         if (!mSystemAppQueried) {
+            Slog.d(TAG, "Trying to update system app list");
             if (mContext != null) {
                 final PackageManager pm = mContext.getPackageManager();
                 if (pm != null) {
@@ -156,6 +157,9 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
                         }
                     }
                     mSystemAppQueried = true;
+                    Slog.d(TAG, "Updated system app list with " + mSystemAppUids.size() + " apps");
+                } else {
+                    Slog.e(TAG, "Package manager is not ready yet");
                 }
             }
         }
