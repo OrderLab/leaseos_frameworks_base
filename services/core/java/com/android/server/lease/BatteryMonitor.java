@@ -72,6 +72,10 @@ public class BatteryMonitor {
     }
 
     public boolean isCharging() {
+        if (!getService()) {
+            Slog.e(TAG, "Fail to get IBatteryStatsService");
+            return false;
+        }
         try {
             return mService.isCharging();
         } catch (RemoteException e) {

@@ -21,9 +21,11 @@
 package com.android.server.lease;
 
 import android.content.Context;
+import android.lease.BehaviorType;
 import android.lease.ResourceType;
 import android.os.Handler;
 import android.os.IBinder;
+import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemClock;
 import android.util.Slog;
@@ -66,6 +68,8 @@ public class Lease {
     private ServiceThread mHandlerThread;
     private Handler mHandler;
     private boolean mScheduled;
+    private PowerManager mPowerManager;
+
     private Runnable mExpireRunnable = new Runnable() {
         @Override
         public void run() {
@@ -83,6 +87,7 @@ public class Lease {
         mStatus = LeaseStatus.INVALID;
         mRStatManager = RStatManager;
         mContext = context;
+        mPowerManager = (PowerManager) mContext.getSystemService(Context.POWER_SERVICE);
     }
 
     /**
@@ -98,7 +103,8 @@ public class Lease {
                 Process.THREAD_PRIORITY_DISPLAY, false /*allowIo*/);
         mHandlerThread.start();
         mHandler = new Handler(mHandlerThread.getLooper());
-        scheduleChecks();
+        long timeInterval = mLength;
+        scheduleChecks(timeInterval);
     }
 
     /**
@@ -123,7 +129,7 @@ public class Lease {
         if (mStatus == LeaseStatus.EXPIRED) {
             startRenewPolicy();
         }
-        return mStatus != LeaseStatus.ACTIVE;
+        return (mStatus == LeaseStatus.ACTIVE || mStatus == LeaseStatus.CHARGING);
     }
 
     /**
@@ -191,26 +197,35 @@ public class Lease {
             mStatus = LeaseStatus.CHARGING;
         }
         if(mStatus == LeaseStatus.CHARGING) {
-            Slog.d(TAG,"The phone is in charing. Directly renew the lease");
+            Slog.d(TAG,"The phone is in charging. Directly renew the lease");
             startRenewPolicy();
         } else if (!mRStatManager.isNoActivateEvent(mLeaseId)) {
             startRenewPolicy();
         } else {
-            Slog.i(TAG, "The lease is expired. Wait for the process " + mOwnerId + "to use Wakelock again");
+            Slog.i(TAG, "The lease is expired. Wait for the process " + mOwnerId + " to use Wakelock again");
         }
         //TODO: release the resource and the policy for deciding the renew time
         return true;
     }
 
-    public void startRenewPolicy() {
+    public boolean startRenewPolicy() {
         //TODO: finish the policy later
-        renew();
+        if (mRStatManager.judge() == BehaviorType.Normal) {
+            return renew();
+        } else {
+            long timeInterval = 60 * 1000;
+            Slog.i(TAG, "Delay to renew lease " + mLeaseId + " for " + timeInterval + "s" + " for process " + mOwnerId);
+            mPowerManager.denyRequest(mLeaseId,timeInterval);
+            scheduleChecks(timeInterval);
+            return true;
+        }
+
     }
 
-    public void scheduleChecks() {
+    public void scheduleChecks(long timeInterval) {
         if (!mScheduled) {
             //Slog.d(TAG, "Scheduling checker queue [" + mCheckInterval + " ms]");
-            mHandler.postDelayed(mExpireRunnable, mLength);
+            mHandler.postDelayed(mExpireRunnable, timeInterval);
             mScheduled = true;
         }
     }
@@ -260,7 +275,8 @@ public class Lease {
                 break;
         }
 
-        scheduleChecks();
+        long timeInterval = mLength;
+        scheduleChecks(timeInterval);
         //TODO: Acquire the resource again
         return success;
     }

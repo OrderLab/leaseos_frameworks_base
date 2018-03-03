@@ -1061,6 +1061,18 @@ public final class PowerManager {
     }
 
     /**
+     * LeaseOS change
+     */
+
+    public void denyRequest(long leaseId, long timeInterval) {
+        try {
+            mService.denyRequest(leaseId, timeInterval);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    /**
      * Intent that is broadcast when the state of {@link #isPowerSaveMode()} changes.
      * This broadcast is only sent to registered receivers.
      */
