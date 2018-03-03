@@ -210,7 +210,7 @@ public class Lease {
 
     public boolean startRenewPolicy() {
         //TODO: finish the policy later
-        if (mRStatManager.judge() == BehaviorType.Normal) {
+        if (mRStatManager.judge() == BehaviorType.Normal || mStatus == LeaseStatus.CHARGING) {
             return renew();
         } else {
             long timeInterval = 60 * 1000;
