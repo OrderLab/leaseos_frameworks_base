@@ -113,6 +113,12 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         }
     }
 
+    public void noteEvent(long leaseId, LeaseEvent event) {
+        if (mLeaseManager != null) {
+            mLeaseManager.noteEvent(leaseId, event);
+        }
+    }
+
     /**
      * Should a given package name or UID be exempted. The package name can be empty
      * if a UID is specified. Package name is useful for white list.

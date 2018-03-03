@@ -16,7 +16,12 @@
 
 package com.android.server.power;
 
-import android.lease.*;
+import static android.os.PowerManagerInternal.POWER_HINT_INTERACTION;
+import static android.os.PowerManagerInternal.WAKEFULNESS_ASLEEP;
+import static android.os.PowerManagerInternal.WAKEFULNESS_AWAKE;
+import static android.os.PowerManagerInternal.WAKEFULNESS_DOZING;
+import static android.os.PowerManagerInternal.WAKEFULNESS_DREAMING;
+
 import android.Manifest;
 import android.annotation.IntDef;
 import android.app.ActivityManager;
@@ -32,6 +37,12 @@ import android.hardware.SensorManager;
 import android.hardware.SystemSensorManager;
 import android.hardware.display.DisplayManagerInternal;
 import android.hardware.display.DisplayManagerInternal.DisplayPowerRequest;
+import android.lease.LeaseDescriptor;
+import android.lease.LeaseEvent;
+import android.lease.LeaseManager;
+import android.lease.LeaseProxy;
+import android.lease.RequestFreezer;
+import android.lease.ResourceType;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.BatteryManagerInternal;
@@ -72,8 +83,9 @@ import com.android.server.ServiceThread;
 import com.android.server.SystemService;
 import com.android.server.Watchdog;
 import com.android.server.am.BatteryStatsService;
-
-import com.android.server.lease.*;
+import com.android.server.lease.Lease;
+import com.android.server.lease.ResourceStatManager;
+import com.android.server.lease.StatHistory;
 import com.android.server.lights.Light;
 import com.android.server.lights.LightsManager;
 import com.android.server.vr.VrManagerService;
@@ -87,12 +99,6 @@ import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Hashtable;
-
-import static android.os.PowerManagerInternal.POWER_HINT_INTERACTION;
-import static android.os.PowerManagerInternal.WAKEFULNESS_ASLEEP;
-import static android.os.PowerManagerInternal.WAKEFULNESS_AWAKE;
-import static android.os.PowerManagerInternal.WAKEFULNESS_DOZING;
-import static android.os.PowerManagerInternal.WAKEFULNESS_DREAMING;
 
 /**
  * The power manager service is responsible for coordinating power management
@@ -512,8 +518,8 @@ public final class PowerManagerService extends SystemService
 
     /*** LeaseOS changes ***/
     private WakelockLeaseProxy mLeaseProxy;
-
     /************************/
+
     // True if we are currently in VR Mode.
     private boolean mIsVrModeEnabled;
 
@@ -896,6 +902,17 @@ public final class PowerManagerService extends SystemService
     private void acquireWakeLockInternal(IBinder lock, int flags, String tag, String packageName,
             WorkSource ws, String historyTag, int uid, int pid) {
         synchronized (mLock) {
+            /*
+            if (mFreezerTable != null) {
+                RequestFreezer<IBinder> lockFreezer = mFreezerTable.get(lock);
+                if (lockFreezer != null && lockFreezer.freeze(lock)) {
+                    Slog.d(TAG, packageName + " has been disruptive, freezing its requests for a "
+                            + "while.. The process is " + uid);
+                    return;
+                }
+            }
+            */
+
             if (DEBUG_SPEW) {
                 Slog.d(TAG, "acquireWakeLockInternal: lock=" + Objects.hashCode(lock)
                         + ", flags=0x" + Integer.toHexString(flags)
@@ -1003,7 +1020,6 @@ public final class PowerManagerService extends SystemService
                 mRequestWaitForNegativeProximity = true;
             }
             /***LeaseOS changes***/
-
             WakelockLease lease = mLeaseProxy.getLease(lock);
             if (lease != null) {
                 Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
@@ -1039,6 +1055,8 @@ public final class PowerManagerService extends SystemService
     }
 
     private class WakelockLeaseProxy extends LeaseProxy<IBinder, WakelockLease> {
+        protected Hashtable<IBinder, RequestFreezer> mFreezerTable;
+
         public WakelockLeaseProxy(Context context) {
             super(context);
         }
@@ -1061,7 +1079,7 @@ public final class PowerManagerService extends SystemService
 
         @Override
         public void renew(long leaseId) throws RemoteException {
-            // TODO: implement the renewmethod
+            // TODO: implement the renew method
         }
     }
     /*********************/
@@ -3927,6 +3945,24 @@ public final class PowerManagerService extends SystemService
                 Binder.restoreCallingIdentity(ident);
             }
         }
+
+        /*
+        public void denyRequest(long leaseId, long timeInterval) {
+            WakeLock wakeLock;
+
+            IBinder lock = mReverseLeasetable.get(leaseId);
+            if (lock != null) {
+                int index = findWakeLockIndexLocked(lock);
+                if (index >= 0) {
+                    wakeLock = mWakeLocks.get(index);
+                    releaseWakeLockInternal(wakeLock.mLock, wakeLock.mFlags, false);
+                }
+                RequestFreezer<IBinder> lockFreezer = new RequestFreezer<IBinder>(timeInterval, 200);
+                mFreezerTable.put(lock, lockFreezer);
+                lockFreezer.addToFreezer(lock);
+            }
+        }
+        */
     }
 
     private final class LocalService extends PowerManagerInternal {

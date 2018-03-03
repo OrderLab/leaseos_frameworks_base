@@ -148,7 +148,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         if (lease == null) {
             return false;
         }
-        return lease.expire();
+        return lease.startRenewPolicy();
     }
 
     /**
