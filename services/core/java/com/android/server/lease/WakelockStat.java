@@ -21,17 +21,13 @@
 package com.android.server.lease;
 
 
-import android.content.ContentValues;
 import android.content.Context;
 import android.lease.BehaviorType;
+import android.lease.LeaseStatus;
 import android.util.Slog;
 
 import com.android.server.lease.db.LeaseStatsDBHelper;
 import com.android.server.lease.db.LeaseStatsRecord;
-import com.android.server.lease.db.LeaseStatsRecordSchema;
-
-import java.sql.Timestamp;
-import java.util.Date;
 
 
 /**

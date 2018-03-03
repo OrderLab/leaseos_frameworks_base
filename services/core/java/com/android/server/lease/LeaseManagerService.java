@@ -25,6 +25,7 @@ import android.lease.ILeaseManager;
 import android.lease.ILeaseProxy;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
+import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.os.Binder;
 import android.os.IBinder;
@@ -34,7 +35,6 @@ import android.util.LongSparseArray;
 import android.util.Slog;
 
 import java.util.HashMap;
-import java.util.Map;
 
 /**
  * The central lease manager service

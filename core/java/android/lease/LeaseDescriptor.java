@@ -26,8 +26,12 @@ package android.lease;
 public class LeaseDescriptor<T> {
     public final T mLeaseKey;
     public final long mLeaseId;
-    public LeaseDescriptor(T key, long id) {
+
+    public LeaseStatus mLeaseStatus; // a cached value of the lease status
+
+    public LeaseDescriptor(T key, long id, LeaseStatus status) {
         mLeaseKey = key;
         mLeaseId = id;
+        mLeaseStatus = status;
     }
 }

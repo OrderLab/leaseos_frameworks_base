@@ -41,6 +41,7 @@ import android.lease.LeaseDescriptor;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.LeaseProxy;
+import android.lease.LeaseStatus;
 import android.lease.RequestFreezer;
 import android.net.Uri;
 import android.os.BatteryManager;
@@ -1048,8 +1049,8 @@ public final class PowerManagerService extends SystemService
     private class WakelockLease extends LeaseDescriptor<IBinder> implements IBinder.DeathRecipient {
         public WakeLock mLeaseValue;
 
-        public WakelockLease(IBinder key, long lid) {
-            super(key, lid);
+        public WakelockLease(IBinder key, long lid, LeaseStatus status) {
+            super(key, lid, status);
         }
 
         @Override
@@ -1070,8 +1071,8 @@ public final class PowerManagerService extends SystemService
         }
 
         @Override
-        public WakelockLease newLease(IBinder key, long leaseId) {
-            WakelockLease lease = new WakelockLease(key, leaseId);
+        public WakelockLease newLease(IBinder key, long leaseId, LeaseStatus status) {
+            WakelockLease lease = new WakelockLease(key, leaseId, status);
             try {
                 key.linkToDeath(lease, 0);
             } catch (RemoteException ex) {
@@ -1085,8 +1086,9 @@ public final class PowerManagerService extends SystemService
             Slog.d(TAG, "LeaseManagerService instruct me to expire lease " + leaseId);
             WakelockLease lease = mLeaseDescriptors.get(leaseId);
             if (lease != null) {
+                WakeLock lock;
                 synchronized (mLock) {
-                    WakeLock lock = lease.mLeaseValue;
+                    lock = lease.mLeaseValue;
                     if (lock == null) {
                         int index = findWakeLockIndexLocked(lease.mLeaseKey);
                         if (index >= 0) {
@@ -1097,10 +1099,11 @@ public final class PowerManagerService extends SystemService
                             Slog.e(TAG, "No wakelock object found for lease " + leaseId);
                         }
                     }
-                    if (lock != null) {
-                        Slog.e(TAG, "Release wakelock object for lease " + leaseId);
-                        releaseWakeLockInternal(lock.mLock, lock.mFlags, false);
-                    }
+                }
+                if (lock != null) {
+                    Slog.e(TAG, "Release wakelock object for lease " + leaseId);
+                    releaseWakeLockInternal(lock.mLock, lock.mFlags, false);
+                    lease.mLeaseStatus = LeaseStatus.EXPIRED;
                 }
             }
         }
@@ -1110,14 +1113,19 @@ public final class PowerManagerService extends SystemService
             Slog.d(TAG, "LeaseManagerService instruct me to renew lease " + leaseId);
             WakelockLease lease = mLeaseDescriptors.get(leaseId);
             if (lease != null) {
-                synchronized (mLock) {
-                    WakeLock lock = lease.mLeaseValue;
-                    if (lock == null) {
-                        Slog.e(TAG, "Cannot renew because no wakelock object is found for lease " + leaseId);
+                WakeLock lock = lease.mLeaseValue;
+                if (lock == null) {
+                    Slog.e(TAG, "Cannot renew because no wakelock object is found for lease "
+                            + leaseId);
+                } else {
+                    if (lease.mLeaseStatus != LeaseStatus.EXPIRED) {
+                        Slog.e(TAG, "Skip renewing because lease " + leaseId + " has not been expire before");
                     } else {
                         // reacquire the lock
                         acquireWakeLockInternal(lock.mLock, lock.mFlags, lock.mTag, lock.mPackageName,
                                 lock.mWorkSource, lock.mHistoryTag, lock.mOwnerUid, lock.mOwnerPid);
+                        // assume that after this point the lease is active
+                        lease.mLeaseStatus = LeaseStatus.ACTIVE;
                     }
                 }
             }

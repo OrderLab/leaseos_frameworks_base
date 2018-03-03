@@ -104,7 +104,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
                 Slog.i(TAG,"Skip invalid lease");
                 return null;
             }
-            lease = newLease(key, leaseId);
+            lease = newLease(key, leaseId, LeaseStatus.ACTIVE); // a new lease
             mLeaseTable.put(key, lease);
             mLeaseDescriptors.put(leaseId, lease);
             Slog.i(TAG, "Created new lease " + leaseId + ". The lease table size is "
@@ -116,7 +116,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         }
     }
 
-    public abstract T newLease(S key, long leaseId);
+    public abstract T newLease(S key, long leaseId, LeaseStatus status);
 
     public void removeLease(LeaseDescriptor<S> descriptor) {
         if (mLeaseManager != null) {

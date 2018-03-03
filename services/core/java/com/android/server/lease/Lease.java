@@ -22,10 +22,10 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.BehaviorType;
+import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.os.Handler;
 import android.os.IBinder;
-import android.os.PowerManager;
 import android.os.Process;
 import android.os.SystemClock;
 import android.util.Slog;
