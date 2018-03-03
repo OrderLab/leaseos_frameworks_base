@@ -24,7 +24,7 @@ import android.content.Context;
 import android.lease.LeaseStatus;
 
 /**
- *
+ * Record the resource usage stat associated with a lease
  */
 public abstract class ResourceStat {
 
@@ -49,9 +49,9 @@ public abstract class ResourceStat {
     protected long mEfficientRatio;
 
     //The number of system damage caused by this lease term
-    protected long mSystemdamage;
+    protected long mSysDamage;
 
-    public abstract LeaseStatus update(long holdingTime, int frequency, Context contextm, int uid);
+    public abstract void update(long holdingTime, int frequency, Context context, int uid);
 
     public ResourceStat(long BeginTime) {
           mBeginTime = BeginTime;

@@ -31,7 +31,7 @@ import java.util.Collections;
 import java.util.LinkedList;
 
 /**
- *
+ * History of resource stats
  */
 public class StatHistory {
     public static final String TAG = "StatHistory";
@@ -58,7 +58,7 @@ public class StatHistory {
         return mStats.get(mStats.size() - 1);
     }
 
-    public LeaseStatus update(long startTime, long endTime, Context context, int uid) {
+    public void update(long startTime, long endTime, Context context, int uid) {
         long holdingTime = 0;
         int frequency = 0;
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
@@ -71,14 +71,14 @@ public class StatHistory {
                     frequency++;
                 } else if (e.acquireTime < startTime) {
                     staleEventsIndex.add(index);
-                    if (index <= mOpenIndex ) {
+                    if (index <= mOpenIndex) {
                         mOpenIndex --;
                     }
                     holdingTime += e.releaseTime - startTime;
                     Slog.d(TAG, "The lease has been acquired before this lease term. For process " + uid + ", the Holding time is " + holdingTime );
                 } else {
                     staleEventsIndex.add(index);
-                    if (index <= mOpenIndex ) {
+                    if (index <= mOpenIndex) {
                         mOpenIndex --;
                     }
                     holdingTime += e.releaseTime - e.acquireTime;
@@ -95,8 +95,7 @@ public class StatHistory {
         }
 
         ResourceStat resourceStat = getCurrentStat();
-        return resourceStat.update(holdingTime, frequency, context, uid);
-
+        resourceStat.update(holdingTime, frequency, context, uid);
     }
 
     public boolean isNoActivateEvent () {

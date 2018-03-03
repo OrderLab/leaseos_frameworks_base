@@ -24,14 +24,11 @@ import android.content.Context;
 import android.lease.LeaseStatus;
 
 /**
- *
+ * Sensor related usage stat
  */
 public class SensorStat extends ResourceStat {
-
     @Override
-    public LeaseStatus update(long holdingTime, int frequency, Context context, int uid) {
-
-        return null;
+    public void update(long holdingTime, int frequency, Context context, int uid) {
     }
 
     public SensorStat(long BeginTime) {

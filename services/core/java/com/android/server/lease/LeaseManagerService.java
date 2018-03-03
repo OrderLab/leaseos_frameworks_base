@@ -80,23 +80,19 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public long create(ResourceType rtype, int uid) {
         synchronized (mLock) {
             if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
-                return Lease.INVALID_LEASE;
+                return LeaseManager.INVALID_LEASE;
             }
             Lease lease = new Lease(mLastLeaseId, uid, rtype, mRStatManager, mContext);
-            StatHistory statHistory;
             Slog.i(TAG,
                     "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
             mLeases.put(mLastLeaseId, lease);
             lease.create();
             Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
-            statHistory = new StatHistory();
+            StatHistory statHistory = new StatHistory();
             Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
             switch (rtype) {
                 case Wakelock:
                     WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid, mContext);
-                    if( wStat.mStatus == LeaseStatus.CHARGING) {
-                        lease.mStatus = LeaseStatus.CHARGING;
-                    }
                     statHistory.addItem(wStat);
                     mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
                     break;
@@ -182,6 +178,12 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         return true;
     }
 
+    /**
+     * Note that an important event has happened for a lease
+     *
+     * @param leaseId
+     * @param event
+     */
     public void noteEvent(long leaseId, LeaseEvent event) {
         StatHistory statHistory;
         synchronized (mLock) {
@@ -208,6 +210,14 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
+    /**
+     * Create a lease proxy wrapper and link to death
+     *
+     * @param proxy
+     * @param type
+     * @param name
+     * @return
+     */
     private LeaseProxy newProxyLocked(ILeaseProxy proxy, int type, String name) {
         IBinder binder = proxy.asBinder();
         LeaseProxy wrapper = new LeaseProxy(proxy, type, name);
@@ -243,6 +253,15 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
 
+    /**
+     * Register a lease proxy with the lease manager service
+     *
+     * @param type
+     * @param name
+     * @param proxy
+     * @return
+     * @throws RemoteException
+     */
     @Override
     public boolean registerProxy(int type, String name, ILeaseProxy proxy) throws RemoteException {
         Slog.d(TAG, "Registering lease proxy " + name);
@@ -251,7 +270,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             synchronized (mLock) {
                 LeaseProxy wrapper = getProxyLocked(proxy);
                 if (wrapper != null) {
-                    // Guardian already existed, silently ignore
+                    // proxy already existed, silently ignore
                     Slog.d(TAG, "proxy " + name + " is already registered");
                     return false;
                 }

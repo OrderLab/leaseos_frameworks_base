@@ -38,32 +38,20 @@ import com.android.server.ServiceThread;
  * TODO: finish the workflow of use wakelock -> check -> policy -> renew part
  */
 public class Lease {
+    private static final String TAG = "Lease";
 
-    public static final int INVALID_LEASE = -1;
+    public static final int DEFAULT_TERM_MS = 60 * 1000; // default 60 seconds, may need to reduce it
 
-    public static final int DEFAULT_TERM_MS = 60 * 1000;
-            // default 60 seconds, may need to reduce it
-    private static final String TAG = "LeaseManagerService";
-    //The identifier of lease
-    protected long mLeaseId;
-    //The identifier of the owner of lease. This variable usually means the UID
-    protected int mOwnerId;
-    //The token of the request from user process
-    protected IBinder mToken;
-    //The type of resource the lease is assigned
-    protected ResourceType mType;
-    //The status of the lease
-    protected LeaseStatus mStatus;
-    //The record of the history lease term for this lease
-    protected ResourceStatManager mRStatManager;
-    //The length of this lease term
-    protected int mLength; // in millisecond
-    //The BeginTime of this lease term
-    protected long mBeginTime;
-    //The EndTime of this lease term
-    protected long mEndTime;
-    //The number of current lease term
-    protected int mRenewal;
+    protected long mLeaseId; // The identifier of lease
+    protected int mOwnerId;  // The identifier of the owner of lease. This variable usually means the UID
+    protected ResourceType mType; // The type of resource the lease is assigned
+    protected LeaseStatus mStatus; // The status of the lease
+
+    protected ResourceStatManager mRStatManager; // The record of the history lease term for this lease
+    protected int mLength; // The length of this lease term in millisecond
+    protected long mBeginTime; // The BeginTime of this lease term
+    protected long mEndTime; // The EndTime of this lease term
+    protected int mRenewal; // The number of current lease term
     protected final Context mContext;
     private ServiceThread mHandlerThread;
     private Handler mHandler;
@@ -96,7 +84,6 @@ public class Lease {
         mStatus = LeaseStatus.ACTIVE;
         mLength = DEFAULT_TERM_MS;
         mBeginTime = SystemClock.elapsedRealtime();
-
         mHandlerThread = new ServiceThread(TAG,
                 Process.THREAD_PRIORITY_DISPLAY, false /*allowIo*/);
         mHandlerThread.start();
@@ -124,10 +111,7 @@ public class Lease {
     }
 
     public boolean isActive() {
-        if (mStatus == LeaseStatus.EXPIRED) {
-            startRenewPolicy();
-        }
-        return (mStatus == LeaseStatus.ACTIVE || mStatus == LeaseStatus.CHARGING);
+        return mStatus == LeaseStatus.ACTIVE;
     }
 
     /**
@@ -149,7 +133,7 @@ public class Lease {
     }
 
     /**
-     * Get the Owner of the lease
+     * Get the owner of the lease
      *
      * @return Owner id
      */
@@ -157,6 +141,11 @@ public class Lease {
         return mOwnerId;
     }
 
+    /**
+     * Get start time of this lease
+     *
+     * @return
+     */
     public long getBeginTime() {
         return mBeginTime;
     }
@@ -186,29 +175,13 @@ public class Lease {
      */
     public boolean expire() {
         Slog.d(TAG, "Starting expire lease " + mLeaseId);
-        mEndTime = SystemClock.elapsedRealtime();
-        if(mStatus != LeaseStatus.CHARGING) {
-            mStatus = LeaseStatus.EXPIRED;
-        }
-        LeaseStatus status = mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
-        if (status == LeaseStatus.CHARGING) {
-            mStatus = LeaseStatus.CHARGING;
-        }
-        if(mStatus == LeaseStatus.CHARGING) {
-            Slog.d(TAG,"The phone is in charging. Directly renew the lease");
-            startRenewPolicy();
-        } else if (!mRStatManager.isNoActivateEvent(mLeaseId)) {
-            startRenewPolicy();
-        } else {
-            Slog.i(TAG, "The lease is expired. Wait for the process " + mOwnerId + " to use Wakelock again");
-        }
         //TODO: release the resource and the policy for deciding the renew time
         return true;
     }
 
     public boolean startRenewPolicy() {
         //TODO: finish the policy later
-        if (mRStatManager.judge() == BehaviorType.Normal || mStatus == LeaseStatus.CHARGING) {
+        if (mRStatManager.judge() == BehaviorType.Normal) {
             return renew();
         } else {
             long timeInterval = 60 * 1000;

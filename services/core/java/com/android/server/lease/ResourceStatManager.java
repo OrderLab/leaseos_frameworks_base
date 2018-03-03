@@ -56,15 +56,15 @@ public class ResourceStatManager {
         mContext = context;
     }
 
-    public LeaseStatus update(long leaseId, long startTime, long endTime, int uid) {
+    public void update(long leaseId, long startTime, long endTime, int uid) {
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             Slog.e(TAG, "No statHistory for the lease " + leaseId);
-            return null;
+            return;
         }
         Slog.d(TAG, "Starting update lease " + leaseId + ", the startTime is " + startTime
                 + ", the endTime is " + endTime);
-        return statHistory.update(startTime, endTime, mContext, uid);
+        statHistory.update(startTime, endTime, mContext, uid);
     }
 
     public ResourceStat getCurrentStat(long leaseId) {

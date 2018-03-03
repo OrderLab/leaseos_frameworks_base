@@ -71,6 +71,11 @@ public class BatteryMonitor {
         return mService != null;
     }
 
+    /**
+     * Tell if the battery is charging.
+     *
+     * @return
+     */
     public boolean isCharging() {
         if (!getService()) {
             Slog.e(TAG, "Fail to get IBatteryStatsService");
@@ -79,24 +84,27 @@ public class BatteryMonitor {
         try {
             return mService.isCharging();
         } catch (RemoteException e) {
-            e.printStackTrace();
+            Slog.e(TAG, "Failed to get isCharging");
+            return false;
         }
-        return false;
     }
 
+    /**
+     * Get the CPU usage time for a UID. The usage time might be stale, but is bound by
+     * REFRESH_BOUND_MS.
+     *
+     * @param uid
+     * @return
+     */
     public long getCPUTime(int uid) {
-        long now = 0;
-
         if (!getService()) {
             Slog.e(TAG, "Fail to get IBatteryStatsService");
             return -1;
         }
-
         try {
-            now = SystemClock.elapsedRealtime();
+            long now = SystemClock.elapsedRealtime();
             if (mLastRefreshTime < 0 || (now - mLastRefreshTime) > REFRESH_BOUND_MS) {
                 mLastRefreshTime = now;
-                //TODO: merge two api to one
                 return mService.getCPUTimeLOS(uid, true);
             } else {
                 return mService.getCPUTimeLOS(uid, false);

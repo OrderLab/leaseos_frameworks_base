@@ -31,7 +31,7 @@ import com.android.server.lease.db.LeaseStatsRecord;
 
 
 /**
- *
+ * Wake lock stat
  */
 public class WakelockStat extends ResourceStat {
     public static final String TAG = "WakelockStat";
@@ -46,23 +46,23 @@ public class WakelockStat extends ResourceStat {
 
     protected Context mContext;
 
-    protected LeaseStatus mStatus;
-
     @Override
-    public LeaseStatus update(long holdingTime, int frequency, Context context, int uid) {
-        if (BatteryMonitor.getInstance(context).isCharging()) {
-            mStatus = LeaseStatus.CHARGING;
-            return mStatus;
+    public void update(long holdingTime, int frequency, Context context, int uid) {
+        final BatteryMonitor bm = BatteryMonitor.getInstance(context);
+        if (bm.isCharging()) {
+            // if the phone is charging skill updating resource stat
+            Slog.d(TAG, "Phone is charging, skip updating WakelockStat");
+            return;
         }
         mHoldingTime = holdingTime;
         mFrequency = frequency;
-        mCurCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
+        mCurCPUTime = bm.getCPUTime(mUid);
         Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
-        LeaseStatsRecord record = createRecord(uid);
-        LeaseStatsDBHelper.getInstance(context).insert(record);
-        return null;
+        // TODO: uncomment inserting db to make it work
+        // LeaseStatsRecord record = createRecord(uid);
+        // LeaseStatsDBHelper.getInstance(context).insert(record);
     }
 
     public LeaseStatsRecord createRecord(int uid) {
@@ -81,20 +81,11 @@ public class WakelockStat extends ResourceStat {
         mFrequency = 0;
         mHoldingTime = 0;
         mUid = uid;
-        if (BatteryMonitor.getInstance(context).isCharging()) {
-            mStatus = LeaseStatus.CHARGING;
-        } else {
-            mStatus = null;
-        }
         mBaseCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
         Slog.d(TAG,"The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
     public void setEndTime(long endTime) {
         mEndTime = endTime;
-    }
-
-    public String getStatusStr() {
-        return mStatus.toString();
     }
 
     @Override

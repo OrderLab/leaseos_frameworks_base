@@ -24,15 +24,11 @@ import android.content.Context;
 import android.lease.LeaseStatus;
 
 /**
- *
+ * GPS related stats
  */
 public class LocationStat extends ResourceStat {
-
-
     @Override
-    public LeaseStatus update(long holdingTime, int frequency, Context context, int uid) {
-
-        return null;
+    public void update(long holdingTime, int frequency, Context context, int uid) {
     }
 
     public LocationStat(long BeginTime) {
@@ -63,5 +59,4 @@ public class LocationStat extends ResourceStat {
     public long getDamage() {
         return 0;
     }
-
 }

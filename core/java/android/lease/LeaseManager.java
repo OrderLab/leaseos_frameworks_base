@@ -57,6 +57,8 @@ public final class LeaseManager {
     public static final String CAMERA_PROXY_STR = "CameraLeaseProxy";
     public static final String IO_PROXY_STR = "IOLeaseProxy";
 
+
+    public static final int INVALID_LEASE = -1;
     public static final long LEASE_ID_START = 1000;
 
     private ILeaseManager mService;
