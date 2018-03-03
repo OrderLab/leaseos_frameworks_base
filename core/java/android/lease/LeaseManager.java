@@ -193,6 +193,21 @@ public final class LeaseManager {
     }
 
     /**
+     * Unregister a lease proxy with lease manager service
+     *
+     * @param proxy
+     * @return
+     */
+    public boolean unregisterProxy(ILeaseProxy proxy) {
+        try {
+            return mService.unregisterProxy(proxy);
+        } catch (RemoteException e) {
+            Log.wtf(TAG, "Fail to unregister lease proxy");
+            return false;
+        }
+    }
+
+    /**
      * Return the string representation of the given type
      *
      * @param type

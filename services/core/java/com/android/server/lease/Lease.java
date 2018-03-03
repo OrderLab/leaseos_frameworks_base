@@ -229,11 +229,7 @@ public class Lease {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
                 WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId, mContext);
-                if (wStat.mStatus == LeaseStatus.CHARGING) {
-                    mStatus = LeaseStatus.CHARGING;
-                } else {
-                    mStatus = LeaseStatus.ACTIVE;
-                }
+                mStatus = LeaseStatus.ACTIVE;
                 success = mRStatManager.addResourceStat(mLeaseId, wStat);
                 break;
             case Location:

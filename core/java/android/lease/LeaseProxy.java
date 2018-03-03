@@ -80,8 +80,27 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         if (mLeaseManager != null) {
             mLeaseManager.registerProxy(mType, mName, this);
             mReady = true;
+            Slog.i(TAG, "Lease proxy " + this + " started");
+        } else {
+            Slog.e(TAG, "Fail to start lease proxy " + this);
         }
         return mReady;
+    }
+
+    /**
+     * Stop the proxy: unregister with lease manager service
+     * @return
+     */
+    public boolean stop() {
+        if (mReady) {
+            mLeaseManager.unregisterProxy(this);
+            mReady = false;
+            Slog.i(TAG, "Lease proxy " + this + " stopped");
+            return true;
+        } else {
+            Slog.e(TAG, "Fail to stop lease proxy " + this);
+            return false;
+        }
     }
 
     /**
@@ -176,5 +195,10 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
                 }
             }
         }
+    }
+
+    @Override
+    public String toString() {
+        return "<" + LeaseManager.getProxyTypeString(mType) + ">" + mName;
     }
 }

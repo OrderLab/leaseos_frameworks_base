@@ -33,6 +33,7 @@ import android.os.Process;
 import android.os.RemoteException;
 import android.util.LongSparseArray;
 import android.util.Slog;
+import android.util.SparseArray;
 
 import java.util.HashMap;
 
@@ -56,6 +57,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     // All registered lease proxies
     private final HashMap<IBinder, LeaseProxy> mProxies = new HashMap<>();
+    private final SparseArray<LeaseProxy> mTypedProxies = new SparseArray<>();
 
     private final Context mContext;
 
@@ -222,6 +224,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         IBinder binder = proxy.asBinder();
         LeaseProxy wrapper = new LeaseProxy(proxy, type, name);
         mProxies.put(binder, wrapper);
+        mTypedProxies.put(type, wrapper); // we only allow one proxy to be registered for one type
         try {
             binder.linkToDeath(wrapper, 0);
         } catch (RemoteException e) {
@@ -231,27 +234,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         Slog.d(TAG, "Lease proxy " + wrapper + " registered");
         return wrapper;
     }
-
-    /**
-     * Get the internal lease proxy
-     *
-     * @param proxy
-     * @return
-     */
-    private LeaseProxy getProxyLocked(ILeaseProxy proxy) {
-        IBinder binder = proxy.asBinder();
-        return mProxies.get(binder);
-    }
-
-    /**
-     * Remove an internal lease proxy
-     *
-     * @param proxy
-     */
-    private void removeProxyLocked(LeaseProxy proxy) {
-        mProxies.remove(proxy.mKey);
-    }
-
 
     /**
      * Register a lease proxy with the lease manager service
@@ -268,7 +250,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         long identity = Binder.clearCallingIdentity();
         try {
             synchronized (mLock) {
-                LeaseProxy wrapper = getProxyLocked(proxy);
+                LeaseProxy wrapper = mProxies.get(proxy.asBinder());
                 if (wrapper != null) {
                     // proxy already existed, silently ignore
                     Slog.d(TAG, "proxy " + name + " is already registered");
@@ -285,6 +267,34 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     /**
+     * Unregister a lease proxy
+     *
+     * @param proxy
+     * @return
+     * @throws RemoteException
+     */
+    @Override
+    public boolean unregisterProxy(ILeaseProxy proxy) throws RemoteException {
+        Slog.d(TAG, "Unregistering lease proxy");
+        long identity = Binder.clearCallingIdentity();
+        try {
+            synchronized (mLock) {
+                LeaseProxy wrapper = mProxies.get(proxy.asBinder());
+                if (wrapper != null) {
+                    mProxies.remove(wrapper.mKey);
+                    mTypedProxies.remove(wrapper.mType);
+                    Slog.d(TAG, "Lease proxy " + wrapper + " unregistered");
+                } else {
+                    Slog.e(TAG, "No internal lease proxy object found");
+                }
+            }
+        } finally {
+            Binder.restoreCallingIdentity(identity);
+        }
+        return true;
+    }
+
+    /**
      * Called when a lease proxy died.
      *
      * @param proxy
@@ -292,7 +302,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private void handleProxyDeath(LeaseProxy proxy) {
         synchronized (mLock) {
             Slog.d(TAG, "Lease proxy " + proxy + " died ...>.<...");
-            removeProxyLocked(proxy);
+            mProxies.remove(proxy.mKey);
+            mTypedProxies.remove(proxy.mType);
         }
     }
 
