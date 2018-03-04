@@ -76,13 +76,13 @@ public class ResourceStatManager {
         return statHistory.getCurrentStat();
     }
 
-    public boolean isNoActivateEvent(long leaseId) {
+    public boolean hasActivateEvent(long leaseId) {
         StatHistory statHistory = mStatsHistorys.get(leaseId);
         if (statHistory == null) {
             Slog.e(TAG, "No statHistory for the lease " + leaseId);
             return false;
         }
-        return statHistory.isNoActivateEvent();
+        return statHistory.hasActivateEvent();
     }
 
     public StatHistory getStatsHistory(long leaseId) {
@@ -122,13 +122,7 @@ public class ResourceStatManager {
         if (statHistory == null) {
             return false;
         }
-        statHistory.remove();
+        statHistory.clear();
         return mStatsHistorys.remove(leaseId, statHistory);
-    }
-
-
-    //TODO:This is the core part of lease manager
-    public BehaviorType judge() {
-        return BehaviorType.FrequencyAsking;
     }
 }

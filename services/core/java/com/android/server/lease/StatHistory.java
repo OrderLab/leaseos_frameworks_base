@@ -42,8 +42,6 @@ public class StatHistory {
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
 
-    protected final static int IN_CHARGING = -2;
-
     public StatHistory() {
         mStats = new LinkedList<>();
         mEventList = new LinkedList<>();
@@ -72,14 +70,14 @@ public class StatHistory {
                 } else if (e.acquireTime < startTime) {
                     staleEventsIndex.add(index);
                     if (index <= mOpenIndex) {
-                        mOpenIndex --;
+                        mOpenIndex--;
                     }
                     holdingTime += e.releaseTime - startTime;
                     Slog.d(TAG, "The lease has been acquired before this lease term. For process " + uid + ", the Holding time is " + holdingTime );
                 } else {
                     staleEventsIndex.add(index);
                     if (index <= mOpenIndex) {
-                        mOpenIndex --;
+                        mOpenIndex--;
                     }
                     holdingTime += e.releaseTime - e.acquireTime;
                     Slog.d(TAG, "The lease has been released. For process " + uid + ", the Holding time is " + holdingTime );
@@ -88,25 +86,23 @@ public class StatHistory {
             }
             index++;
         }
-
-        Collections.reverse(staleEventsIndex);
-        for (int staleIndex : staleEventsIndex) {
-            mEventList.remove(staleIndex);
+        for (int i = staleEventsIndex.size() - 1; i >= 0; i--) {
+            int idx = staleEventsIndex.get(i);
+            mEventList.remove(idx);
         }
-
         ResourceStat resourceStat = getCurrentStat();
         resourceStat.update(holdingTime, frequency, context, uid);
     }
 
-    public boolean isNoActivateEvent () {
-        return mEventList.isEmpty();
+    public boolean hasActivateEvent () {
+        return !mEventList.isEmpty();
     }
 
     public boolean addItem(ResourceStat resourceStat) {
         return mStats.add(resourceStat);
     }
 
-    public void remove() {
+    public void clear() {
         mStats.clear();
     }
 

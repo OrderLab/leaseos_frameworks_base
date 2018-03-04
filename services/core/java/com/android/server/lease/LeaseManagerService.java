@@ -28,6 +28,7 @@ import android.lease.LeaseManager;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.os.Binder;
+import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
@@ -59,6 +60,10 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private final HashMap<IBinder, LeaseProxy> mProxies = new HashMap<>();
     private final SparseArray<LeaseProxy> mTypedProxies = new SparseArray<>();
 
+    // Each type of lease will get assigned with a different worker thread to
+    // handle work related to these leases
+    private final SparseArray<LeaseWorkerHandler> mWorkers = new SparseArray<>();
+
     private final Context mContext;
 
     public LeaseManagerService(Context context) {
@@ -84,27 +89,39 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
                 return LeaseManager.INVALID_LEASE;
             }
-            Lease lease = new Lease(mLastLeaseId, uid, rtype, mRStatManager, mContext);
-            Slog.i(TAG,
-                    "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
+            Lease lease = new Lease(mLastLeaseId, uid, rtype, mRStatManager, null,
+                    null, mContext);
+            Slog.i(TAG, "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
             mLeases.put(mLastLeaseId, lease);
             lease.create();
             Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
             StatHistory statHistory = new StatHistory();
             Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
+            LeaseProxy proxy = null;
+            LeaseWorkerHandler handler = null;
             switch (rtype) {
                 case Wakelock:
                     WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid, mContext);
                     statHistory.addItem(wStat);
-                    mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
+                    proxy = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
+                    handler = mWorkers.get(LeaseManager.WAKELOCK_LEASE_PROXY);
                     break;
                 case Location:
-                    mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
+                    proxy = mTypedProxies.get(LeaseManager.LOCATION_LEASE_PROXY);
+                    handler = mWorkers.get(LeaseManager.LOCATION_LEASE_PROXY);
                     break;
                 case Sensor:
-                    mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
+                    proxy = mTypedProxies.get(LeaseManager.SENSOR_LEASE_PROXY);
+                    handler = mWorkers.get(LeaseManager.SENSOR_LEASE_PROXY);
                     break;
             }
+            if (proxy != null && proxy.mProxy != null) {
+                lease.setProxy(proxy.mProxy); // set the proxy for this lease
+            }
+            if (handler != null) {
+                lease.setHandler(handler);
+            }
+            mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
             mLastLeaseId++;
             return lease.mLeaseId;
         }
@@ -150,11 +167,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         Lease lease;
         synchronized (mLock) {
             lease = mLeases.get(leaseId);
-            if (lease == null) {
-                return false;
-            }
+            return lease != null && lease.renew(true);
         }
-        return lease.startRenewPolicy();
     }
 
     /**
@@ -230,6 +244,16 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         } catch (RemoteException e) {
             Slog.e(TAG, "linkToDeath failed:", e);
             return null;
+        }
+        if (mWorkers.get(type) == null) {
+            String workerName = wrapper.toString() + "-worker";
+            HandlerThread hthread = new HandlerThread(workerName);
+            hthread.start();
+            LeaseWorkerHandler handler = new LeaseWorkerHandler(workerName, hthread.getLooper());
+            mWorkers.put(type, handler);
+            Slog.d(TAG, "Worker thread for " + LeaseManager.getProxyTypeString(type) + " is started");
+        } else {
+            Slog.d(TAG, "Worker thread for " + LeaseManager.getProxyTypeString(type) + " already exists");
         }
         Slog.d(TAG, "Lease proxy " + wrapper + " registered");
         return wrapper;
@@ -330,7 +354,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
         @Override
         public String toString() {
-            return "<" + LeaseManager.getProxyTypeString(mType) + ">" + mName;
+            return "[" + LeaseManager.getProxyTypeString(mType) + "]-" + mName;
         }
     }
 }

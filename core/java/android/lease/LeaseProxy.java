@@ -199,6 +199,6 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
 
     @Override
     public String toString() {
-        return "<" + LeaseManager.getProxyTypeString(mType) + ">" + mName;
+        return "[" + LeaseManager.getProxyTypeString(mType) + "]-" + mName;
     }
 }

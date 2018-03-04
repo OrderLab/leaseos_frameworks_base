@@ -22,11 +22,13 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.BehaviorType;
+import android.lease.ILeaseProxy;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Process;
+import android.os.RemoteException;
 import android.os.SystemClock;
 import android.util.Slog;
 
@@ -46,33 +48,35 @@ public class Lease {
     protected int mOwnerId;  // The identifier of the owner of lease. This variable usually means the UID
     protected ResourceType mType; // The type of resource the lease is assigned
     protected LeaseStatus mStatus; // The status of the lease
-
-    protected ResourceStatManager mRStatManager; // The record of the history lease term for this lease
     protected int mLength; // The length of this lease term in millisecond
     protected long mBeginTime; // The BeginTime of this lease term
     protected long mEndTime; // The EndTime of this lease term
     protected int mRenewal; // The number of current lease term
-    protected final Context mContext;
-    private ServiceThread mHandlerThread;
-    private Handler mHandler;
+    protected final Context mContext; // The context in which the lease is created
+    protected ResourceStatManager mRStatManager; // The record of the history lease term for this lease
+    protected ILeaseProxy mProxy; // the associated lease proxy
+
+    private LeaseWorkerHandler mHandler;
     private boolean mScheduled;
+
 
     private Runnable mExpireRunnable = new Runnable() {
         @Override
         public void run() {
             cancelChecks();
-            expire();
+            endTerm(); // call end of term at the end
         }
     };
 
-
     public Lease(long lid, int Oid, ResourceType type, ResourceStatManager RStatManager,
-            Context context) {
+            ILeaseProxy proxy, LeaseWorkerHandler handler, Context context) {
         mLeaseId = lid;
         mOwnerId = Oid;
         mType = type;
         mStatus = LeaseStatus.INVALID;
         mRStatManager = RStatManager;
+        mProxy = proxy;
+        mHandler = handler;
         mContext = context;
     }
 
@@ -84,10 +88,6 @@ public class Lease {
         mStatus = LeaseStatus.ACTIVE;
         mLength = DEFAULT_TERM_MS;
         mBeginTime = SystemClock.elapsedRealtime();
-        mHandlerThread = new ServiceThread(TAG,
-                Process.THREAD_PRIORITY_DISPLAY, false /*allowIo*/);
-        mHandlerThread.start();
-        mHandler = new Handler(mHandlerThread.getLooper());
         long timeInterval = mLength;
         scheduleChecks(timeInterval);
     }
@@ -164,8 +164,44 @@ public class Lease {
      *
      * @return the status of lease
      */
-    public String getStatusStr() {
-        return mStatus.toString();
+    public LeaseStatus getStatus() {
+        return mStatus;
+    }
+
+    /**
+     * Return the current resource stat of the lease
+     *
+     * @return
+     */
+    public ResourceStat getCurrentStat() {
+        return mRStatManager.getCurrentStat(mLeaseId);
+    }
+
+    /**
+     * Return the history of resource stat of the lease.
+     *
+     * @return
+     */
+    public StatHistory getStatHistory() {
+        return mRStatManager.getStatsHistory(mLeaseId);
+    }
+
+    /**
+     * Set the associated lease proxy.
+     *
+     * @param proxy
+     */
+    public void setProxy(ILeaseProxy proxy) {
+        mProxy = proxy;
+    }
+
+    /**
+     * Set the associated worker thread for this lease.
+     *
+     * @param handler
+     */
+    public void setHandler(LeaseWorkerHandler handler) {
+        mHandler = handler;
     }
 
     /**
@@ -174,56 +210,60 @@ public class Lease {
      * @return true if the lease is successfully expired
      */
     public boolean expire() {
-        Slog.d(TAG, "Starting expire lease " + mLeaseId);
-        //TODO: release the resource and the policy for deciding the renew time
-        return true;
-    }
-
-    public boolean startRenewPolicy() {
-        //TODO: finish the policy later
-        if (mRStatManager.judge() == BehaviorType.Normal) {
-            return renew();
+        if (mStatus != LeaseStatus.ACTIVE) {
+            Slog.e(TAG, "Skip expiring an inactive lease " + mLeaseId);
+            return false;
+        }
+        mStatus = LeaseStatus.EXPIRED;
+        if (mProxy != null) {
+            try {
+                Slog.d(TAG, "Calling onExpire for lease " + mLeaseId);
+                mProxy.onExpire(mLeaseId);
+                return true;
+            } catch (RemoteException e) {
+                Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
+                return false;
+            }
         } else {
-            long timeInterval = 60 * 1000;
-            Slog.i(TAG, "Delay to renew lease " + mLeaseId + " for " + timeInterval + "s" + " for process " + mOwnerId);
-            // TODO: use lease proxy to deny lease renew request
-            scheduleChecks(timeInterval);
-            return true;
-        }
-
-    }
-
-    public void scheduleChecks(long timeInterval) {
-        if (!mScheduled) {
-            //Slog.d(TAG, "Scheduling checker queue [" + mCheckInterval + " ms]");
-            mHandler.postDelayed(mExpireRunnable, timeInterval);
-            mScheduled = true;
+            Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
+            return false;
         }
     }
 
-    public void cancelChecks() {
-        if (mScheduled) {
-            //Slog.d(TAG, "Canceling checker queue [" + mCheckInterval + " ms]");
-            mHandler.removeCallbacks(mExpireRunnable);
-            mScheduled = false;
+    /**
+     * One lease term has come to an end.
+     */
+    public void endTerm() {
+        mEndTime = SystemClock.elapsedRealtime();
+        // update the stats for this lease term
+        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
+        LeasePolicyRuler.Decision decision = LeasePolicyRuler.judge(this);
+        switch (decision) {
+            case EXPIRE:
+                expire();
+                break;
+            case RENEW:
+                renew(false); // skip checking the status as we just transit from end of term
+                break;
+            default:
+                Slog.e(TAG, "Unimplemented action for decision " + decision);
         }
     }
 
     /**
      * Renew a new lease term for the lease
      *
+     * @param check should the lease status be checked
      * @return true if the lease is renewed
      */
-    public boolean renew() {
-        boolean success = false;
-
+    public boolean renew(boolean check) {
         Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
-        if (mStatus == LeaseStatus.ACTIVE) {
+        if (check && mStatus == LeaseStatus.ACTIVE) {
             return false;
         }
-
         mRenewal++;
         mBeginTime = SystemClock.elapsedRealtime();
+        boolean success = false;
         // create a new stat for the new lease term
         switch (mType) {
             case Wakelock:
@@ -241,11 +281,35 @@ public class Lease {
                 success = mRStatManager.addResourceStat(mLeaseId, sStat);
                 break;
         }
-
-        long timeInterval = mLength;
-        scheduleChecks(timeInterval);
-        //TODO: Acquire the resource again
+        if (mProxy != null) {
+            try {
+                Slog.d(TAG, "Calling onRenew for lease " + mLeaseId);
+                mProxy.onRenew(mLeaseId);
+            } catch (RemoteException e) {
+                Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
+                success = false;
+            }
+        } else {
+            Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
+            success = false;
+        }
+        scheduleChecks(mLength);
         return success;
     }
 
+    public void scheduleChecks(long timeInterval) {
+        if (!mScheduled && mHandler != null) {
+            Slog.d(TAG, "Scheduling expiration check for lease " + mLeaseId + " after " + mLength + " ms");
+            mHandler.postDelayed(mExpireRunnable, timeInterval);
+            mScheduled = true;
+        }
+    }
+
+    public void cancelChecks() {
+        if (mScheduled && mHandler != null) {
+            Slog.d(TAG, "Cancelling expiration check for lease " + mLeaseId);
+            mHandler.removeCallbacks(mExpireRunnable);
+            mScheduled = false;
+        }
+    }
 }
