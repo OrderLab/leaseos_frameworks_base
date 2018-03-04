@@ -902,18 +902,38 @@ public final class PowerManagerService extends SystemService
     }
 
     private void acquireWakeLockInternal(IBinder lock, int flags, String tag, String packageName,
-            WorkSource ws, String historyTag, int uid, int pid) {
+            WorkSource ws, String historyTag, int uid, int pid, boolean fromProxy) {
         synchronized (mLock) {
-            /*
-            if (mFreezerTable != null) {
-                RequestFreezer<IBinder> lockFreezer = mFreezerTable.get(lock);
-                if (lockFreezer != null && lockFreezer.freeze(lock)) {
-                    Slog.d(TAG, packageName + " has been disruptive, freezing its requests for a "
-                            + "while.. The process is " + uid);
+            /*** LeaseOS changes ***/
+            // First, check if any lease has been created for this request or should the request
+            // be denied for a while.
+            WakelockLease lease = null;
+            if (mLeaseProxy != null && !fromProxy) {
+                // For frequent asking problem, the lease manager might decides to
+                // deny any lease creation request for a given UID instead of deny a
+                // specific lease ID, in this case, we should check if the package/uid has
+                // been temporarily banned, and if so we should just return.
+                if (mLeaseProxy.shouldFreezePkg(packageName)) {
+                    Slog.d(TAG, packageName + " has been disruptive to lease manager service,"
+                            + " freezing lease requests for a while..");
                     return;
                 }
+                lease = mLeaseProxy.getLease(lock);
+                if (lease != null) {
+                    if (lease.mLeaseStatus == LeaseStatus.ACTIVE) {
+                        Slog.d(TAG, "App " + packageName + " still hold a valid lease for wakelock " + tag);
+                    } else if (lease.mLeaseStatus == LeaseStatus.EXPIRED) {
+                        Slog.d(TAG, "App " + packageName + " hold an expired lease for wakelock " + tag);
+                        if (!mLeaseProxy.renewLease(lease))
+                            return;
+                        // If renewal is successful, it means the App now is allowed to request this
+                        // resource.
+                    } else {
+                        Slog.e(TAG, "App " + packageName + " hold an invalid lease for wakelock " + tag);
+                    }
+                }
             }
-            */
+            /*********************/
 
             if (DEBUG_SPEW) {
                 Slog.d(TAG, "acquireWakeLockInternal: lock=" + Objects.hashCode(lock)
@@ -943,14 +963,18 @@ public final class PowerManagerService extends SystemService
                 mWakeLocks.add(wakeLock);
                 setWakeLockDisabledStateLocked(wakeLock);
                 notifyAcquire = true;
+            }
 
-                /*** LeaseOS changes ***/
+            /*** LeaseOS changes ***/
+            // Second, if no lease has been created for this request, try to request a lease
+            // from the lease manager
+            if (lease == null) {
                 if (mLeaseProxy != null) {
                     if (mLeaseProxy.exempt(packageName, uid)) {
                         Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
-                    } else {
+                    } else if (!fromProxy) {
                         //TODO: there is a bug that the service will create leases for same process for many times
-                        WakelockLease lease = mLeaseProxy.getOrCreateLease(lock, uid);
+                        lease = mLeaseProxy.createLease(lock, uid);
                         if (lease != null) {
                             // hold the internal data structure in case we need it later
                             lease.mLeaseValue = wakeLock;
@@ -959,8 +983,11 @@ public final class PowerManagerService extends SystemService
                         }
                     }
                 }
-                /*********************/
+            } else {
+                // update the internal data structure in case we need it later
+                lease.mLeaseValue = wakeLock;
             }
+            /*********************/
 
             applyWakeLockFlagsOnAcquireLocked(wakeLock, uid);
             mDirty |= DIRTY_WAKE_LOCKS;
@@ -1005,7 +1032,7 @@ public final class PowerManagerService extends SystemService
         }
     }
 
-    private void releaseWakeLockInternal(IBinder lock, int flags, boolean finalized) {
+    private void releaseWakeLockInternal(IBinder lock, int flags, boolean finalized, boolean fromProxy) {
         synchronized (mLock) {
             int index = findWakeLockIndexLocked(lock);
             if (index < 0) {
@@ -1032,7 +1059,14 @@ public final class PowerManagerService extends SystemService
                 if (lease != null) {
                     Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
                     // TODO: notify ResourceStatManager about the release event
-                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_RELEASE);
+                    if (!fromProxy) {
+                        // if the release is not called from within the lease proxy
+                        // we let the lease manager service know this event
+                        // otherwise, we don't note the event because the callback to
+                        // the proxy is from lease manager service who should be expecting
+                        // this event
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_RELEASE);
+                    }
                     if (finalized) {
                         Slog.i(TAG, "Final removal of lease " + lease.mLeaseId);
                         mLeaseProxy.removeLease(lease);
@@ -1040,6 +1074,7 @@ public final class PowerManagerService extends SystemService
                 }
             }
             /*********************/
+
             wakeLock.mLock.unlinkToDeath(wakeLock, 0);
             removeWakeLockLocked(wakeLock, index);
         }
@@ -1060,7 +1095,7 @@ public final class PowerManagerService extends SystemService
             // release, power manager service will call unlinkToDeath, which will deregister the
             // recipient. But the lease table lives longer than the release period.
             mLeaseProxy.removeLease(this);
-            Slog.i(TAG, "Death of wakelock. Remove lease " + mLeaseId);
+            Slog.i(TAG, "Death of wakelock. Removed lease " + mLeaseId);
         }
     }
 
@@ -1102,7 +1137,7 @@ public final class PowerManagerService extends SystemService
                 }
                 if (lock != null) {
                     Slog.e(TAG, "Release wakelock object for lease " + leaseId);
-                    releaseWakeLockInternal(lock.mLock, lock.mFlags, false);
+                    releaseWakeLockInternal(lock.mLock, lock.mFlags, false, true);
                     lease.mLeaseStatus = LeaseStatus.EXPIRED;
                 }
             }
@@ -1123,7 +1158,7 @@ public final class PowerManagerService extends SystemService
                     } else {
                         // re-acquire the lock
                         acquireWakeLockInternal(lock.mLock, lock.mFlags, lock.mTag, lock.mPackageName,
-                                lock.mWorkSource, lock.mHistoryTag, lock.mOwnerUid, lock.mOwnerPid);
+                                lock.mWorkSource, lock.mHistoryTag, lock.mOwnerUid, lock.mOwnerPid, true);
                     }
                     // assume that after this point the lease is active
                     lease.mLeaseStatus = LeaseStatus.ACTIVE;
@@ -1133,12 +1168,12 @@ public final class PowerManagerService extends SystemService
 
         @Override
         public void onReject(int uid) throws RemoteException {
-            // TODO: reject a lease create request for this UID for one time
+            freezeUid(uid, -1, 1);
         }
 
         @Override
         public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
-            // TODO: implement freezing using request freezer.
+            freezeUid(uid, freezeDuration, freeCount);
         }
     }
     /*********************/
@@ -3573,7 +3608,7 @@ public final class PowerManagerService extends SystemService
             final int pid = Binder.getCallingPid();
             final long ident = Binder.clearCallingIdentity();
             try {
-                acquireWakeLockInternal(lock, flags, tag, packageName, ws, historyTag, uid, pid);
+                acquireWakeLockInternal(lock, flags, tag, packageName, ws, historyTag, uid, pid, false);
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }
@@ -3589,7 +3624,7 @@ public final class PowerManagerService extends SystemService
 
             final long ident = Binder.clearCallingIdentity();
             try {
-                releaseWakeLockInternal(lock, flags, finalized);
+                releaseWakeLockInternal(lock, flags, finalized, false);
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }
