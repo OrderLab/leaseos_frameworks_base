@@ -93,7 +93,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                     null, mContext);
             Slog.i(TAG, "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
             mLeases.put(mLastLeaseId, lease);
-            lease.create();
             Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
             StatHistory statHistory = new StatHistory();
             Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
@@ -117,10 +116,15 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             }
             if (proxy != null && proxy.mProxy != null) {
                 lease.setProxy(proxy.mProxy); // set the proxy for this lease
+            } else {
+                Slog.e(TAG, "No proxy found for lease " + lease.mLeaseId);
             }
             if (handler != null) {
                 lease.setHandler(handler);
+            } else {
+                Slog.e(TAG, "No worker thread found for lease " + lease.mLeaseId);
             }
+            lease.create(); // at last when proxy and worker thread is ready, create this lease
             mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
             mLastLeaseId++;
             return lease.mLeaseId;

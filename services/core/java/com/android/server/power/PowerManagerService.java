@@ -1121,12 +1121,12 @@ public final class PowerManagerService extends SystemService
                     if (lease.mLeaseStatus != LeaseStatus.EXPIRED) {
                         Slog.e(TAG, "Skip renewing because lease " + leaseId + " has not been expire before");
                     } else {
-                        // reacquire the lock
+                        // re-acquire the lock
                         acquireWakeLockInternal(lock.mLock, lock.mFlags, lock.mTag, lock.mPackageName,
                                 lock.mWorkSource, lock.mHistoryTag, lock.mOwnerUid, lock.mOwnerPid);
-                        // assume that after this point the lease is active
-                        lease.mLeaseStatus = LeaseStatus.ACTIVE;
                     }
+                    // assume that after this point the lease is active
+                    lease.mLeaseStatus = LeaseStatus.ACTIVE;
                 }
             }
         }
