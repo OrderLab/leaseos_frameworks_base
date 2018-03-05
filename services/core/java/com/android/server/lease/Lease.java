@@ -93,11 +93,10 @@ public class Lease {
     /**
      * Create a new lease and the corresponding resource manager
      */
-    public void create() {
+    public void create(long now) {
         mRenewal = 0;
         mStatus = LeaseStatus.ACTIVE;
         mLength = DEFAULT_TERM_MS;
-        mBeginTime = SystemClock.elapsedRealtime();
         mDelayInterval = DEFAULT_DELY_TIME;
         mDelayCounter = 0;
         if(mBatteryMonitor.isCharging()) {
@@ -105,6 +104,7 @@ public class Lease {
         } else {
             isCharging = true;
         }
+        mBeginTime = now;
         scheduleExpire(mLength);
     }
 
@@ -288,7 +288,7 @@ public class Lease {
                 expire();
                 break;
             case RENEW:
-                renew(false); // skip checking the status as we just transit from end of term
+                renew(true); // skip checking the status as we just transit from end of term
                 break;
             case DELAY:
                 expire();
@@ -306,14 +306,18 @@ public class Lease {
     }
 
     /**
-     * Renew a new lease term for the lease
+     * Renew a new lease term for the lease. There are two types of renewal. One is automatic
+     * renewal that's granted at the end of a lease term (the original meaning of renew). The other
+     * is delayed renewal that's requested from the proxy, e.g., a lease has been expired and then after
+     * 5ms an app tries to access the resource again.
      *
-     * @param check should the lease status be checked
+     * @param auto should the lease status be checked
      * @return true if the lease is renewed
      */
-    public boolean renew(boolean check) {
+    public boolean renew(boolean auto) {
         Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
-        if (check && mStatus == LeaseStatus.ACTIVE) {
+        if (!auto && mStatus != LeaseStatus.EXPIRED) {
+            // if a renewal is not at the end of a lease term, we must check for status first
             return false;
         }
         if (mBatteryMonitor.isCharging()) {
@@ -341,17 +345,20 @@ public class Lease {
                 success = mRStatManager.addResourceStat(mLeaseId, sStat);
                 break;
         }
-        if (mProxy != null) {
-            try {
-                Slog.d(TAG, "Calling onRenew for lease " + mLeaseId);
-                mProxy.onRenew(mLeaseId);
-            } catch (RemoteException e) {
-                Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
+        if (auto) {
+            // if it's an automatic renewal, we must try to notify the lease proxy
+            if (mProxy != null) {
+                try {
+                    Slog.d(TAG, "Calling onRenew for lease " + mLeaseId);
+                    mProxy.onRenew(mLeaseId);
+                } catch (RemoteException e) {
+                    Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
+                    success = false;
+                }
+            } else {
+                Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
                 success = false;
             }
-        } else {
-            Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
-            success = false;
         }
         scheduleExpire(mLength);
         return success;

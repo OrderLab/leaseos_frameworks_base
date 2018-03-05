@@ -31,6 +31,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Process;
 import android.os.RemoteException;
+import android.os.SystemClock;
 import android.util.LongSparseArray;
 import android.util.Slog;
 import android.util.SparseArray;
@@ -88,18 +89,21 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
                 return LeaseManager.INVALID_LEASE;
             }
+            Slog.i(TAG, "Begin to create a lease " + mLastLeaseId + " for process: " + uid);
             Lease lease = new Lease(mLastLeaseId, uid, rtype, mRStatManager, null,
                     null, mContext);
-            Slog.i(TAG, "newLease: begin to create a lease " + mLastLeaseId + " for process: " + uid);
             mLeases.put(mLastLeaseId, lease);
+
             Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
             StatHistory statHistory = new StatHistory();
             Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
+
             LeaseProxy proxy = null;
             LeaseWorkerHandler handler = null;
+            long now = SystemClock.elapsedRealtime();
             switch (rtype) {
                 case Wakelock:
-                    WakelockStat wStat = new WakelockStat(lease.mBeginTime, uid, mContext);
+                    WakelockStat wStat = new WakelockStat(now, uid, mContext);
                     statHistory.addItem(wStat);
                     proxy = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
                     handler = mWorkers.get(LeaseManager.WAKELOCK_LEASE_PROXY);
@@ -116,14 +120,14 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             if (proxy != null && proxy.mProxy != null) {
                 lease.setProxy(proxy.mProxy); // set the proxy for this lease
             } else {
-                Slog.e(TAG, "No proxy found for lease " + lease.mLeaseId);
+                Slog.e(TAG, "No proxy found for lease " + mLastLeaseId);
             }
             if (handler != null) {
                 lease.setHandler(handler);
             } else {
-                Slog.e(TAG, "No worker thread found for lease " + lease.mLeaseId);
+                Slog.e(TAG, "No worker thread found for lease " + mLastLeaseId);
             }
-            lease.create(); // at last when proxy and worker thread is ready, create this lease
+            lease.create(now); // at last when proxy and worker thread is ready, create this lease
             mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
             mLastLeaseId++;
             return lease.mLeaseId;
@@ -170,7 +174,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         Lease lease;
         synchronized (mLock) {
             lease = mLeases.get(leaseId);
-            return lease != null && lease.renew(true);
+            return lease != null && lease.renew(false);
         }
     }
 
@@ -189,6 +193,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 Slog.d(TAG, "remove: can not find lease for id:" + leaseId);
                 return false;
             }
+            Slog.d(TAG, "Removed lease " + leaseId + " in LeaseManagerService");
         }
         //TODO: how to handler the logic of true or false
         lease.cancelExpire();

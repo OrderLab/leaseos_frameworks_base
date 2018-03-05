@@ -50,7 +50,8 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
     protected final LeaseWhiteList mWhiteList;
     protected final Hashtable<S, T> mLeaseTable;
     protected final LongSparseArray<T> mLeaseDescriptors;
-    protected final Hashtable<Integer,RequestFreezer> mFreezerTable;
+    protected final RequestFreezer<Integer> mUidFreezer;
+
 
     protected LeaseManager mLeaseManager;
 
@@ -64,7 +65,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         mWhiteList = new LeaseWhiteList(LeaseWhiteList.WHITELIST_DEFAULT);
         mLeaseTable = new Hashtable<>();
         mLeaseDescriptors =  new LongSparseArray<>();
-        mFreezerTable = new Hashtable<>();
+        mUidFreezer = new RequestFreezer<>();
     }
 
     public LeaseManager getManager() {
@@ -106,6 +107,28 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
     }
 
     /**
+     * Test if a uid should be frozen from talking to lease manager service for a while.
+     *
+     * @param uid
+     * @return
+     */
+    public boolean shouldFreezeUid(int uid) {
+        return mUidFreezer.freeze(uid);
+    }
+
+    /**
+     * Add a UID to freezer for a short duration.
+     *
+     * @param uid
+     * @param freezeDuration
+     * @param freeCount
+     * @return
+     */
+    public boolean freezeUid(int uid, long freezeDuration, int freeCount) {
+        return mUidFreezer.addToFreezer(uid, freezeDuration, freeCount);
+    }
+
+    /**
      * Given a key to a lease, return the lease descriptor
      *
      * @param key
@@ -115,17 +138,14 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         return mLeaseTable.get(key);
     }
 
-    public T getOrCreateLease(S key, int uid) {
+    public T createLease(S key, int uid) {
         if (mLeaseManager != null) {
-            T lease = mLeaseTable.get(key);
-            if (lease != null)
-                return lease;
             long leaseId = mLeaseManager.create(ResourceType.Wakelock, uid);
             if (leaseId < LeaseManager.LEASE_ID_START) {
                 Slog.i(TAG,"Skip invalid lease");
                 return null;
             }
-            lease = newLease(key, leaseId, LeaseStatus.ACTIVE); // a new lease
+            T lease = newLease(key, leaseId, LeaseStatus.ACTIVE); // a new lease
             mLeaseTable.put(key, lease);
             mLeaseDescriptors.put(leaseId, lease);
             Slog.i(TAG, "Created new lease " + leaseId + ". The lease table size is "
@@ -135,6 +155,18 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
             Slog.i(TAG, "LeaseManager is not ready");
             return null;
         }
+    }
+
+    public boolean renewLease(T lease) {
+        if (!mLeaseManager.renew(lease.mLeaseId)) {
+            // Possible failure reason: there has been too many lease requests from this UID
+            // the lease manager decides to reject the requests for a while.
+            Slog.d(TAG, "Failed to renew lease " + lease.mLeaseId + " from lease manager");
+            return false;
+        }
+        Slog.d(TAG, "Successfully renewed lease " + lease.mLeaseId + " from lease manager");
+        lease.mLeaseStatus = LeaseStatus.ACTIVE;
+        return true;
     }
 
     public abstract T newLease(S key, long leaseId, LeaseStatus status);

@@ -31,41 +31,21 @@ public class RequestFreezer<T> {
     public static final int DEFAULT_FREEZE_COUNT = 200;
 
     protected Map<T, FreezeStats> mFreezeStats;
-    protected long mFreezeDuration;
-    protected int mFreezeCount;
 
     public RequestFreezer() {
-        this(DEFAULT_FREEZE_DURATION, DEFAULT_FREEZE_COUNT);
-    }
-
-    public RequestFreezer(long freezeDuration, int freeCount) {
-        mFreezeDuration = freezeDuration;
-        mFreezeCount = freeCount;
-        mFreezeStats = new HashMap<T, FreezeStats>();
+        mFreezeStats = new HashMap<>();
     }
 
     /**
      * Add a naughty owner to the freezer. If the owner is already frozen,
      * do nothing.
      */
-    public boolean addToFreezer(T owner) {
+    public boolean addToFreezer(T owner, long freezeDuration, int freeCount) {
         FreezeStats stats = mFreezeStats.get(owner);
         if (stats != null) {
             return false;
         }
-        long time;
-        int cnt;
-        if (mFreezeDuration > 0) {
-            time = SystemClock.elapsedRealtime();
-        } else {
-            time = -1;
-        }
-        if (mFreezeCount > 0) {
-            cnt = 0;
-        } else {
-            cnt = -1;
-        }
-        mFreezeStats.put(owner, new FreezeStats(time, cnt));
+        mFreezeStats.put(owner, new FreezeStats(freezeDuration, freeCount));
         return true;
     }
 
@@ -109,23 +89,35 @@ public class RequestFreezer<T> {
      * @hide
      */
     public class FreezeStats {
+        public final long maxFreezeDuration;
+        public final int maxFreezeCount;
+
         public long freezeTime;
         public int freezeCount;
 
-        public FreezeStats(long time, int count) {
-            freezeTime = time;
-            freezeCount = count;
+        public FreezeStats(long maxDuration, int maxCount) {
+            maxFreezeDuration = maxDuration;
+            maxFreezeCount = maxCount;
+            if (maxDuration > 0) {
+                freezeTime = SystemClock.elapsedRealtime();
+            } else {
+                freezeTime = -1;
+            }
+            if (maxFreezeCount > 0) {
+                freezeCount = 0;
+            } else {
+                freezeCount = -1;
+            }
         }
 
         /**
          * @hide
          */
         public boolean expired() {
-            if (mFreezeCount > 0 && freezeCount >= mFreezeCount) {
+            if (maxFreezeCount > 0 && freezeCount >= maxFreezeCount) {
                 return true;
             }
-            if (mFreezeDuration > 0
-                    && (SystemClock.elapsedRealtime() - freezeTime) >= mFreezeDuration) {
+            if (maxFreezeDuration > 0 && (SystemClock.elapsedRealtime() - freezeTime) >= maxFreezeDuration) {
                 return true;
             }
             return false;
@@ -135,10 +127,9 @@ public class RequestFreezer<T> {
          * @hide
          */
         public void increment() {
-            if (mFreezeCount > 0) {
-                mFreezeCount++;
+            if (freezeCount > 0) {
+                freezeCount++;
             }
         }
     }
-
 }
