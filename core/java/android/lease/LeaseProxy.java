@@ -50,6 +50,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
     protected final LeaseWhiteList mWhiteList;
     protected final Hashtable<S, T> mLeaseTable;
     protected final LongSparseArray<T> mLeaseDescriptors;
+    protected final Hashtable<Integer,RequestFreezer> mFreezerTable;
 
     protected LeaseManager mLeaseManager;
 
@@ -63,6 +64,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         mWhiteList = new LeaseWhiteList(LeaseWhiteList.WHITELIST_DEFAULT);
         mLeaseTable = new Hashtable<>();
         mLeaseDescriptors =  new LongSparseArray<>();
+        mFreezerTable = new Hashtable<>();
     }
 
     public LeaseManager getManager() {

@@ -904,17 +904,6 @@ public final class PowerManagerService extends SystemService
     private void acquireWakeLockInternal(IBinder lock, int flags, String tag, String packageName,
             WorkSource ws, String historyTag, int uid, int pid) {
         synchronized (mLock) {
-            /*
-            if (mFreezerTable != null) {
-                RequestFreezer<IBinder> lockFreezer = mFreezerTable.get(lock);
-                if (lockFreezer != null && lockFreezer.freeze(lock)) {
-                    Slog.d(TAG, packageName + " has been disruptive, freezing its requests for a "
-                            + "while.. The process is " + uid);
-                    return;
-                }
-            }
-            */
-
             if (DEBUG_SPEW) {
                 Slog.d(TAG, "acquireWakeLockInternal: lock=" + Objects.hashCode(lock)
                         + ", flags=0x" + Integer.toHexString(flags)
@@ -949,13 +938,16 @@ public final class PowerManagerService extends SystemService
                     if (mLeaseProxy.exempt(packageName, uid)) {
                         Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                     } else {
-                        //TODO: there is a bug that the service will create leases for same process for many times
                         WakelockLease lease = mLeaseProxy.getOrCreateLease(lock, uid);
                         if (lease != null) {
                             // hold the internal data structure in case we need it later
                             lease.mLeaseValue = wakeLock;
-                            // TODO: invoke check and notify ResourceStatManager
-                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
+                            if(mLeaseProxy.isFreeze(uid)) {
+                                releaseWakeLockInternal(lock, flags, false);
+                            } else {
+                                // TODO: invoke check and notify ResourceStatManager
+                                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
+                            }
                         }
                     }
                 }
@@ -1139,6 +1131,20 @@ public final class PowerManagerService extends SystemService
         @Override
         public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
             // TODO: implement freezing using request freezer.
+            RequestFreezer<Integer> lockFreezer = new RequestFreezer<Integer>(freezeDuration, freeCount);
+            mFreezerTable.put(uid, lockFreezer);
+            lockFreezer.addToFreezer(uid);
+        }
+
+        public boolean isFreeze(int uid) {
+            if (mFreezerTable != null) {
+                RequestFreezer<Integer> lockFreezer = mFreezerTable.get(uid);
+                if (lockFreezer != null && lockFreezer.freeze(uid)) {
+                    Slog.d(TAG, "Process " + uid + " is on freezing");
+                    return true;
+                }
+            }
+           return false;
         }
     }
     /*********************/

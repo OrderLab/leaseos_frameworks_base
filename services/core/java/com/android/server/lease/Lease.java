@@ -38,6 +38,7 @@ public class Lease {
 
     public static final int DEFAULT_TERM_MS = 60 * 1000; // default 60 seconds, may need to reduce it
     public static final int DEFAULT_DELY_TIME = 20 * 1000; // the delay time, default 20 second
+    public static final int MAX_DELAY_NUMBER = 200  ;
 
     protected long mLeaseId; // The identifier of lease
     protected int mOwnerId;  // The identifier of the owner of lease. This variable usually means the UID
@@ -238,6 +239,29 @@ public class Lease {
     }
 
     /**
+     * Freeze the request of wakelock for this uid
+     *
+     * @return true if the lease is successfully expired
+     */
+    public boolean freeze() {
+        if (mProxy != null) {
+            try {
+                Slog.d(TAG, "Calling onFreeze for lease " + mLeaseId);
+                mProxy.onFreeze(mOwnerId, mDelayInterval, MAX_DELAY_NUMBER);
+            } catch (RemoteException e) {
+                Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
+                return false;
+            }
+            return true;
+        } else {
+            Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
+            return false;
+        }
+    }
+
+
+
+    /**
      * One lease term has come to an end.
      */
     public void endTerm() {
@@ -255,6 +279,7 @@ public class Lease {
                 break;
             case DELAY:
                 expire();
+                freeze();
                 sechduleNextLeaseTerm();
             default:
                 Slog.e(TAG, "Unimplemented action for decision " + decision);
