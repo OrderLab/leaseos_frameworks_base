@@ -1131,6 +1131,7 @@ public final class PowerManagerService extends SystemService
         @Override
         public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
             // TODO: implement freezing using request freezer.
+            Slog.d(TAG, "LeaseManagerService instruct me to freeze uid " + uid + " for " + freezeDuration + " ms");
             RequestFreezer<Integer> lockFreezer = new RequestFreezer<Integer>(freezeDuration, freeCount);
             mFreezerTable.put(uid, lockFreezer);
             lockFreezer.addToFreezer(uid);
