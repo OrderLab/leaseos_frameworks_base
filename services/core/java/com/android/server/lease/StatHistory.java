@@ -39,6 +39,7 @@ public class StatHistory {
     protected LinkedList<Event> mEventList;
     protected int mOpenIndex;
     //TODO: remove the old stats
+    protected static final int MAX_HISTORY_STATS = 10;
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
 
@@ -99,6 +100,10 @@ public class StatHistory {
     }
 
     public boolean addItem(ResourceStat resourceStat) {
+        if(mStats.size() >= MAX_HISTORY_STATS) {
+            ResourceStat stat = mStats.getFirst();
+            mStats.remove(stat);
+        }
         return mStats.add(resourceStat);
     }
 

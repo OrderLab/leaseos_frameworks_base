@@ -52,7 +52,9 @@ public class Lease {
     protected ResourceStatManager mRStatManager; // The record of the history lease term for this lease
     protected ILeaseProxy mProxy; // the associated lease proxy
     protected long mDelayInterval; // the time interval between two leases
-    protected long mDelayCounter;
+    protected long mDelayCounter; // the counter of delaying times
+    BatteryMonitor mBatteryMonitor; // the instance of Battery Monitor
+    protected boolean isCharging; // true if the phone is charged during this lease term
 
     private LeaseWorkerHandler mHandler;
     private boolean mScheduled;
@@ -85,6 +87,7 @@ public class Lease {
         mProxy = proxy;
         mHandler = handler;
         mContext = context;
+        mBatteryMonitor = BatteryMonitor.getInstance(context);
     }
 
     /**
@@ -97,6 +100,11 @@ public class Lease {
         mBeginTime = SystemClock.elapsedRealtime();
         mDelayInterval = DEFAULT_DELY_TIME;
         mDelayCounter = 0;
+        if(mBatteryMonitor.isCharging()) {
+            isCharging = true;
+        } else {
+            isCharging = true;
+        }
         scheduleExpire(mLength);
     }
 
@@ -246,7 +254,7 @@ public class Lease {
     public boolean freeze() {
         if (mProxy != null) {
             try {
-                Slog.d(TAG, "Calling onFreeze for lease " + mLeaseId);
+                Slog.d(TAG, "Calling onFreeze for uid " + mOwnerId + " to freeze for " + mDelayInterval);
                 mProxy.onFreeze(mOwnerId, mDelayInterval, MAX_DELAY_NUMBER);
             } catch (RemoteException e) {
                 Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
@@ -268,6 +276,11 @@ public class Lease {
         mEndTime = SystemClock.elapsedRealtime();
         // update the stats for this lease term
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
+        if (isCharging == true || mBatteryMonitor.isCharging()) {
+            Slog.d(TAG,"The phone is in charing, immediately renew for lease " + mLeaseId);
+            renew(false);
+            return;
+        }
         LeasePolicyRuler.Decision decision = LeasePolicyRuler.behaviorJudge(this);
         switch (decision) {
             case EXPIRE:
@@ -302,6 +315,11 @@ public class Lease {
         Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
         if (check && mStatus == LeaseStatus.ACTIVE) {
             return false;
+        }
+        if (mBatteryMonitor.isCharging()) {
+            isCharging = true;
+        } else {
+            isCharging = false;
         }
         mRenewal++;
         mBeginTime = SystemClock.elapsedRealtime();
