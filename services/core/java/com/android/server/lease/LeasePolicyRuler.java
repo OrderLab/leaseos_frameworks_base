@@ -1,7 +1,7 @@
 /*
  *  @author Ryan Huang <huang@cs.jhu.edu>
  *
- *  The LeaseOS Project  
+ *  The LeaseOS Project
  *
  *  Copyright (c) 2018, Johns Hopkins University - Order Lab.
  *      All rights reserved.
@@ -21,25 +21,23 @@
 package com.android.server.lease;
 
 import android.lease.BehaviorType;
-import android.os.DeadSystemException;
 
 /**
  * Decide important policy about lease such as whether to renew a lease.
- *
  */
 public class LeasePolicyRuler {
     public enum Decision {
         EXPIRE,
         RENEW,
-        DELAY,
-        FREEZE
+        FrequencyAsking,
+        LongHolding,
+        LowUtility,
+        HighDamage,
+        Normal
     }
 
     /**
      * Classify the app's lease usage behavior type based on the stat history.
-     *
-     * @param history
-     * @return
      */
     public static BehaviorType classify(StatHistory history) {
         return BehaviorType.FrequencyAsking;
@@ -47,18 +45,26 @@ public class LeasePolicyRuler {
 
     /**
      * Judge what to do with a lease when it expires.
-     *
-     * @param lease
-     * @return
      */
     public static Decision behaviorJudge(Lease lease, boolean isProxy) {
         // TODO: judge based on the lease's current resource stat or entire stat history.
         StatHistory statHistory = lease.getStatHistory();
         BehaviorType behavior = classify(lease.getStatHistory());
         if (isProxy || statHistory.hasActivateEvent()) {
-            if (behavior == BehaviorType.Normal)
-                return Decision.RENEW; // TODO: probably should just let it expire
-            return Decision.DELAY;
+            switch (behavior) {
+                case Normal:
+                    return Decision.RENEW;
+                case FrequencyAsking:
+                    return Decision.FrequencyAsking;
+                case LongHolding:
+                    return Decision.LongHolding;
+                case LowUtility:
+                    return Decision.LowUtility;
+                case HighDamage:
+                    return Decision.HighDamage;
+                default:
+                    return Decision.RENEW;
+            }
         } else {
             return Decision.EXPIRE;
         }

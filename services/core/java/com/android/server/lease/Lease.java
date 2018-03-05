@@ -52,7 +52,7 @@ public class Lease {
     protected ResourceStatManager mRStatManager; // The record of the history lease term for this lease
     protected ILeaseProxy mProxy; // the associated lease proxy
     protected long mDelayInterval; // the time interval between two leases
-    protected long mDelayCounter; // the counter of delaying times
+    protected int mDelayCounter; // the counter of delaying times
     BatteryMonitor mBatteryMonitor; // the instance of Battery Monitor
     protected boolean isCharging; // true if the phone is charged during this lease term
     protected boolean isDelay;
@@ -100,11 +100,7 @@ public class Lease {
         mLength = DEFAULT_TERM_MS;
         mDelayInterval = DEFAULT_DELY_TIME;
         mDelayCounter = 0;
-        if(mBatteryMonitor.isCharging()) {
-            isCharging = true;
-        } else {
-            isCharging = true;
-        }
+        isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
         isDelay = false;
         scheduleExpire(mLength);
@@ -130,6 +126,7 @@ public class Lease {
 
 
     public boolean isActiveOrRenew() {
+        isCharging = mBatteryMonitor.isCharging();
         if (mStatus == LeaseStatus.ACTIVE || isCharging) {
             return true;
         } else if (mStatus == LeaseStatus.EXPIRED && !isDelay ) {
@@ -301,29 +298,45 @@ public class Lease {
         LeasePolicyRuler.Decision decision = LeasePolicyRuler.behaviorJudge(this, isProxy);
         switch (decision) {
             case EXPIRE:
-                //TODO: the goal of expire case is unclear
                 isDelay = false;
                 expire();
                 return true;
             case RENEW:
-                isDelay = false;
                 renew(true); // skip checking the status as we just transit from end of term
                 return true;
-            case DELAY:
-                expire();
-                sechduleNextLeaseTerm();
-                return false;
             default:
                 Slog.e(TAG, "Unimplemented action for decision " + decision);
-                return true;
+                expire();
+                sechduleNextLeaseTerm(decision);
+                return false;
         }
     }
 
-    public void sechduleNextLeaseTerm() {
+    public void sechduleNextLeaseTerm(LeasePolicyRuler.Decision decision) {
         isDelay = true;
-        mDelayInterval = mDelayCounter * (mDelayCounter + 1);
         mDelayCounter++;
-        scheduleDelay(mDelayInterval);
+        switch (decision) {
+            case FrequencyAsking:
+                mDelayInterval = DEFAULT_DELY_TIME;
+                mLength = DEFAULT_TERM_MS;
+                scheduleDelay(mDelayInterval);
+                break;
+            case LongHolding:
+                mDelayInterval = DEFAULT_DELY_TIME * mDelayCounter;
+                mLength = DEFAULT_TERM_MS;
+                scheduleDelay(mDelayInterval);
+                break;
+            case LowUtility:
+                mDelayInterval = DEFAULT_DELY_TIME;
+                mLength = DEFAULT_TERM_MS/mDelayCounter;
+                scheduleDelay(mDelayCounter);
+                break;
+            case HighDamage:
+                mDelayInterval = DEFAULT_DELY_TIME;
+                mLength = DEFAULT_TERM_MS;
+                scheduleDelay(mDelayInterval);
+                break;
+        }
     }
 
     /**
@@ -337,15 +350,12 @@ public class Lease {
      */
     public boolean renew(boolean auto) {
         Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
+        isDelay = false;
         if (!auto && mStatus != LeaseStatus.EXPIRED) {
             // if a renewal is not at the end of a lease term, we must check for status first
             return false;
         }
-        if (mBatteryMonitor.isCharging()) {
-            isCharging = true;
-        } else {
-            isCharging = false;
-        }
+        isCharging = mBatteryMonitor.isCharging();
         mRenewal++;
         mBeginTime = SystemClock.elapsedRealtime();
         boolean success = false;

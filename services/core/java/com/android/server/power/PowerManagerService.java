@@ -904,27 +904,6 @@ public final class PowerManagerService extends SystemService
     private void acquireWakeLockInternal(IBinder lock, int flags, String tag, String packageName,
             WorkSource ws, String historyTag, int uid, int pid, boolean fromProxy) {
         synchronized (mLock) {
-            /*** LeaseOS changes ***/
-            // First, check if any lease has been created for this request or should the request
-            // be denied for a while.
-            WakelockLease lease = null;
-            if (mLeaseProxy != null && !fromProxy) {
-                // For frequent asking problem, the lease manager might decides to
-                // deny any lease creation request for a given UID instead of deny a
-                // specific lease ID, in this case, we should check if the package/uid has
-                // been temporarily banned, and if so we should just return.
-                lease = mLeaseProxy.getLease(lock);
-                if (lease != null) {
-                    if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
-                        Slog.d(TAG, uid + " has been disruptive to lease manager service,"
-                                + " freezing lease requests for a while..");
-                        return;
-                    }
-                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
-                }
-            }
-            /*********************/
-
             if (DEBUG_SPEW) {
                 Slog.d(TAG, "acquireWakeLockInternal: lock=" + Objects.hashCode(lock)
                         + ", flags=0x" + Integer.toHexString(flags)
@@ -956,6 +935,27 @@ public final class PowerManagerService extends SystemService
             }
 
             /*** LeaseOS changes ***/
+            // First, check if any lease has been created for this request or should the request
+            // be denied for a while.
+            WakelockLease lease = null;
+            if (mLeaseProxy != null && !fromProxy) {
+                // For frequent asking problem, the lease manager might decides to
+                // deny any lease creation request for a given UID instead of deny a
+                // specific lease ID, in this case, we should check if the package/uid has
+                // been temporarily banned, and if so we should just return.
+                lease = mLeaseProxy.getLease(lock);
+                if (lease != null) {
+                    if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
+                        lease.mLeaseValue = wakeLock;
+                        releaseWakeLockInternal(lock, flags, false, false);
+                        Slog.d(TAG, uid + " has been disruptive to lease manager service,"
+                                + " freezing lease requests for a while..");
+                        return;
+                    }
+                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
+                }
+            }
+            /*********************/
             // Second, if no lease has been created for this request, try to request a lease
             // from the lease manager
             if (lease == null) {
@@ -1047,7 +1047,6 @@ public final class PowerManagerService extends SystemService
                 WakelockLease lease = mLeaseProxy.getLease(lock);
                 if (lease != null) {
                     Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
-                    lease.mLeaseValue = null;
                     // TODO: notify ResourceStatManager about the release event
                     if (!fromProxy) {
                         // if the release is not called from within the lease proxy
@@ -1055,6 +1054,7 @@ public final class PowerManagerService extends SystemService
                         // otherwise, we don't note the event because the callback to
                         // the proxy is from lease manager service who should be expecting
                         // this event
+                        lease.mLeaseValue = null;
                         mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_RELEASE);
                     }
                     if (finalized) {
