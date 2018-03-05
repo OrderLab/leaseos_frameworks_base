@@ -51,12 +51,17 @@ public class LeasePolicyRuler {
      * @param lease
      * @return
      */
-    public static Decision behaviorJudge(Lease lease) {
+    public static Decision behaviorJudge(Lease lease, boolean isProxy) {
         // TODO: judge based on the lease's current resource stat or entire stat history.
+        StatHistory statHistory = lease.getStatHistory();
         BehaviorType behavior = classify(lease.getStatHistory());
-        if (behavior == BehaviorType.Normal)
-            return Decision.RENEW; // TODO: probably should just let it expire
-        return Decision.DELAY;
+        if (isProxy || statHistory.hasActivateEvent()) {
+            if (behavior == BehaviorType.Normal)
+                return Decision.RENEW; // TODO: probably should just let it expire
+            return Decision.DELAY;
+        } else {
+            return Decision.EXPIRE;
+        }
     }
 
 }

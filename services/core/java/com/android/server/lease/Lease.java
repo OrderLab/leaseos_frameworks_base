@@ -72,7 +72,7 @@ public class Lease {
     private Runnable mRenewRunnable = new Runnable() {
         @Override
         public void run() {
-            renew(false);
+            renew(true);
             scheduleExpire(mLength);
             cancelDelay();
         }
@@ -133,7 +133,7 @@ public class Lease {
         if (mStatus == LeaseStatus.ACTIVE || isCharging) {
             return true;
         } else if (mStatus == LeaseStatus.EXPIRED && !isDelay ) {
-            return RenewDescison();
+            return RenewDescison(true);
         } else if (mStatus == LeaseStatus.EXPIRED && isDelay) {
             return false;
         }
@@ -265,6 +265,7 @@ public class Lease {
      *
      * @return true if the lease is successfully expired
      */
+    /*
     public boolean freeze() {
         if (mProxy != null) {
             try {
@@ -280,7 +281,7 @@ public class Lease {
             return false;
         }
     }
-
+*/
     /**
      * One lease term has come to an end.
      */
@@ -293,12 +294,11 @@ public class Lease {
             renew(true);
             return;
         }
-        RenewDescison();
-
+        RenewDescison(false);
     }
 
-    public boolean RenewDescison () {
-        LeasePolicyRuler.Decision decision = LeasePolicyRuler.behaviorJudge(this);
+    public boolean RenewDescison (boolean isProxy) {
+        LeasePolicyRuler.Decision decision = LeasePolicyRuler.behaviorJudge(this, isProxy);
         switch (decision) {
             case EXPIRE:
                 //TODO: the goal of expire case is unclear
@@ -311,7 +311,6 @@ public class Lease {
                 return true;
             case DELAY:
                 expire();
-                freeze();
                 sechduleNextLeaseTerm();
                 return false;
             default:
