@@ -71,7 +71,7 @@ public class Lease {
     private Runnable mRenewRunnable = new Runnable() {
         @Override
         public void run() {
-            renew(true);
+            renew(false);
             scheduleExpire(mLength);
             cancelDelay();
         }
@@ -278,7 +278,7 @@ public class Lease {
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
             Slog.d(TAG,"The phone is in charing, immediately renew for lease " + mLeaseId);
-            renew(false);
+            renew(true);
             return;
         }
         LeasePolicyRuler.Decision decision = LeasePolicyRuler.behaviorJudge(this);

@@ -66,6 +66,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         mLeaseTable = new Hashtable<>();
         mLeaseDescriptors =  new LongSparseArray<>();
         mUidFreezer = new RequestFreezer<>();
+        mUidFreezer = new RequestFreezer<>();
     }
 
     public LeaseManager getManager() {

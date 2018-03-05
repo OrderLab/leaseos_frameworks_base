@@ -922,6 +922,7 @@ public final class PowerManagerService extends SystemService
                 lease = mLeaseProxy.getLease(lock);
                 if (lease != null) {
                     if (lease.mLeaseStatus == LeaseStatus.ACTIVE) {
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                         Slog.d(TAG, "App " + packageName + " still hold a valid lease for wakelock " + tag);
                     } else if (lease.mLeaseStatus == LeaseStatus.EXPIRED) {
                         Slog.d(TAG, "App " + packageName + " hold an expired lease for wakelock " + tag);
@@ -1058,6 +1059,7 @@ public final class PowerManagerService extends SystemService
                 WakelockLease lease = mLeaseProxy.getLease(lock);
                 if (lease != null) {
                     Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
+                    lease.mLeaseValue = null;
                     // TODO: notify ResourceStatManager about the release event
                     if (!fromProxy) {
                         // if the release is not called from within the lease proxy

@@ -174,7 +174,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         Lease lease;
         synchronized (mLock) {
             lease = mLeases.get(leaseId);
-            return lease != null && lease.renew(false);
+            return lease != null;
         }
     }
 
