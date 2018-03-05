@@ -913,26 +913,14 @@ public final class PowerManagerService extends SystemService
                 // deny any lease creation request for a given UID instead of deny a
                 // specific lease ID, in this case, we should check if the package/uid has
                 // been temporarily banned, and if so we should just return.
-                if (mLeaseProxy.shouldFreezeUid(uid)) {
-                    // TODO: may also want to freeze based on package name. Would require LMS to know package name
-                    Slog.d(TAG, uid + " has been disruptive to lease manager service,"
-                            + " freezing lease requests for a while..");
-                    return;
-                }
                 lease = mLeaseProxy.getLease(lock);
                 if (lease != null) {
-                    if (lease.mLeaseStatus == LeaseStatus.ACTIVE) {
-                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
-                        Slog.d(TAG, "App " + packageName + " still hold a valid lease for wakelock " + tag);
-                    } else if (lease.mLeaseStatus == LeaseStatus.EXPIRED) {
-                        Slog.d(TAG, "App " + packageName + " hold an expired lease for wakelock " + tag);
-                        if (!mLeaseProxy.renewLease(lease))
-                            return;
-                        // If renewal is successful, it means the App now is allowed to request this
-                        // resource.
-                    } else {
-                        Slog.e(TAG, "App " + packageName + " hold an invalid lease for wakelock " + tag);
+                    if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
+                        Slog.d(TAG, uid + " has been disruptive to lease manager service,"
+                                + " freezing lease requests for a while..");
+                        return;
                     }
+                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                 }
             }
             /*********************/

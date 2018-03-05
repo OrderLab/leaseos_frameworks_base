@@ -66,7 +66,6 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         mLeaseTable = new Hashtable<>();
         mLeaseDescriptors =  new LongSparseArray<>();
         mUidFreezer = new RequestFreezer<>();
-        mUidFreezer = new RequestFreezer<>();
     }
 
     public LeaseManager getManager() {
@@ -156,6 +155,13 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
             Slog.i(TAG, "LeaseManager is not ready");
             return null;
         }
+    }
+
+    public boolean checkorRenew(long leaseId) {
+        if (mLeaseManager != null) {
+            return mLeaseManager.check(leaseId);
+        }
+        return true;
     }
 
     public boolean renewLease(T lease) {

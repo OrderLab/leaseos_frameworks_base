@@ -144,7 +144,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public boolean check(long leaseId) {
         synchronized (mLock) {
             Lease lease = mLeases.get(leaseId);
-            return lease != null && lease.isActive();
+            return lease != null && lease.isActiveOrRenew();
         }
     }
 

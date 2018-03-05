@@ -55,6 +55,7 @@ public class Lease {
     protected long mDelayCounter; // the counter of delaying times
     BatteryMonitor mBatteryMonitor; // the instance of Battery Monitor
     protected boolean isCharging; // true if the phone is charged during this lease term
+    protected boolean isDelay;
 
     private LeaseWorkerHandler mHandler;
     private boolean mScheduled;
@@ -105,6 +106,7 @@ public class Lease {
             isCharging = true;
         }
         mBeginTime = now;
+        isDelay = false;
         scheduleExpire(mLength);
     }
 
@@ -126,7 +128,19 @@ public class Lease {
         return mStatus != LeaseStatus.INVALID;
     }
 
-    public boolean isActive() {
+
+    public boolean isActiveOrRenew() {
+        if (mStatus == LeaseStatus.ACTIVE || isCharging) {
+            return true;
+        } else if (mStatus == LeaseStatus.EXPIRED && !isDelay ) {
+            return RenewDescison();
+        } else if (mStatus == LeaseStatus.EXPIRED && isDelay) {
+            return false;
+        }
+        return false;
+    }
+
+    public boolean isActive () {
         return mStatus == LeaseStatus.ACTIVE;
     }
 
@@ -267,8 +281,6 @@ public class Lease {
         }
     }
 
-
-
     /**
      * One lease term has come to an end.
      */
@@ -281,25 +293,35 @@ public class Lease {
             renew(true);
             return;
         }
+        RenewDescison();
+
+    }
+
+    public boolean RenewDescison () {
         LeasePolicyRuler.Decision decision = LeasePolicyRuler.behaviorJudge(this);
         switch (decision) {
             case EXPIRE:
                 //TODO: the goal of expire case is unclear
+                isDelay = false;
                 expire();
-                break;
+                return true;
             case RENEW:
+                isDelay = false;
                 renew(true); // skip checking the status as we just transit from end of term
-                break;
+                return true;
             case DELAY:
                 expire();
                 freeze();
                 sechduleNextLeaseTerm();
+                return false;
             default:
                 Slog.e(TAG, "Unimplemented action for decision " + decision);
+                return true;
         }
     }
 
     public void sechduleNextLeaseTerm() {
+        isDelay = true;
         mDelayInterval = mDelayCounter * (mDelayCounter + 1);
         mDelayCounter++;
         scheduleDelay(mDelayInterval);
