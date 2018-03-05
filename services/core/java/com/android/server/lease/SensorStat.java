@@ -60,4 +60,9 @@ public class SensorStat extends ResourceStat {
         return 0;
     }
 
+    @Override
+    public void judge() {
+
+    }
+
 }

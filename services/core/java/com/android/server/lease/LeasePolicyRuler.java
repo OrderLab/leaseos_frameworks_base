@@ -26,21 +26,13 @@ import android.lease.BehaviorType;
  * Decide important policy about lease such as whether to renew a lease.
  */
 public class LeasePolicyRuler {
-    public enum Decision {
-        EXPIRE,
-        RENEW,
-        FrequencyAsking,
-        LongHolding,
-        LowUtility,
-        HighDamage,
-        Normal
-    }
+
 
     /**
      * Classify the app's lease usage behavior type based on the stat history.
      */
     public static BehaviorType classify(StatHistory history) {
-        return BehaviorType.FrequencyAsking;
+        return history.judgeHistory();
     }
 
     /**
@@ -48,25 +40,23 @@ public class LeasePolicyRuler {
      */
     public static Decision behaviorJudge(Lease lease, boolean isProxy) {
         // TODO: judge based on the lease's current resource stat or entire stat history.
-        StatHistory statHistory = lease.getStatHistory();
+        StatHistory statHistory = new StatHistory();
+        lease.getStatHistory();
         BehaviorType behavior = classify(lease.getStatHistory());
+        Decision decision = new Decision();
+        decision.mBehaviorType = behavior;
         if (isProxy || statHistory.hasActivateEvent()) {
             switch (behavior) {
                 case Normal:
-                    return Decision.RENEW;
-                case FrequencyAsking:
-                    return Decision.FrequencyAsking;
-                case LongHolding:
-                    return Decision.LongHolding;
-                case LowUtility:
-                    return Decision.LowUtility;
-                case HighDamage:
-                    return Decision.HighDamage;
+                    decision.mDecision = Decision.Decisions.RENEW;
+                    return decision;
                 default:
-                    return Decision.RENEW;
+                    decision.mDecision = Decision.Decisions.DELAY;
+                    return decision;
             }
         } else {
-            return Decision.EXPIRE;
+            decision.mDecision = Decision.Decisions.EXPIRE;
+            return decision;
         }
     }
 

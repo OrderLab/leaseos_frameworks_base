@@ -22,12 +22,12 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.BehaviorType;
-import android.lease.LeaseStatus;
 import android.os.SystemClock;
 import android.util.Slog;
 
 import java.util.ArrayList;
 import java.util.Collections;
+import java.util.Hashtable;
 import java.util.LinkedList;
 
 /**
@@ -66,7 +66,8 @@ public class StatHistory {
             if (e.acquireTime > startTime || e.releaseTime < endTime) {
                 if (e.acquireTime == e.releaseTime) {
                     holdingTime += endTime - e.acquireTime;
-                    Slog.d(TAG, "The lease has not been released yet. For process " + uid + ", the Holding time is " + holdingTime );
+                    Slog.d(TAG, "The lease has not been released yet. For process " + uid
+                            + ", the Holding time is " + holdingTime);
                     frequency++;
                 } else if (e.acquireTime < startTime) {
                     staleEventsIndex.add(index);
@@ -74,14 +75,17 @@ public class StatHistory {
                         mOpenIndex--;
                     }
                     holdingTime += e.releaseTime - startTime;
-                    Slog.d(TAG, "The lease has been acquired before this lease term. For process " + uid + ", the Holding time is " + holdingTime );
+                    Slog.d(TAG,
+                            "The lease has been acquired before this lease term. For process " + uid
+                                    + ", the Holding time is " + holdingTime);
                 } else {
                     staleEventsIndex.add(index);
                     if (index <= mOpenIndex) {
                         mOpenIndex--;
                     }
                     holdingTime += e.releaseTime - e.acquireTime;
-                    Slog.d(TAG, "The lease has been released. For process " + uid + ", the Holding time is " + holdingTime );
+                    Slog.d(TAG, "The lease has been released. For process " + uid
+                            + ", the Holding time is " + holdingTime);
                     frequency++;
                 }
             }
@@ -95,12 +99,12 @@ public class StatHistory {
         resourceStat.update(holdingTime, frequency, context, uid);
     }
 
-    public boolean hasActivateEvent () {
+    public boolean hasActivateEvent() {
         return !mEventList.isEmpty();
     }
 
     public boolean addItem(ResourceStat resourceStat) {
-        if(mStats.size() >= MAX_HISTORY_STATS) {
+        if (mStats.size() >= MAX_HISTORY_STATS) {
             ResourceStat stat = mStats.getFirst();
             mStats.remove(stat);
         }
@@ -113,7 +117,16 @@ public class StatHistory {
 
     //TODO:need to implement the judge behavior part
     public BehaviorType judgeHistory() {
-        return BehaviorType.FrequencyAsking;
+        Hashtable<Integer, BehaviorType> behaviorFrequency = new Hashtable<>();
+        int maxFrequency = 0;
+        for (BehaviorType behaviorType : BehaviorType.values()) {
+            int count = Collections.frequency(mStats, behaviorType.toString());
+            if (count > maxFrequency) {
+                maxFrequency = count;
+            }
+            behaviorFrequency.put(count, behaviorType);
+        }
+        return behaviorFrequency.get(maxFrequency);
     }
 
     public void noteAcquire() {
@@ -131,7 +144,7 @@ public class StatHistory {
             return;
         }
         e.releaseTime = SystemClock.elapsedRealtime();
-        frequencyCount ++;
+        frequencyCount++;
     }
 
     public class Event {

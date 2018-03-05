@@ -295,8 +295,8 @@ public class Lease {
     }
 
     public boolean RenewDescison (boolean isProxy) {
-        LeasePolicyRuler.Decision decision = LeasePolicyRuler.behaviorJudge(this, isProxy);
-        switch (decision) {
+        Decision decision = LeasePolicyRuler.behaviorJudge(this, isProxy);
+        switch (decision.mDecision) {
             case EXPIRE:
                 isDelay = false;
                 expire();
@@ -312,10 +312,10 @@ public class Lease {
         }
     }
 
-    public void sechduleNextLeaseTerm(LeasePolicyRuler.Decision decision) {
+    public void sechduleNextLeaseTerm(Decision decision) {
         isDelay = true;
         mDelayCounter++;
-        switch (decision) {
+        switch (decision.mBehaviorType) {
             case FrequencyAsking:
                 mDelayInterval = DEFAULT_DELY_TIME;
                 mLength = DEFAULT_TERM_MS;

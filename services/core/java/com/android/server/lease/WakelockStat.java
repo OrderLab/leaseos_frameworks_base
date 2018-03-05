@@ -60,6 +60,7 @@ public class WakelockStat extends ResourceStat {
         Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
+        judge();
         // TODO: uncomment inserting db to make it work
         // LeaseStatsRecord record = createRecord(uid);
         // LeaseStatsDBHelper.getInstance(context).insert(record);
@@ -116,7 +117,13 @@ public class WakelockStat extends ResourceStat {
     }
 
     //TODO: implment the judge method
-    public BehaviorType judge() {
-        return BehaviorType.FrequencyAsking;
+    @Override
+    public void judge() {
+        if ((float)mUsageTime/mHoldingTime < 0.1) {
+            mBehaviorType = BehaviorType.FrequencyAsking;
+        } else {
+            mBehaviorType = BehaviorType.Normal;
+        }
+
     }
 }

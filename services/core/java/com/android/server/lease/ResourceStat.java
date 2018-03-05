@@ -21,7 +21,7 @@
 package com.android.server.lease;
 
 import android.content.Context;
-import android.lease.LeaseStatus;
+import android.lease.BehaviorType;
 
 /**
  * Record the resource usage stat associated with a lease
@@ -29,27 +29,14 @@ import android.lease.LeaseStatus;
 public abstract class ResourceStat {
 
     public int mStatNumber;
-
-    // Timestamp of when the lease term  was created.
-    protected long mBeginTime;
-
-    // Timestamp of when the lease term was ended.
-    protected long mEndTime;
-
-    //The number of resource consumed in this lease term
-    protected long mConsumption;
-
-    //The number of work made in this lease term
-    protected long mWork;
-
-    //The asking frequency
-    protected int mFrequency;
-
-    //The ratio of useful work and useless work
-    protected long mEfficientRatio;
-
-    //The number of system damage caused by this lease term
-    protected long mSysDamage;
+    protected long mBeginTime;// Timestamp of when the lease term  was created.
+    protected long mEndTime; // Timestamp of when the lease term was ended.
+    protected long mConsumption; //The number of resource consumed in this lease term
+    protected long mWork; //The number of work made in this lease term
+    protected int mFrequency; //The asking frequency
+    protected long mEfficientRatio; //The ratio of useful work and useless work
+    protected long mSysDamage; //The number of system damage caused by this lease term
+    protected BehaviorType mBehaviorType; // the behavior type of this lease term
 
     public abstract void update(long holdingTime, int frequency, Context context, int uid);
 
@@ -78,6 +65,8 @@ public abstract class ResourceStat {
     public abstract long getEfficientRatio();
 
     public abstract long getDamage();
+
+    public abstract void judge();
 
     public long getEfficiency() {
         return getWork() / getConsumption();

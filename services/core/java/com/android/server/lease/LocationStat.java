@@ -59,4 +59,9 @@ public class LocationStat extends ResourceStat {
     public long getDamage() {
         return 0;
     }
+
+    @Override
+    public void judge() {
+        
+    }
 }
