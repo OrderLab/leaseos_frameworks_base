@@ -21,6 +21,7 @@
 package com.android.server.lease;
 
 import android.lease.BehaviorType;
+import android.os.DeadSystemException;
 
 /**
  * Decide important policy about lease such as whether to renew a lease.
@@ -50,11 +51,12 @@ public class LeasePolicyRuler {
      * @param lease
      * @return
      */
-    public static Decision judge(Lease lease) {
+    public static Decision behaviorJudge(Lease lease) {
         // TODO: judge based on the lease's current resource stat or entire stat history.
         BehaviorType behavior = classify(lease.getStatHistory());
         if (behavior == BehaviorType.Normal)
             return Decision.RENEW; // TODO: probably should just let it expire
-        return Decision.EXPIRE;
+        return Decision.DELAY;
     }
+
 }

@@ -25,7 +25,6 @@ import android.lease.ILeaseManager;
 import android.lease.ILeaseProxy;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
-import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.os.Binder;
 import android.os.HandlerThread;
@@ -192,7 +191,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             }
         }
         //TODO: how to handler the logic of true or false
-        lease.cancelChecks();
+        lease.cancelExpire();
         mRStatManager.removeStatHistory(lease.mLeaseId);
         mLeases.remove(leaseId);
         return true;
