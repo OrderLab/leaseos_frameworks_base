@@ -62,6 +62,6 @@ public class LocationStat extends ResourceStat {
 
     @Override
     public void judge() {
-        
+
     }
 }

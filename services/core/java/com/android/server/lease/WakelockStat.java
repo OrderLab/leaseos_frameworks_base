@@ -120,8 +120,10 @@ public class WakelockStat extends ResourceStat {
     @Override
     public void judge() {
         if ((float)mUsageTime/mHoldingTime < 0.1) {
-            mBehaviorType = BehaviorType.FrequencyAsking;
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
+            mBehaviorType = BehaviorType.LongHolding;
         } else {
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a normal behavior");
             mBehaviorType = BehaviorType.Normal;
         }
 
