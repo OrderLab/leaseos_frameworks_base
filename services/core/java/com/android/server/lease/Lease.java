@@ -37,7 +37,7 @@ public class Lease {
     private static final String TAG = "Lease";
 
     public static final int DEFAULT_TERM_MS = 60 * 1000; // default 60 seconds, may need to reduce it
-    public static final int DEFAULT_DELY_TIME = 20 * 1000; // the delay time, default 20 second
+    public static final int DEFAULT_DELY_TIME = 20 * 1000; // the delay time, default 20 seconds
     public static final int MAX_DELAY_NUMBER = 200  ;
 
     protected long mLeaseId; // The identifier of lease
@@ -72,9 +72,8 @@ public class Lease {
     private Runnable mRenewRunnable = new Runnable() {
         @Override
         public void run() {
-            renew(true);
-            scheduleExpire(mLength);
             cancelDelay();
+            renew(true);
         }
     };
 
@@ -305,7 +304,7 @@ public class Lease {
                 renew(true); // skip checking the status as we just transit from end of term
                 return true;
             default:
-                Slog.e(TAG, "Unimplemented action for decision " + decision);
+                Slog.e(TAG, "Unimplemented action for decision " + decision.mBehaviorType);
                 expire();
                 sechduleNextLeaseTerm(decision);
                 return false;
@@ -329,7 +328,7 @@ public class Lease {
             case LowUtility:
                 mDelayInterval = DEFAULT_DELY_TIME;
                 mLength = DEFAULT_TERM_MS/mDelayCounter;
-                scheduleDelay(mDelayCounter);
+                scheduleDelay(mDelayInterval);
                 break;
             case HighDamage:
                 mDelayInterval = DEFAULT_DELY_TIME;
@@ -397,22 +396,23 @@ public class Lease {
 
     public void scheduleDelay (long delayInterval) {
         if (!mScheduled && mHandler != null) {
-            Slog.d(TAG, "Renew lease " + mLeaseId + " after " + mDelayInterval + " ms");
-            mHandler.postDelayed(mRenewRunnable,delayInterval);
+            Slog.d(TAG, "Renew lease " + mLeaseId + " after " + delayInterval / 1000 + " s");
+            mHandler.postDelayed(mRenewRunnable, 2000);
+            mScheduled = true;
         }
     }
 
     public void cancelDelay () {
         if (mScheduled && mHandler != null) {
             Slog.d(TAG, "Cancelling delay renew for lease " + mLeaseId);
-            mHandler.removeCallbacks(mExpireRunnable);
+            mHandler.removeCallbacks(mRenewRunnable);
             mScheduled = false;
         }
     }
 
     public void scheduleExpire(long leaseTerm) {
         if (!mScheduled && mHandler != null) {
-            Slog.d(TAG, "Scheduling expiration check for lease " + mLeaseId + " after " + mLength + " ms");
+            Slog.d(TAG, "Scheduling expiration check for lease " + mLeaseId + " after " + mLength / 1000 + " s");
             mHandler.postDelayed(mExpireRunnable, leaseTerm);
             mScheduled = true;
         }

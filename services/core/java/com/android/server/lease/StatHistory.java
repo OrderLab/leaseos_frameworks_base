@@ -26,7 +26,6 @@ import android.os.SystemClock;
 import android.util.Slog;
 
 import java.util.ArrayList;
-import java.util.Collections;
 import java.util.Hashtable;
 import java.util.LinkedList;
 
@@ -126,16 +125,30 @@ public class StatHistory {
 
     //TODO:need to implement the judge behavior part
     public BehaviorType judgeHistory() {
-        Hashtable<Integer, BehaviorType> behaviorFrequency = new Hashtable<>();
-        int maxFrequency = 0;
-        for (BehaviorType behaviorType : BehaviorType.values()) {
-            int count = Collections.frequency(mStats, behaviorType.toString());
-            if (count > maxFrequency) {
-                maxFrequency = count;
+        Hashtable<BehaviorType, Integer> behaviorFrequency = new Hashtable<>();
+        BehaviorType leaseBehaviorType = BehaviorType.Normal;
+        int maxCount = 0;
+        for (ResourceStat resourceStat : mStats) {
+            if (behaviorFrequency.get(resourceStat.mBehaviorType) == null) {
+                behaviorFrequency.put(resourceStat.mBehaviorType, 1);
+            } else {
+                int count = behaviorFrequency.get(resourceStat.mBehaviorType);
+                count++;
+                behaviorFrequency.put(resourceStat.mBehaviorType, count);
             }
-            behaviorFrequency.put(count, behaviorType);
         }
-        return behaviorFrequency.get(maxFrequency);
+        for (BehaviorType behaviorType: BehaviorType.values()) {
+            if (behaviorFrequency.get(behaviorType) == null) {
+                continue;
+            } else {
+                int frequency = behaviorFrequency.get(behaviorType);
+                if (frequency > maxCount) {
+                    leaseBehaviorType = behaviorType;
+                    maxCount = frequency;
+                }
+            }
+        }
+        return leaseBehaviorType;
     }
 
     public void noteAcquire() {

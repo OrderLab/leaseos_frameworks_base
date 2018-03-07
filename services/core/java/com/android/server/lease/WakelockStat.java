@@ -83,6 +83,7 @@ public class WakelockStat extends ResourceStat {
         mHoldingTime = 0;
         mUid = uid;
         mBaseCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
+        mBehaviorType = BehaviorType.Normal;
         Slog.d(TAG,"The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
 
