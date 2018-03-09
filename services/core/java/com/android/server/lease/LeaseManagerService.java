@@ -20,21 +20,33 @@
  */
 package com.android.server.lease;
 
+import android.content.ContentResolver;
 import android.content.Context;
+import android.database.ContentObserver;
 import android.lease.ILeaseManager;
 import android.lease.ILeaseProxy;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
+import android.lease.LeaseSettings;
+import android.lease.LeaseSettingsUtils;
 import android.lease.ResourceType;
+import android.net.Uri;
 import android.os.Binder;
+import android.os.Handler;
 import android.os.HandlerThread;
 import android.os.IBinder;
+import android.os.Looper;
+import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.os.UserHandle;
+import android.provider.Settings;
 import android.util.LongSparseArray;
 import android.util.Slog;
 import android.util.SparseArray;
+
+import com.android.server.vr.SettingsObserver;
 
 import java.util.HashMap;
 
@@ -48,12 +60,14 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private static final String TAG = "LeaseManagerService";
     private final Object mLock = new Object();
 
+    private HandlerThread mHandlerThread;
+    private LeaseHandler mHandler;
+
     // Table of all leases acquired by services.
     private final LongSparseArray<Lease> mLeases = new LongSparseArray<>();
 
     //The identifier of the last lease
     private long mLastLeaseId = LeaseManager.LEASE_ID_START;
-
     private ResourceStatManager mRStatManager;
 
     // All registered lease proxies
@@ -66,10 +80,25 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     private final Context mContext;
 
+    private boolean mLeaseRunning = false;
+
+    private LeaseSettings mSettings;
+    private SettingsObserver mSettingsObserver;
+
+    private static final String[] OBSERVE_SETTINGS = new String[] {
+            /*** Global settings ***/
+            Settings.Secure.LEASE_SERVICE_ENABLED
+    };
+
     public LeaseManagerService(Context context) {
         super();
         mContext = context;
         mRStatManager = ResourceStatManager.getInstance(mContext);
+        mHandlerThread = new HandlerThread(TAG);
+        mHandlerThread.start();
+        mHandler = new LeaseHandler(mHandlerThread.getLooper());
+        mSettings = LeaseSettings.getDefaultSettings();
+        mHandler.sendEmptyMessage(LeaseHandler.MSG_SYNC_SETTINGS);
         Slog.i(TAG, "LeaseManagerService initialized");
     }
 
@@ -234,6 +263,93 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
+    public void systemRunning() {
+        Slog.d(TAG, "Ready to start defense");
+        synchronized (mLock) {
+            // We should ALWAYS register for settings changes!
+            // Otherwise we won't get notified when users change
+            // from disabling the service to re-enabling the service
+            registerSettingsListeners();
+
+            // only start lease when system is up and running,
+            // otherwise, there might be some dependency issues,
+            // e.g,, alarm service not ready
+            // we also do NOT start defense if the service is disabled
+            if (mSettings.serviceEnabled)
+                runLeaseLocked();
+        }
+    }
+
+    private void registerSettingsListeners() {
+        Slog.d(TAG, "Registering content observer");
+        mSettingsObserver = new SettingsObserver(mHandler);
+        // Register for settings changes.
+        final ContentResolver resolver = mContext.getContentResolver();
+        for (String settings:OBSERVE_SETTINGS) {
+            resolver.registerContentObserver(Settings.Secure.getUriFor(settings),
+                    false, mSettingsObserver, UserHandle.USER_ALL);
+        }
+    }
+
+    private void runLeaseLocked() {
+        if (!mLeaseRunning) {
+            mLeaseRunning = true;
+            startAllLeaseProxyLocked();
+        }
+    }
+
+    private void stopLeaseLocked() {
+        if (mLeaseRunning) {
+            mLeaseRunning = false;
+            stopAllLeaseProxyLocked();
+        }
+    }
+
+    /**
+     * Called during initial service start or when related settings changed
+     */
+    private void updateSettingsLocked(LeaseSettings newSettings) {
+        // If it's service enabling/disabling change, we need to start
+        // or stop the guardians
+        if (mSettings.serviceEnabled != newSettings.serviceEnabled) {
+            if (newSettings.serviceEnabled) {
+                mSettings = newSettings;
+                runLeaseLocked();
+            }
+            else {
+                mSettings = newSettings;
+                stopLeaseLocked();
+            }
+        } else {
+            // Otherwise, we need to inform the new settings to guardians if the service is enabled
+            if (mSettings.serviceEnabled) {
+                checkGuardianEnableSettingsLocked(newSettings);
+                mSettings = newSettings;
+            }
+        }
+    }
+
+    private void checkGuardianEnableSettingsLocked(LeaseSettings newSettings) {
+
+    }
+
+    /**
+     * Stop all guardians registered with the service.
+     * We do not remove the guardians since we might need to
+     * call them later once the service is re-enabled.
+     */
+    private void stopAllLeaseProxyLocked() {
+        Slog.d(TAG, "Stopping all guardians...");
+    }
+
+    /**
+     * Start all guardians registered with the service. Make sure the system
+     * is ready before calling this function.
+     */
+    private void startAllLeaseProxyLocked() {
+        Slog.d(TAG, "Starting all guardians...");
+    }
+
     /**
      * Create a lease proxy wrapper and link to death
      *
@@ -363,6 +479,51 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         @Override
         public String toString() {
             return "[" + LeaseManager.getProxyTypeString(mType) + "]-" + mName;
+        }
+    }
+
+    public class LeaseHandler extends Handler {
+        private static final int MSG_SYNC_SETTINGS = 1;
+
+        public LeaseHandler(Looper looper) {
+            super(looper, null, true /*async*/);
+        }
+
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case MSG_SYNC_SETTINGS:
+                    synchronized (mLock) {
+                        final ContentResolver resolver = mContext.getContentResolver();
+                        final LeaseSettings settings = LeaseSettingsUtils.readLeaseSettingsLocked(resolver);
+                        updateSettingsLocked(settings);
+                        Slog.d(TAG, "DefenseSettings synced");
+                    }
+                    break;
+                default:
+                    Slog.wtf(TAG, "Unknown lease message");
+            }
+        }
+    }
+
+    private class SettingsObserver extends ContentObserver {
+        /**
+         * Creates a content observer.
+         *
+         * @param handler The handler to run {@link #onChange} on, or null if none.
+         */
+        public SettingsObserver(Handler handler) {
+            super(handler);
+        }
+
+        @Override
+        public void onChange(boolean selfChange, Uri uri) {
+            synchronized (mLock) {
+                Slog.d(TAG, "DefenseSettings changed");
+                final ContentResolver resolver = mContext.getContentResolver();
+                final LeaseSettings settings = LeaseSettingsUtils.readLeaseSettingsLocked(resolver);
+                updateSettingsLocked(settings);
+            }
         }
     }
 }

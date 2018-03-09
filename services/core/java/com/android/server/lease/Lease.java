@@ -397,7 +397,7 @@ public class Lease {
     public void scheduleDelay (long delayInterval) {
         if (!mScheduled && mHandler != null) {
             Slog.d(TAG, "Renew lease " + mLeaseId + " after " + delayInterval / 1000 + " s");
-            mHandler.postDelayed(mRenewRunnable, 2000);
+            mHandler.postDelayed(mRenewRunnable, delayInterval);
             mScheduled = true;
         }
     }

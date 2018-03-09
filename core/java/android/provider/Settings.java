@@ -6412,6 +6412,14 @@ public final class Settings {
         public static final String DEVICE_PAIRED = "device_paired";
 
         /**
+         * If lease service should be enabled
+         *
+         * @hide
+         */
+        public static final String LEASE_SERVICE_ENABLED = "enable_lease_service";
+        
+
+        /**
          * This are the settings to be backed up.
          *
          * NOTE: Settings are backed up and restored in the order they appear

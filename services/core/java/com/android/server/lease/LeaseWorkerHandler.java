@@ -1,7 +1,7 @@
 /*
  *  @author Ryan Huang <huang@cs.jhu.edu>
  *
- *  The LeaseOS Project  
+ *  The LeaseOS Project
  *
  *  Copyright (c) 2018, Johns Hopkins University - Order Lab.
  *      All rights reserved.
