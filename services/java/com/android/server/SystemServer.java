@@ -1336,6 +1336,7 @@ public final class SystemServer {
         final TelephonyRegistry telephonyRegistryF = telephonyRegistry;
         final MediaRouterService mediaRouterF = mediaRouter;
         final MmsServiceBroker mmsServiceF = mmsService;
+        final LeaseManagerService leaseF = lease;
 
         // We now tell the activity manager it is okay to run third party
         // code.  It will call back into us once it has gotten to the state
@@ -1472,6 +1473,14 @@ public final class SystemServer {
                 } catch (Throwable e) {
                     reportWtf("Notifying NetworkScoreService running", e);
                 }
+
+                try {
+                    if (leaseF != null) leaseF.systemRunning();
+                } catch (Throwable e) {
+                    reportWtf("Notifying LeaseServove", e);
+                }
+
+
                 Trace.traceEnd(Trace.TRACE_TAG_SYSTEM_SERVER);
             }
         });

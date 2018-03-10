@@ -45,6 +45,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
     protected Context mContext;
     protected boolean mReady;
     protected boolean mSystemAppQueried;
+    public boolean mLeaseServiceEnabled;
 
     protected final HashSet<Integer> mSystemAppUids;
     protected final LeaseWhiteList mWhiteList;
@@ -66,6 +67,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         mLeaseTable = new Hashtable<>();
         mLeaseDescriptors =  new LongSparseArray<>();
         mUidFreezer = new RequestFreezer<>();
+        mLeaseServiceEnabled =  LeaseSettings.getDefaultSettings().serviceEnabled;
     }
 
     public LeaseManager getManager() {
@@ -235,6 +237,33 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
                     Slog.e(TAG, "Package manager is not ready yet");
                 }
             }
+        }
+    }
+
+    /**
+     * Inform guardian it can start defense
+     */
+    public void startLease(LeaseSettings settings) {
+        Slog.d(TAG, "[" + mName + "]: Lease");
+        synchronized (mLock) {
+            if (!mSystemAppQueried) {
+                Slog.d(TAG, "[" + mName + "]: UPDATE SYSTEM APPS");
+                updateSystemAppsLocked();
+            }
+            if (mLeaseManager == null && mContext != null) {
+                mLeaseManager = (LeaseManager) mContext.getSystemService(Context.LEASE_SERVICE);
+            }
+           //updateSettingsLocked(settings); // update settings
+            mLeaseServiceEnabled = true;
+        }
+    }
+
+    /**
+     * Inform guardian it should stop defense
+     */
+    public void stopLease() {
+        synchronized (mLock) {
+            mLeaseServiceEnabled = false;
         }
     }
 

@@ -46,8 +46,6 @@ import android.util.LongSparseArray;
 import android.util.Slog;
 import android.util.SparseArray;
 
-import com.android.server.vr.SettingsObserver;
-
 import java.util.HashMap;
 
 /**
@@ -264,7 +262,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     public void systemRunning() {
-        Slog.d(TAG, "Ready to start defense");
+        Slog.d(TAG, "Ready to start lease");
         synchronized (mLock) {
             // We should ALWAYS register for settings changes!
             // Otherwise we won't get notified when users change
@@ -295,6 +293,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         if (!mLeaseRunning) {
             mLeaseRunning = true;
             startAllLeaseProxyLocked();
+            stopAllLeaseLocked();
         }
     }
 
@@ -311,44 +310,77 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private void updateSettingsLocked(LeaseSettings newSettings) {
         // If it's service enabling/disabling change, we need to start
         // or stop the guardians
+        Slog.d(TAG, "Updating setting");
         if (mSettings.serviceEnabled != newSettings.serviceEnabled) {
             if (newSettings.serviceEnabled) {
                 mSettings = newSettings;
                 runLeaseLocked();
-            }
-            else {
+            } else {
                 mSettings = newSettings;
                 stopLeaseLocked();
             }
         } else {
             // Otherwise, we need to inform the new settings to guardians if the service is enabled
             if (mSettings.serviceEnabled) {
-                checkGuardianEnableSettingsLocked(newSettings);
+                checkLeaseEnableSettingsLocked(newSettings);
                 mSettings = newSettings;
             }
         }
     }
 
-    private void checkGuardianEnableSettingsLocked(LeaseSettings newSettings) {
+    private void checkLeaseEnableSettingsLocked(LeaseSettings newSettings) {
 
     }
 
     /**
-     * Stop all guardians registered with the service.
-     * We do not remove the guardians since we might need to
+     * Stop all leases proxy registered with the service.
+     * We do not remove the lease since we might need to
      * call them later once the service is re-enabled.
      */
     private void stopAllLeaseProxyLocked() {
-        Slog.d(TAG, "Stopping all guardians...");
+        Slog.d(TAG, "Stopping all lease proxy...");
+        for (LeaseProxy proxy:mProxies.values()) {
+            try {
+                proxy.mProxy.stopLease();
+            } catch (RemoteException e) {
+                Slog.e(TAG, "Fail to stop defense " + proxy);
+            }
+        }
     }
 
     /**
-     * Start all guardians registered with the service. Make sure the system
+     * Stop all leases managed by the service.
+     * We do not remove the lease since we might need to
+     * call them later once the service is re-enabled.
+     */
+    private void stopAllLeaseLocked() {
+        Slog.d(TAG, "Stopping all lease...");
+        for (int i = 0; i < mLeases.size(); i++) {
+            Lease lease = mLeases.valueAt(i);
+            lease.cancelDelay();
+            lease.cancelExpire();
+            lease.expire();
+        }
+
+    }
+
+    /**
+     * Start all leases registered with the service. Make sure the system
      * is ready before calling this function.
      */
     private void startAllLeaseProxyLocked() {
-        Slog.d(TAG, "Starting all guardians...");
+        Slog.d(TAG, "Starting all lease proxy...");
+        for (LeaseProxy proxy:mProxies.values()) {
+            try {
+                Slog.d(TAG, "[" + proxy.mName + "]: START");
+                proxy.mProxy.startLease(mSettings);
+            } catch (RemoteException e) {
+                Slog.e(TAG, "Fail to stop defense " + proxy);
+            }
+        }
+
     }
+
 
     /**
      * Create a lease proxy wrapper and link to death
@@ -497,7 +529,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                         final ContentResolver resolver = mContext.getContentResolver();
                         final LeaseSettings settings = LeaseSettingsUtils.readLeaseSettingsLocked(resolver);
                         updateSettingsLocked(settings);
-                        Slog.d(TAG, "DefenseSettings synced");
+                        Slog.d(TAG, "LeaseSettings synced");
                     }
                     break;
                 default:
@@ -519,7 +551,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         @Override
         public void onChange(boolean selfChange, Uri uri) {
             synchronized (mLock) {
-                Slog.d(TAG, "DefenseSettings changed");
+                Slog.d(TAG, "LeaseSettings changed");
                 final ContentResolver resolver = mContext.getContentResolver();
                 final LeaseSettings settings = LeaseSettingsUtils.readLeaseSettingsLocked(resolver);
                 updateSettingsLocked(settings);

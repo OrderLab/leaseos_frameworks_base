@@ -20,6 +20,8 @@
  */
 package android.lease;
 
+import android.lease.LeaseSettings;
+
 /**
  * Callback interface for lease manager service to notify the proxy to carry out certain action, such
  * as blocking.
@@ -38,4 +40,8 @@ oneway interface ILeaseProxy {
 
     /* Freeze a given UID from any new lease request through this proxy for a given period */
     void onFreeze(int uid, long freezeDuration, int freeCount);
+
+    void startLease(in LeaseSettings settings);
+
+    void stopLease();
 }

@@ -935,31 +935,31 @@ public final class PowerManagerService extends SystemService
             }
 
             /*** LeaseOS changes ***/
-            // First, check if any lease has been created for this request or should the request
-            // be denied for a while.
-            WakelockLease lease = null;
-            if (mLeaseProxy != null && !fromProxy) {
-                // For frequent asking problem, the lease manager might decides to
-                // deny any lease creation request for a given UID instead of deny a
-                // specific lease ID, in this case, we should check if the package/uid has
-                // been temporarily banned, and if so we should just return.
-                lease = mLeaseProxy.getLease(lock);
-                if (lease != null) {
-                    if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
-                        lease.mLeaseValue = wakeLock;
-                        releaseWakeLockInternal(lock, flags, false, false);
-                        Slog.d(TAG, uid + " has been disruptive to lease manager service,"
-                                + " freezing lease requests for a while..");
-                        return;
+            if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                // First, check if any lease has been created for this request or should the request
+                // be denied for a while.
+                WakelockLease lease = null;
+                if (!fromProxy) {
+                    // For frequent asking problem, the lease manager might decides to
+                    // deny any lease creation request for a given UID instead of deny a
+                    // specific lease ID, in this case, we should check if the package/uid has
+                    // been temporarily banned, and if so we should just return.
+                    lease = mLeaseProxy.getLease(lock);
+                    if (lease != null) {
+                        if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
+                            lease.mLeaseValue = wakeLock;
+                            releaseWakeLockInternal(lock, flags, false, false);
+                            Slog.d(TAG, uid + " has been disruptive to lease manager service,"
+                                    + " freezing lease requests for a while..");
+                            return;
+                        }
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                     }
-                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                 }
-            }
-            /*********************/
-            // Second, if no lease has been created for this request, try to request a lease
-            // from the lease manager
-            if (lease == null) {
-                if (mLeaseProxy != null) {
+                /*********************/
+                // Second, if no lease has been created for this request, try to request a lease
+                // from the lease manager
+                if (lease == null) {
                     if (mLeaseProxy.exempt(packageName, uid)) {
                         Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                     } else if (!fromProxy) {
@@ -971,11 +971,12 @@ public final class PowerManagerService extends SystemService
                             mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                         }
                     }
+                } else {
+                    // update the internal data structure in case we need it later
+                    lease.mLeaseValue = wakeLock;
                 }
-            } else {
-                // update the internal data structure in case we need it later
-                lease.mLeaseValue = wakeLock;
             }
+
             /*********************/
 
             applyWakeLockFlagsOnAcquireLocked(wakeLock, uid);
@@ -1043,7 +1044,7 @@ public final class PowerManagerService extends SystemService
             }
 
             /***LeaseOS changes***/
-            if (mLeaseProxy != null) {
+            if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
                 WakelockLease lease = mLeaseProxy.getLease(lock);
                 if (lease != null) {
                     Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
