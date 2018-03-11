@@ -27,22 +27,57 @@ import android.os.Parcelable;
  *
  */
 public class LeaseSettings implements Parcelable {
+    public static final String WHITELIST_DELIM = ",";
+
+    private static final int MILLIS_PER_MINUTE = 60 * 1000;
+
     public static final boolean SERVICE_ENABLED_DEFAULT = true;
+    public static final String WHITE_LIST_DEFAULT = "android,com.android.phone,com.quicin.trepn";
+    public static final long RATE_LIMIT_WINDOW_DEFAULT = 3 * MILLIS_PER_MINUTE; // 3 minutes
+    public static final long GC_WINDOW_DEFAULT = 10 * MILLIS_PER_MINUTE; // 10 minutes
     public static final LeaseSettings DEFAULT_SETTINGS = getDefaultSettings();
+
+    public static final boolean WAKELOCK_LEASE_ENABLED = true;
+    public static final boolean LOCATION_LEASE_ENABLED = true;
+    public static final boolean SENSOR_LEASE_ENABLED = true;
 
     // Whether the service is enabled or not
     public boolean serviceEnabled;
+    // Comma separated white list of package names.
+    public String whiteList;
+    // Min observation window for rate limiting
+    public long rateLimitWindow;
+    // Min window for GC;
+    public long gcWindow;
+
+    public boolean wakelockLeaseEnabled;
+    public boolean gpsLeaseEnabled;
+    public boolean sensorLeaseEnabled;
 
     public LeaseSettings() {
     }
 
     public LeaseSettings(Parcel in) {
         serviceEnabled = (in.readInt() != 0);
+        whiteList = in.readString();
+        rateLimitWindow = in.readLong();
+        gcWindow = in.readLong();
+
+        wakelockLeaseEnabled = (in.readInt() != 0);
+        gpsLeaseEnabled = (in.readInt() != 0);
+        sensorLeaseEnabled = (in.readInt() != 0);
     }
 
     public static LeaseSettings getDefaultSettings() {
         LeaseSettings settings = new LeaseSettings();
         settings.serviceEnabled = SERVICE_ENABLED_DEFAULT;
+        settings.whiteList = WHITE_LIST_DEFAULT;
+        settings.rateLimitWindow = RATE_LIMIT_WINDOW_DEFAULT;
+        settings.gcWindow = GC_WINDOW_DEFAULT;
+
+        settings.wakelockLeaseEnabled = WAKELOCK_LEASE_ENABLED;
+        settings.gpsLeaseEnabled = LOCATION_LEASE_ENABLED;
+        settings.sensorLeaseEnabled = SENSOR_LEASE_ENABLED;
         return settings;
     }
 
@@ -61,6 +96,13 @@ public class LeaseSettings implements Parcelable {
     @Override
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(serviceEnabled ? 1 : 0);
+        dest.writeString(whiteList);
+        dest.writeLong(rateLimitWindow);
+        dest.writeLong(gcWindow);
+
+        dest.writeInt(wakelockLeaseEnabled ? 1 : 0);
+        dest.writeInt(gpsLeaseEnabled ? 1 : 0);
+        dest.writeInt(sensorLeaseEnabled ? 1 : 0);
     }
 
     public static final Creator<LeaseSettings> CREATOR = new Creator<LeaseSettings>() {

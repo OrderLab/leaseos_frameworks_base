@@ -6417,7 +6417,48 @@ public final class Settings {
          * @hide
          */
         public static final String LEASE_SERVICE_ENABLED = "enable_lease_service";
-        
+
+        /**
+         * White list of comma-separated package names.
+         *
+         * @hide
+         */
+        public static final String LEASE_WHITELIST = "lease_whitelist";
+
+        /**
+         * Min window length for rate limiting
+         *
+         * @hide
+         */
+        public static final String LEASE_RATE_LIMIT_WINDOW = "lease_ratelimit_window";
+
+        /**
+         * Min window length for garbage collection
+         *
+         * @hide
+         */
+        public static final String LEASE_GC_WINDOW = "lease_gc_window";
+
+        /**
+         * Whether wakelock lease is enabled
+         *
+         * @hide
+         */
+        public static final String LEASEOS_WAKELOCK_LEASE_ENABLED = "leaseos_wakelock_lease_enabled";
+
+        /**
+         * Whether GPS lease is enabled
+         *
+         * @hide
+         */
+        public static final String LEASEOS_LOCATION_LEASE_ENABLED = "leaseos_gps_lease_enabled";
+
+        /**
+         * Whether sensor lease is enabled
+         *
+         * @hide
+         */
+        public static final String LEASEOS_SENSOR_LEASE_ENABLED = "leaseos_sensor_lease_enabled";
 
         /**
          * This are the settings to be backed up.
