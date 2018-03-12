@@ -27,6 +27,7 @@ import android.lease.ILeaseManager;
 import android.lease.ILeaseProxy;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
+import android.lease.LeaseProxy;
 import android.lease.LeaseSettings;
 import android.lease.LeaseSettingsUtils;
 import android.lease.ResourceType;
@@ -47,6 +48,7 @@ import android.util.Slog;
 import android.util.SparseArray;
 
 import java.util.HashMap;
+import java.util.HashSet;
 
 /**
  * The central lease manager service
@@ -85,7 +87,15 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     private static final String[] OBSERVE_SETTINGS = new String[] {
             /*** Global settings ***/
-            Settings.Secure.LEASE_SERVICE_ENABLED
+            Settings.Secure.LEASE_SERVICE_ENABLED,
+            Settings.Secure.LEASE_WHITELIST,
+            Settings.Secure.LEASE_RATE_LIMIT_WINDOW,
+            Settings.Secure.LEASE_GC_WINDOW,
+
+            /*** Lease enabling settings ***/
+            Settings.Secure.LEASEOS_WAKELOCK_LEASE_ENABLED,
+            Settings.Secure.LEASEOS_LOCATION_LEASE_ENABLED,
+            Settings.Secure.LEASEOS_SENSOR_LEASE_ENABLED,
     };
 
     public LeaseManagerService(Context context) {
@@ -329,6 +339,60 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     private void checkLeaseEnableSettingsLocked(LeaseSettings newSettings) {
+        Slog.d(TAG, "Checking guardian enable settings");
+        HashSet<Integer> disableLeases = new HashSet<Integer>();
+        HashSet<Integer> enableLeases = new HashSet<Integer>();
+        if (mSettings.wakelockLeaseEnabled != newSettings.wakelockLeaseEnabled) {
+            if (newSettings.wakelockLeaseEnabled)
+                enableLeases.add(LeaseManager.WAKELOCK_LEASE_PROXY);
+            else
+                disableLeases.add(LeaseManager.WAKELOCK_LEASE_PROXY);
+        }
+        if (mSettings.gpsLeaseEnabled != newSettings.gpsLeaseEnabled) {
+            if (newSettings.gpsLeaseEnabled)
+                enableLeases.add(LeaseManager.LOCATION_LEASE_PROXY);
+            else
+                disableLeases.add(LeaseManager.LOCATION_LEASE_PROXY);
+        }
+        if (mSettings.sensorLeaseEnabled != newSettings.sensorLeaseEnabled) {
+            if (newSettings.sensorLeaseEnabled)
+                enableLeases.add(LeaseManager.SENSOR_LEASE_PROXY);
+            else
+                disableLeases.add(LeaseManager.SENSOR_LEASE_PROXY);
+        }
+        if (disableLeases.isEmpty() && enableLeases.isEmpty()) {
+            // Nothing changed
+            Slog.d(TAG, "No change to guardian enable settings");
+            return;
+        }
+
+        for (LeaseProxy leaseProxy:mProxies.values()) {
+            if (disableLeases.contains(leaseProxy.mType)) {
+                try {
+                    Slog.d(TAG, "Stopping lease " + leaseProxy + " due to settings change");
+                    if (leaseProxy.mType == LeaseManager.WAKELOCK_LEASE_PROXY) {
+                        stopLeaseLocked(ResourceType.Wakelock);
+                    } else if (leaseProxy.mType == LeaseManager.LOCATION_LEASE_PROXY) {
+                        stopLeaseLocked(ResourceType.Location);
+                    } else if (leaseProxy.mType == LeaseManager.SENSOR_LEASE_PROXY) {
+                        stopLeaseLocked(ResourceType.Sensor);
+                    } else {
+                        Slog.d(TAG, "Unknow type of lease proxy");
+                    }
+                    leaseProxy.mProxy.stopLease();
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+            if (enableLeases.contains(leaseProxy.mType)) {
+                try {
+                    Slog.d(TAG, "Starting guardian " + leaseProxy + " due to settings change");
+                    leaseProxy.mProxy.startLease(newSettings);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
 
     }
 
@@ -339,7 +403,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     private void stopAllLeaseProxyLocked() {
         Slog.d(TAG, "Stopping all lease proxy...");
-        for (LeaseProxy proxy:mProxies.values()) {
+        for (LeaseProxy proxy : mProxies.values()) {
             try {
                 proxy.mProxy.stopLease();
             } catch (RemoteException e) {
@@ -361,7 +425,18 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             lease.cancelExpire();
             lease.expire();
         }
+    }
 
+    private void  stopLeaseLocked(ResourceType type) {
+        Slog.d(TAG, "Stopping all wakelock lease...");
+        for (int i = 0; i < mLeases.size(); i++) {
+            Lease lease = mLeases.valueAt(i);
+            if (lease.mType == type) {
+                lease.cancelDelay();
+                lease.cancelExpire();
+                lease.expire();
+            }
+        }
     }
 
     /**

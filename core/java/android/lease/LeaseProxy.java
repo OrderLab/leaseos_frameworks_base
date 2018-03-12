@@ -46,6 +46,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
     protected boolean mReady;
     protected boolean mSystemAppQueried;
     public boolean mLeaseServiceEnabled;
+    protected LeaseSettings mSettings;
 
     protected final HashSet<Integer> mSystemAppUids;
     protected final LeaseWhiteList mWhiteList;
@@ -63,7 +64,8 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         mSystemAppQueried = false;
         mReady = false;
         mSystemAppUids = new HashSet<>();
-        mWhiteList = new LeaseWhiteList(LeaseWhiteList.WHITELIST_DEFAULT);
+        mSettings = LeaseSettings.getDefaultSettings();
+        mWhiteList = new LeaseWhiteList(mSettings.whiteList);
         mLeaseTable = new Hashtable<>();
         mLeaseDescriptors =  new LongSparseArray<>();
         mUidFreezer = new RequestFreezer<>();
@@ -240,6 +242,13 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         }
     }
 
+
+    private void updateSettingsLocked(LeaseSettings settings) {
+        mSettings = settings;
+        mWhiteList.reset(mSettings.whiteList); // update white list
+    }
+
+
     /**
      * Inform guardian it can start defense
      */
@@ -253,7 +262,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
             if (mLeaseManager == null && mContext != null) {
                 mLeaseManager = (LeaseManager) mContext.getSystemService(Context.LEASE_SERVICE);
             }
-           //updateSettingsLocked(settings); // update settings
+            updateSettingsLocked(settings); // update settings
             mLeaseServiceEnabled = true;
         }
     }
