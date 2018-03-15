@@ -125,4 +125,8 @@ public class ResourceStatManager {
         statHistory.clear();
         return mStatsHistorys.remove(leaseId, statHistory);
     }
+
+    public void clearAll() {
+        mStatsHistorys.clear();
+    }
 }

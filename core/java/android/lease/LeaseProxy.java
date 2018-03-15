@@ -293,6 +293,9 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
     public void stopLease() {
         synchronized (mLock) {
             mLeaseServiceEnabled = false;
+            mLeaseTable.clear();
+            mLeaseDescriptors.clear();
+            mUidFreezer.clear();
         }
     }
 

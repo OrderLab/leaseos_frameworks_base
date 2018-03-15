@@ -303,7 +303,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         if (!mLeaseRunning) {
             mLeaseRunning = true;
             startAllLeaseProxyLocked();
-            stopAllLeaseLocked();
         }
     }
 
@@ -311,6 +310,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         if (mLeaseRunning) {
             mLeaseRunning = false;
             stopAllLeaseProxyLocked();
+            stopAllLeaseLocked();
         }
     }
 
@@ -442,12 +442,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     private void stopAllLeaseLocked() {
         Slog.d(TAG, "Stopping all lease...");
-        for (int i = 0; i < mLeases.size(); i++) {
-            Lease lease = mLeases.valueAt(i);
-            lease.cancelDelay();
-            lease.cancelExpire();
-            lease.expire();
-        }
+        mLeases.clear();
+        mRStatManager.clearAll();
     }
 
     private void  stopLeaseLocked(ResourceType type) {
@@ -455,9 +451,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         for (int i = 0; i < mLeases.size(); i++) {
             Lease lease = mLeases.valueAt(i);
             if (lease.mType == type) {
-                lease.cancelDelay();
-                lease.cancelExpire();
-                lease.expire();
+                remove(lease.mLeaseId);
             }
         }
     }

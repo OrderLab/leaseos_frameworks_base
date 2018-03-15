@@ -56,6 +56,10 @@ public class RequestFreezer<T> {
         mFreezeStats.remove(owner);
     }
 
+    public void clear() {
+        mFreezeStats.clear();
+    }
+
     /**
      * Test if the requests of an owner should be denied or not. If there is a freeze stats
      * for the owner and the freeze stats expired, heat the owner and return not deny,

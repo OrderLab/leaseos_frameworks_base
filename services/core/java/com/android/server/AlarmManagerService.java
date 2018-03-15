@@ -206,7 +206,7 @@ class AlarmManagerService extends SystemService {
         private static final String KEY_LISTENER_TIMEOUT = "listener_timeout";
 
         private static final long DEFAULT_MIN_FUTURITY = 5 * 1000;
-        private static final long DEFAULT_MIN_INTERVAL = 1 * 1000;
+        private static final long DEFAULT_MIN_INTERVAL = 60 * 1000;
         private static final long DEFAULT_ALLOW_WHILE_IDLE_SHORT_TIME = DEFAULT_MIN_FUTURITY;
         private static final long DEFAULT_ALLOW_WHILE_IDLE_LONG_TIME = 9*60*1000;
         private static final long DEFAULT_ALLOW_WHILE_IDLE_WHITELIST_DURATION = 10*1000;
