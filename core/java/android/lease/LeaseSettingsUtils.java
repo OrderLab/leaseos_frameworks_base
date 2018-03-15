@@ -66,7 +66,7 @@ public class LeaseSettingsUtils {
         if (settings.whiteList == null)
             settings.whiteList = LeaseSettings.WHITE_LIST_DEFAULT;
 
-        settings.rateLimitWindow = Settings.Secure.getLongForUser(resolver,
+        settings.LeaseTermWindow = Settings.Secure.getLongForUser(resolver,
                 Settings.Secure.LEASE_RATE_LIMIT_WINDOW,
                 LeaseSettings.RATE_LIMIT_WINDOW_DEFAULT,
                 UserHandle.USER_CURRENT);

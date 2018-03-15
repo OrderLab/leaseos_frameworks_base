@@ -20,7 +20,6 @@
  */
 package com.android.server.lease;
 
-
 import android.content.Context;
 import android.lease.BehaviorType;
 import android.lease.LeaseStatus;
@@ -62,8 +61,8 @@ public class WakelockStat extends ResourceStat {
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
         judge();
         // TODO: uncomment inserting db to make it work
-        // LeaseStatsRecord record = createRecord(uid);
-        // LeaseStatsDBHelper.getInstance(context).insert(record);
+        LeaseStatsRecord record = createRecord(uid);
+        LeaseStatsDBHelper.getInstance(context).insert(record);
     }
 
     public LeaseStatsRecord createRecord(int uid) {

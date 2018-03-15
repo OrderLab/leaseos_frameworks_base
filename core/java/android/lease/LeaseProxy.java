@@ -242,6 +242,26 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         }
     }
 
+    /**
+     * Inform lease proxy that the lease settings has changed
+     *
+     * @param settings
+     */
+    public void settingsChanged(LeaseSettings settings) {
+        // Update the internal settings. There are two ways clients of defense machines
+        // may receive updates of defense settings:
+        //
+        // 1). they use the IDefenseSettingsProvider
+        // that DefenseGuardian provides, which always have the latest copy of defense settings.
+        // Clients that passively use the settings therefore does not need to listen for updates.
+        //
+        // 2). They register to listen for changes to the defense machine.
+
+        synchronized (mLock) {
+            Slog.d(TAG, "Received LeaseSettings updates...");
+            updateSettingsLocked(settings);
+        }
+    }
 
     private void updateSettingsLocked(LeaseSettings settings) {
         mSettings = settings;

@@ -44,4 +44,6 @@ oneway interface ILeaseProxy {
     void startLease(in LeaseSettings settings);
 
     void stopLease();
+
+    void settingsChanged(in LeaseSettings settings);
 }

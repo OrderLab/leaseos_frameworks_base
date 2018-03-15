@@ -46,7 +46,7 @@ public class LeaseSettings implements Parcelable {
     // Comma separated white list of package names.
     public String whiteList;
     // Min observation window for rate limiting
-    public long rateLimitWindow;
+    public long LeaseTermWindow;
     // Min window for GC;
     public long gcWindow;
 
@@ -60,7 +60,7 @@ public class LeaseSettings implements Parcelable {
     public LeaseSettings(Parcel in) {
         serviceEnabled = (in.readInt() != 0);
         whiteList = in.readString();
-        rateLimitWindow = in.readLong();
+        LeaseTermWindow = in.readLong();
         gcWindow = in.readLong();
 
         wakelockLeaseEnabled = (in.readInt() != 0);
@@ -72,7 +72,7 @@ public class LeaseSettings implements Parcelable {
         LeaseSettings settings = new LeaseSettings();
         settings.serviceEnabled = SERVICE_ENABLED_DEFAULT;
         settings.whiteList = WHITE_LIST_DEFAULT;
-        settings.rateLimitWindow = RATE_LIMIT_WINDOW_DEFAULT;
+        settings.LeaseTermWindow = RATE_LIMIT_WINDOW_DEFAULT;
         settings.gcWindow = GC_WINDOW_DEFAULT;
 
         settings.wakelockLeaseEnabled = WAKELOCK_LEASE_ENABLED;
@@ -97,7 +97,7 @@ public class LeaseSettings implements Parcelable {
     public void writeToParcel(Parcel dest, int flags) {
         dest.writeInt(serviceEnabled ? 1 : 0);
         dest.writeString(whiteList);
-        dest.writeLong(rateLimitWindow);
+        dest.writeLong(LeaseTermWindow);
         dest.writeLong(gcWindow);
 
         dest.writeInt(wakelockLeaseEnabled ? 1 : 0);

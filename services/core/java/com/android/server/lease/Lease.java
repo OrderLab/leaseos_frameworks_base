@@ -36,10 +36,12 @@ import android.util.Slog;
 public class Lease {
     private static final String TAG = "Lease";
 
-    public static final int DEFAULT_TERM_MS = 60 * 1000; // default 60 seconds, may need to reduce it
+    public static int DEFAULT_TERM_MS = 60 * 1000; // default 60 seconds, may need to reduce it
     public static final int DEFAULT_DELY_TIME = 20 * 1000; // the delay time, default 20 seconds
-    public static final int MAX_DELAY_NUMBER = 200  ;
+    public static final int MAX_DELAY_NUMBER = 200;
 
+    public long mUserDefinedTerm;
+    public boolean UserDefined;
     protected long mLeaseId; // The identifier of lease
     protected int mOwnerId;  // The identifier of the owner of lease. This variable usually means the UID
     protected ResourceType mType; // The type of resource the lease is assigned
@@ -229,6 +231,11 @@ public class Lease {
     public void setHandler(LeaseWorkerHandler handler) {
         mHandler = handler;
     }
+
+    public static void setDefaultLeaseTerm (long leaseTerm) {
+        DEFAULT_TERM_MS = (int)leaseTerm;
+    }
+
 
     /**
      * Expire the lease
