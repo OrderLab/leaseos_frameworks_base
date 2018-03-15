@@ -333,7 +333,30 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             // Otherwise, we need to inform the new settings to guardians if the service is enabled
             if (mSettings.serviceEnabled) {
                 checkLeaseEnableSettingsLocked(newSettings);
+                notifySettingsChangedLocked(newSettings);
+                updateLeaseSetting(newSettings);
                 mSettings = newSettings;
+            }
+        }
+    }
+
+    private void updateLeaseSetting(LeaseSettings newSettings) {
+        Slog.d(TAG, "The default setting of lease term is " + newSettings.LeaseTermWindow );
+        Lease.setDefaultLeaseTerm(newSettings.LeaseTermWindow);
+    }
+
+    /**
+     * Notify registered lease proxies that the settings have changed!
+     *
+     * @param newSettings
+     */
+    private void notifySettingsChangedLocked(LeaseSettings newSettings) {
+        Slog.d(TAG, "Notifying settings changes to guardians...");
+        for (LeaseProxy proxy:mProxies.values()) {
+            try {
+                proxy.mProxy.settingsChanged(newSettings);
+            } catch (RemoteException e) {
+                Slog.e(TAG, "Fail to notify settings change " + proxy);
             }
         }
     }
