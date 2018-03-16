@@ -70,7 +70,7 @@ public class LeaseSettingsUtils {
                 Settings.Secure.LEASE_RATE_LIMIT_WINDOW,
                 LeaseSettings.RATE_LIMIT_WINDOW_DEFAULT,
                 UserHandle.USER_CURRENT);
-        settings.gcWindow = Settings.Secure.getLongForUser(resolver,
+        settings.DelayWindow = Settings.Secure.getLongForUser(resolver,
                 Settings.Secure.LEASE_GC_WINDOW,
                 LeaseSettings.GC_WINDOW_DEFAULT,
                 UserHandle.USER_CURRENT);

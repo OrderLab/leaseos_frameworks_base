@@ -37,7 +37,7 @@ public class Lease {
     private static final String TAG = "Lease";
 
     public static int DEFAULT_TERM_MS = 60 * 1000; // default 60 seconds, may need to reduce it
-    public static final int DEFAULT_DELY_TIME = 20 * 1000; // the delay time, default 20 seconds
+    public static int DEFAULT_DELY_TIME = 20 * 1000; // the delay time, default 20 seconds
     public static final int MAX_DELAY_NUMBER = 200;
 
     public long mUserDefinedTerm;
@@ -232,8 +232,10 @@ public class Lease {
         mHandler = handler;
     }
 
-    public static void setDefaultLeaseTerm (long leaseTerm) {
+    public static void setDefaultParameter (long leaseTerm, long delayInterval) {
+        Slog.d(TAG, "Set the lease term as " + leaseTerm/1000 + " seconds and delay interval as " + delayInterval/1000 + " seconds");
         DEFAULT_TERM_MS = (int)leaseTerm;
+        DEFAULT_DELY_TIME = (int) delayInterval;
     }
 
 
@@ -328,7 +330,7 @@ public class Lease {
                 scheduleDelay(mDelayInterval);
                 break;
             case LongHolding:
-                mDelayInterval = DEFAULT_DELY_TIME * mDelayCounter;
+                mDelayInterval = DEFAULT_DELY_TIME ;
                 mLength = DEFAULT_TERM_MS;
                 scheduleDelay(mDelayInterval);
                 break;

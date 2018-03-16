@@ -48,7 +48,7 @@ public class LeaseSettings implements Parcelable {
     // Min observation window for rate limiting
     public long LeaseTermWindow;
     // Min window for GC;
-    public long gcWindow;
+    public long DelayWindow;
 
     public boolean wakelockLeaseEnabled;
     public boolean gpsLeaseEnabled;
@@ -61,7 +61,7 @@ public class LeaseSettings implements Parcelable {
         serviceEnabled = (in.readInt() != 0);
         whiteList = in.readString();
         LeaseTermWindow = in.readLong();
-        gcWindow = in.readLong();
+        DelayWindow = in.readLong();
 
         wakelockLeaseEnabled = (in.readInt() != 0);
         gpsLeaseEnabled = (in.readInt() != 0);
@@ -73,7 +73,7 @@ public class LeaseSettings implements Parcelable {
         settings.serviceEnabled = SERVICE_ENABLED_DEFAULT;
         settings.whiteList = WHITE_LIST_DEFAULT;
         settings.LeaseTermWindow = RATE_LIMIT_WINDOW_DEFAULT;
-        settings.gcWindow = GC_WINDOW_DEFAULT;
+        settings.DelayWindow = GC_WINDOW_DEFAULT;
 
         settings.wakelockLeaseEnabled = WAKELOCK_LEASE_ENABLED;
         settings.gpsLeaseEnabled = LOCATION_LEASE_ENABLED;
@@ -98,7 +98,7 @@ public class LeaseSettings implements Parcelable {
         dest.writeInt(serviceEnabled ? 1 : 0);
         dest.writeString(whiteList);
         dest.writeLong(LeaseTermWindow);
-        dest.writeLong(gcWindow);
+        dest.writeLong(DelayWindow);
 
         dest.writeInt(wakelockLeaseEnabled ? 1 : 0);
         dest.writeInt(gpsLeaseEnabled ? 1 : 0);

@@ -27,7 +27,6 @@ import android.lease.ILeaseManager;
 import android.lease.ILeaseProxy;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
-import android.lease.LeaseProxy;
 import android.lease.LeaseSettings;
 import android.lease.LeaseSettingsUtils;
 import android.lease.ResourceType;
@@ -319,7 +318,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     private void updateSettingsLocked(LeaseSettings newSettings) {
         // If it's service enabling/disabling change, we need to start
-        // or stop the guardians
+        // or stop the leases
         Slog.d(TAG, "Updating setting");
         if (mSettings.serviceEnabled != newSettings.serviceEnabled) {
             if (newSettings.serviceEnabled) {
@@ -332,17 +331,22 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         } else {
             // Otherwise, we need to inform the new settings to guardians if the service is enabled
             if (mSettings.serviceEnabled) {
+                updateLeaseSetting(newSettings);
                 checkLeaseEnableSettingsLocked(newSettings);
                 notifySettingsChangedLocked(newSettings);
-                updateLeaseSetting(newSettings);
                 mSettings = newSettings;
             }
         }
     }
 
     private void updateLeaseSetting(LeaseSettings newSettings) {
-        Slog.d(TAG, "The default setting of lease term is " + newSettings.LeaseTermWindow );
-        Lease.setDefaultLeaseTerm(newSettings.LeaseTermWindow);
+        Slog.d(TAG, "The default setting of lease term is " + newSettings.LeaseTermWindow + ", the default setting of delay interval is " + newSettings.DelayWindow);
+        for (int i = 0; i < mLeases.size(); i++) {
+            Lease lease = mLeases.valueAt(i);
+            lease.DEFAULT_TERM_MS = (int) newSettings.LeaseTermWindow;
+            lease.DEFAULT_DELY_TIME = (int) newSettings.DelayWindow;
+        }
+        Lease.setDefaultParameter(newSettings.LeaseTermWindow, newSettings.DelayWindow);
     }
 
     /**
@@ -351,7 +355,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @param newSettings
      */
     private void notifySettingsChangedLocked(LeaseSettings newSettings) {
-        Slog.d(TAG, "Notifying settings changes to guardians...");
+        Slog.d(TAG, "Notifying settings changes to leases...");
         for (LeaseProxy proxy:mProxies.values()) {
             try {
                 proxy.mProxy.settingsChanged(newSettings);
@@ -362,7 +366,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     private void checkLeaseEnableSettingsLocked(LeaseSettings newSettings) {
-        Slog.d(TAG, "Checking guardian enable settings");
+        Slog.d(TAG, "Checking leases enable settings");
         HashSet<Integer> disableLeases = new HashSet<Integer>();
         HashSet<Integer> enableLeases = new HashSet<Integer>();
         if (mSettings.wakelockLeaseEnabled != newSettings.wakelockLeaseEnabled) {
@@ -385,19 +389,22 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         if (disableLeases.isEmpty() && enableLeases.isEmpty()) {
             // Nothing changed
-            Slog.d(TAG, "No change to guardian enable settings");
+            Slog.d(TAG, "No change to lease enable settings");
             return;
         }
 
         for (LeaseProxy leaseProxy:mProxies.values()) {
             if (disableLeases.contains(leaseProxy.mType)) {
                 try {
-                    Slog.d(TAG, "Stopping lease " + leaseProxy + " due to settings change");
+                    Slog.d(TAG, "Stopping " + leaseProxy.mType + " lease due to settings change");
                     if (leaseProxy.mType == LeaseManager.WAKELOCK_LEASE_PROXY) {
+                        stopLeaseProxyLocked(LeaseManager.WAKELOCK_LEASE_PROXY);
                         stopLeaseLocked(ResourceType.Wakelock);
                     } else if (leaseProxy.mType == LeaseManager.LOCATION_LEASE_PROXY) {
+                        stopLeaseProxyLocked(LeaseManager.LOCATION_LEASE_PROXY);
                         stopLeaseLocked(ResourceType.Location);
                     } else if (leaseProxy.mType == LeaseManager.SENSOR_LEASE_PROXY) {
+                        stopLeaseProxyLocked(LeaseManager.SENSOR_LEASE_PROXY);
                         stopLeaseLocked(ResourceType.Sensor);
                     } else {
                         Slog.d(TAG, "Unknow type of lease proxy");
@@ -435,6 +442,19 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
+    private void stopLeaseProxyLocked(int type) {
+        Slog.d(TAG, "Stopping all " + type + " lease proxy...");
+        for (LeaseProxy proxy : mProxies.values()) {
+            try {
+                if (proxy.mType == type) {
+                    proxy.mProxy.stopLease();
+                }
+            } catch (RemoteException e) {
+                Slog.e(TAG, "Fail to stop defense " + proxy);
+            }
+        }
+    }
+
     /**
      * Stop all leases managed by the service.
      * We do not remove the lease since we might need to
@@ -442,12 +462,16 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     private void stopAllLeaseLocked() {
         Slog.d(TAG, "Stopping all lease...");
+        for (int i = 0; i < mLeases.size(); i++) {
+            Lease lease = mLeases.valueAt(i);
+            remove(lease.mLeaseId);
+        }
         mLeases.clear();
         mRStatManager.clearAll();
     }
 
     private void  stopLeaseLocked(ResourceType type) {
-        Slog.d(TAG, "Stopping all wakelock lease...");
+        Slog.d(TAG, "Stopping all " + type + " lease...");
         for (int i = 0; i < mLeases.size(); i++) {
             Lease lease = mLeases.valueAt(i);
             if (lease.mType == type) {
