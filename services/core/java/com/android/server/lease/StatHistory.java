@@ -61,41 +61,45 @@ public class StatHistory {
         int frequency = 0;
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
         int index = 0;
+        int stale = 0;
         for (Event e : mEventList) {
-            if (e.acquireTime < e.releaseTime && e.acquireTime < startTime && e.releaseTime < startTime) {
+            if (e.acquireTime < e.releaseTime && e.acquireTime < startTime
+                    && e.releaseTime < startTime) {
                 staleEventsIndex.add(index);
-                if (index <= mOpenIndex) {
-                    mOpenIndex--;
-                }
                 Slog.d(TAG, "Stale wakelock");
                 index++;
-            } else if (e.acquireTime < e.releaseTime && e.acquireTime >= startTime && e.releaseTime <= endTime) {
+                stale++;
+            } else if (e.acquireTime < e.releaseTime && e.acquireTime >= startTime
+                    && e.releaseTime <= endTime) {
                 staleEventsIndex.add(index);
-                if (index <= mOpenIndex) {
-                    mOpenIndex--;
-                }
                 holdingTime += e.releaseTime - e.acquireTime;
                 Slog.d(TAG, "The wakelock has been released. For process " + uid
                         + ", the Holding time is " + holdingTime);
                 frequency++;
                 index++;
-            } else if(e.acquireTime < e.releaseTime && e.acquireTime < startTime && e.releaseTime <= endTime ) {
+                stale++;
+            } else if (e.acquireTime < e.releaseTime && e.acquireTime < startTime
+                    && e.releaseTime <= endTime) {
                 staleEventsIndex.add(index);
-                if (index <= mOpenIndex) {
-                    mOpenIndex--;
-                }
                 holdingTime += e.releaseTime - startTime;
-                Slog.d(TAG, "The wakelock has been released but is not acquired in this lease term. For process " + uid
-                        + ", the Holding time is " + holdingTime);
+                Slog.d(TAG,
+                        "The wakelock has been released but is not acquired in this lease term. "
+                                + "For process "
+                                + uid
+                                + ", the Holding time is " + holdingTime);
                 frequency++;
                 index++;
+                stale++;
             } else if (e.acquireTime == e.releaseTime && e.acquireTime >= startTime) {
                 holdingTime += endTime - e.acquireTime;
-                Slog.d(TAG, "The wakelock has not been released yet but is acquired in this lease term. For process " + uid
-                        + ", the Holding time is " + holdingTime);
+                Slog.d(TAG,
+                        "The wakelock has not been released yet but is acquired in this lease "
+                                + "term. For process "
+                                + uid
+                                + ", the Holding time is " + holdingTime);
                 frequency++;
                 index++;
-            } else if(e.acquireTime == e.releaseTime && e.acquireTime <= startTime) {
+            } else if (e.acquireTime == e.releaseTime && e.acquireTime <= startTime) {
                 holdingTime += endTime - startTime;
                 Slog.d(TAG, "The wakelock has not been released yet. For process " + uid
                         + ", the Holding time is " + holdingTime);
@@ -110,6 +114,7 @@ public class StatHistory {
             int idx = staleEventsIndex.get(i);
             mEventList.remove(idx);
         }
+        mOpenIndex -= stale;
         ResourceStat resourceStat = getCurrentStat();
         resourceStat.update(holdingTime, frequency, context, uid);
     }
@@ -144,7 +149,7 @@ public class StatHistory {
                 behaviorFrequency.put(resourceStat.mBehaviorType, count);
             }
         }
-        for (BehaviorType behaviorType: BehaviorType.values()) {
+        for (BehaviorType behaviorType : BehaviorType.values()) {
             if (behaviorFrequency.get(behaviorType) == null) {
                 continue;
             } else {
@@ -161,7 +166,7 @@ public class StatHistory {
     public void noteAcquire() {
         Event e = new Event(SystemClock.elapsedRealtime());
         mEventList.add(e);
-        Slog.d(TAG, "Add the release event at " + e.acquireTime);
+        Slog.d(TAG, "Add the acquire event at " + e.acquireTime);
     }
 
     public void noteRelease() {

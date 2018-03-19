@@ -313,7 +313,7 @@ public class Lease {
                 renew(true); // skip checking the status as we just transit from end of term
                 return true;
             default:
-                Slog.e(TAG, "Unimplemented action for decision " + decision.mBehaviorType);
+                Slog.e(TAG, "Start action for decision " + decision.mBehaviorType);
                 expire();
                 sechduleNextLeaseTerm(decision);
                 return false;
