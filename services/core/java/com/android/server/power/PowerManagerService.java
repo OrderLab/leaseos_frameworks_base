@@ -946,14 +946,14 @@ public final class PowerManagerService extends SystemService
                     // been temporarily banned, and if so we should just return.
                     lease = mLeaseProxy.getLease(lock);
                     if (lease != null) {
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
                             lease.mLeaseValue = wakeLock;
-                            releaseWakeLockInternal(lock, flags, false, false);
+                            releaseWakeLockInternal(lock, flags, false, true);
                             Slog.d(TAG, uid + " has been disruptive to lease manager service,"
                                     + " freezing lease requests for a while..");
                             return;
                         }
-                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                     }
                 }
                 /*********************/
@@ -1025,6 +1025,30 @@ public final class PowerManagerService extends SystemService
     private void releaseWakeLockInternal(IBinder lock, int flags, boolean finalized, boolean fromProxy) {
         synchronized (mLock) {
             int index = findWakeLockIndexLocked(lock);
+            /***LeaseOS changes***/
+            if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                WakelockLease lease = mLeaseProxy.getLease(lock);
+                if (lease != null) {
+                    Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
+                    // TODO: notify ResourceStatManager about the release event
+                    if (!fromProxy) {
+                        // if the release is not called from within the lease proxy
+                        // we let the lease manager service know this event
+                        // otherwise, we don't note the event because the callback to
+                        // the proxy is from lease manager service who should be expecting
+                        // this event
+                        Slog.d(TAG, "Note the release event");
+                        lease.mLeaseValue = null;
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_RELEASE);
+                    }
+                    if (finalized) {
+                        Slog.i(TAG, "Final removal of lease " + lease.mLeaseId);
+                        mLeaseProxy.removeLease(lease);
+                    }
+                }
+            }
+            /*********************/
+
             if (index < 0) {
                 if (DEBUG_SPEW) {
                     Slog.d(TAG, "releaseWakeLockInternal: lock=" + Objects.hashCode(lock)
@@ -1042,29 +1066,6 @@ public final class PowerManagerService extends SystemService
             if ((flags & PowerManager.RELEASE_FLAG_WAIT_FOR_NO_PROXIMITY) != 0) {
                 mRequestWaitForNegativeProximity = true;
             }
-
-            /***LeaseOS changes***/
-            if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
-                WakelockLease lease = mLeaseProxy.getLease(lock);
-                if (lease != null) {
-                    Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
-                    // TODO: notify ResourceStatManager about the release event
-                    if (!fromProxy) {
-                        // if the release is not called from within the lease proxy
-                        // we let the lease manager service know this event
-                        // otherwise, we don't note the event because the callback to
-                        // the proxy is from lease manager service who should be expecting
-                        // this event
-                        lease.mLeaseValue = null;
-                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_RELEASE);
-                    }
-                    if (finalized) {
-                        Slog.i(TAG, "Final removal of lease " + lease.mLeaseId);
-                        mLeaseProxy.removeLease(lease);
-                    }
-                }
-            }
-            /*********************/
 
             wakeLock.mLock.unlinkToDeath(wakeLock, 0);
             removeWakeLockLocked(wakeLock, index);
@@ -1129,8 +1130,8 @@ public final class PowerManagerService extends SystemService
                 if (lock != null) {
                     Slog.e(TAG, "Release wakelock object for lease " + leaseId);
                     releaseWakeLockInternal(lock.mLock, lock.mFlags, false, true);
-                    lease.mLeaseStatus = LeaseStatus.EXPIRED;
                 }
+                lease.mLeaseStatus = LeaseStatus.EXPIRED;
             }
         }
 

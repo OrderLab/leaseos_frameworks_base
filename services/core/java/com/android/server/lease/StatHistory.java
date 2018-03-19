@@ -62,7 +62,14 @@ public class StatHistory {
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
         int index = 0;
         for (Event e : mEventList) {
-            if (e.acquireTime < e.releaseTime && e.acquireTime >= startTime && e.releaseTime <= endTime) {
+            if (e.acquireTime < e.releaseTime && e.acquireTime < startTime && e.releaseTime < startTime) {
+                staleEventsIndex.add(index);
+                if (index <= mOpenIndex) {
+                    mOpenIndex--;
+                }
+                Slog.d(TAG, "Stale wakelock");
+                index++;
+            } else if (e.acquireTime < e.releaseTime && e.acquireTime >= startTime && e.releaseTime <= endTime) {
                 staleEventsIndex.add(index);
                 if (index <= mOpenIndex) {
                     mOpenIndex--;
@@ -72,8 +79,7 @@ public class StatHistory {
                         + ", the Holding time is " + holdingTime);
                 frequency++;
                 index++;
-            }
-            if(e.acquireTime < e.releaseTime && e.acquireTime < startTime && e.releaseTime <= endTime) {
+            } else if(e.acquireTime < e.releaseTime && e.acquireTime < startTime && e.releaseTime <= endTime ) {
                 staleEventsIndex.add(index);
                 if (index <= mOpenIndex) {
                     mOpenIndex--;
@@ -83,22 +89,23 @@ public class StatHistory {
                         + ", the Holding time is " + holdingTime);
                 frequency++;
                 index++;
-            }
-            if (e.acquireTime == e.releaseTime && e.acquireTime >= startTime) {
+            } else if (e.acquireTime == e.releaseTime && e.acquireTime >= startTime) {
                 holdingTime += endTime - e.acquireTime;
                 Slog.d(TAG, "The wakelock has not been released yet but is acquired in this lease term. For process " + uid
                         + ", the Holding time is " + holdingTime);
                 frequency++;
                 index++;
-            }
-            if(e.acquireTime == e.releaseTime && e.acquireTime <= startTime) {
+            } else if(e.acquireTime == e.releaseTime && e.acquireTime <= startTime) {
                 holdingTime += endTime - startTime;
-                Slog.d(TAG, "The lease has not been released yet. For process " + uid
+                Slog.d(TAG, "The wakelock has not been released yet. For process " + uid
                         + ", the Holding time is " + holdingTime);
                 frequency++;
                 index++;
+            } else {
+                Slog.d(TAG, "UnKnow type");
             }
         }
+
         for (int i = staleEventsIndex.size() - 1; i >= 0; i--) {
             int idx = staleEventsIndex.get(i);
             mEventList.remove(idx);
@@ -154,10 +161,12 @@ public class StatHistory {
     public void noteAcquire() {
         Event e = new Event(SystemClock.elapsedRealtime());
         mEventList.add(e);
+        Slog.d(TAG, "Add the release event at " + e.acquireTime);
     }
 
     public void noteRelease() {
         if (mOpenIndex + 1 >= mEventList.size()) {
+            Slog.d(TAG, "There is no associated event for this release");
             return;
         }
         mOpenIndex++;
@@ -166,6 +175,7 @@ public class StatHistory {
             return;
         }
         e.releaseTime = SystemClock.elapsedRealtime();
+        Slog.d(TAG, "Add the release event at " + e.releaseTime);
         frequencyCount++;
     }
 

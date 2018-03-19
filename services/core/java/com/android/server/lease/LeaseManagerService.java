@@ -248,7 +248,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         StatHistory statHistory;
         synchronized (mLock) {
             Lease lease = mLeases.get(leaseId);
-            if (lease == null || !lease.isActive()) {
+            if (lease == null || !lease.isValid()) {
                 // if lease is no longer active, ignore the event
                 return;
             }
@@ -260,9 +260,11 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         switch (event) {
             case WAKELOCK_ACQUIRE:
+                Slog.d(TAG, "Note acquire event for lease " + leaseId);
                 statHistory.noteAcquire();
                 break;
             case WAKELOCK_RELEASE:
+                Slog.d(TAG, "Note release event for lease " + leaseId);
                 statHistory.noteRelease();
                 break;
             default:

@@ -33,8 +33,8 @@ public class LeaseSettings implements Parcelable {
 
     public static final boolean SERVICE_ENABLED_DEFAULT = true;
     public static final String WHITE_LIST_DEFAULT = "android,com.android.phone,com.quicin.trepn";
-    public static final long RATE_LIMIT_WINDOW_DEFAULT = 3 * MILLIS_PER_MINUTE; // 3 minutes
-    public static final long GC_WINDOW_DEFAULT = 10 * MILLIS_PER_MINUTE; // 10 minutes
+    public static final long LEASE_TERM_DEFAULT = (long)0.5 * MILLIS_PER_MINUTE; // 30 seconds
+    public static final long DELAY_INTERVAL_DEFAULT = (long)0.5 * MILLIS_PER_MINUTE; // 10 minutes
     public static final LeaseSettings DEFAULT_SETTINGS = getDefaultSettings();
 
     public static final boolean WAKELOCK_LEASE_ENABLED = true;
@@ -72,8 +72,8 @@ public class LeaseSettings implements Parcelable {
         LeaseSettings settings = new LeaseSettings();
         settings.serviceEnabled = SERVICE_ENABLED_DEFAULT;
         settings.whiteList = WHITE_LIST_DEFAULT;
-        settings.LeaseTermWindow = RATE_LIMIT_WINDOW_DEFAULT;
-        settings.DelayWindow = GC_WINDOW_DEFAULT;
+        settings.LeaseTermWindow = LEASE_TERM_DEFAULT;
+        settings.DelayWindow = DELAY_INTERVAL_DEFAULT;
 
         settings.wakelockLeaseEnabled = WAKELOCK_LEASE_ENABLED;
         settings.gpsLeaseEnabled = LOCATION_LEASE_ENABLED;

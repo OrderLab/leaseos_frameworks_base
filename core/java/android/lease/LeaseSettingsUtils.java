@@ -68,11 +68,11 @@ public class LeaseSettingsUtils {
 
         settings.LeaseTermWindow = Settings.Secure.getLongForUser(resolver,
                 Settings.Secure.LEASE_RATE_LIMIT_WINDOW,
-                LeaseSettings.RATE_LIMIT_WINDOW_DEFAULT,
+                LeaseSettings.LEASE_TERM_DEFAULT,
                 UserHandle.USER_CURRENT);
         settings.DelayWindow = Settings.Secure.getLongForUser(resolver,
                 Settings.Secure.LEASE_GC_WINDOW,
-                LeaseSettings.GC_WINDOW_DEFAULT,
+                LeaseSettings.DELAY_INTERVAL_DEFAULT,
                 UserHandle.USER_CURRENT);
 
         settings.wakelockLeaseEnabled = (Settings.Secure.getIntForUser(resolver,
