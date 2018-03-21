@@ -24,6 +24,7 @@ import android.content.Context;
 import android.lease.ILeaseProxy;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
+import android.lease.TimeUtils;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.util.Slog;
@@ -36,11 +37,16 @@ import android.util.Slog;
 public class Lease {
     private static final String TAG = "Lease";
 
-    public static int DEFAULT_TERM_MS = 30 * 1000; // default 30 seconds, may need to reduce it
-    public static int DEFAULT_DELY_TIME = 30 * 1000; // the delay time, default 30 seconds
+    public static int USER_DEFINE_TERM_MS = 30 * 1000; // default 30 seconds, may need to reduce it
+    public static int USER_DEFINE_DELAY_TIME = 30 * 1000; // the delay time, default 30 seconds
     public static final int MAX_DELAY_NUMBER = 200;
 
-    public long mUserDefinedTerm;
+    private static final int DEFAULT_LONGHOLD_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_LONGHOLD_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
+
+    private static final int DEFAULT_NORMAL_TERM_MS = 15 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_NORMAL_DELAY_MS = 2 * TimeUtils.MILLIS_PER_SECOND;
+
     public boolean UserDefined;
     protected long mLeaseId; // The identifier of lease
     protected int mOwnerId;  // The identifier of the owner of lease. This variable usually means the UID
@@ -98,8 +104,8 @@ public class Lease {
     public void create(long now) {
         mRenewal = 0;
         mStatus = LeaseStatus.ACTIVE;
-        mLength = DEFAULT_TERM_MS;
-        mDelayInterval = DEFAULT_DELY_TIME;
+        mLength = USER_DEFINE_TERM_MS;
+        mDelayInterval = USER_DEFINE_DELAY_TIME;
         mDelayCounter = 0;
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
@@ -234,8 +240,8 @@ public class Lease {
 
     public static void setDefaultParameter (long leaseTerm, long delayInterval) {
         Slog.d(TAG, "Set the lease term as " + leaseTerm/1000 + " seconds and delay interval as " + delayInterval/1000 + " seconds");
-        DEFAULT_TERM_MS = (int)leaseTerm;
-        DEFAULT_DELY_TIME = (int) delayInterval;
+        USER_DEFINE_TERM_MS = (int)leaseTerm;
+        USER_DEFINE_DELAY_TIME = (int) delayInterval;
     }
 
 
@@ -310,6 +316,7 @@ public class Lease {
                 expire();
                 return true;
             case RENEW:
+                mLength = DEFAULT_NORMAL_TERM_MS;
                 renew(true); // skip checking the status as we just transit from end of term
                 return true;
             default:
@@ -325,23 +332,23 @@ public class Lease {
         mDelayCounter++;
         switch (decision.mBehaviorType) {
             case FrequencyAsking:
-                mDelayInterval = DEFAULT_DELY_TIME;
-                mLength = DEFAULT_TERM_MS;
+                mDelayInterval = USER_DEFINE_DELAY_TIME;
+                mLength = USER_DEFINE_TERM_MS;
                 scheduleDelay(mDelayInterval);
                 break;
             case LongHolding:
-                mDelayInterval = DEFAULT_DELY_TIME ;
-                mLength = DEFAULT_TERM_MS;
+                mDelayInterval = DEFAULT_LONGHOLD_TERM_MS;
+                mLength = DEFAULT_LONGHOLD_DELAY_MS;
                 scheduleDelay(mDelayInterval);
                 break;
             case LowUtility:
-                mDelayInterval = DEFAULT_DELY_TIME;
-                mLength = DEFAULT_TERM_MS/mDelayCounter;
+                mDelayInterval = USER_DEFINE_DELAY_TIME;
+                mLength = USER_DEFINE_TERM_MS /mDelayCounter;
                 scheduleDelay(mDelayInterval);
                 break;
             case HighDamage:
-                mDelayInterval = DEFAULT_DELY_TIME;
-                mLength = DEFAULT_TERM_MS;
+                mDelayInterval = USER_DEFINE_DELAY_TIME;
+                mLength = USER_DEFINE_TERM_MS;
                 scheduleDelay(mDelayInterval);
                 break;
         }

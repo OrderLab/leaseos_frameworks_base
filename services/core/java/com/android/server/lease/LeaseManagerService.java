@@ -345,8 +345,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         Slog.d(TAG, "The default setting of lease term is " + newSettings.LeaseTermWindow + ", the default setting of delay interval is " + newSettings.DelayWindow);
         for (int i = 0; i < mLeases.size(); i++) {
             Lease lease = mLeases.valueAt(i);
-            lease.DEFAULT_TERM_MS = (int) newSettings.LeaseTermWindow;
-            lease.DEFAULT_DELY_TIME = (int) newSettings.DelayWindow;
+            lease.USER_DEFINE_TERM_MS = (int) newSettings.LeaseTermWindow;
+            lease.USER_DEFINE_DELAY_TIME = (int) newSettings.DelayWindow;
         }
         Lease.setDefaultParameter(newSettings.LeaseTermWindow, newSettings.DelayWindow);
     }
