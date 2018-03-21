@@ -138,8 +138,9 @@ public class StatHistory {
     //TODO:need to implement the judge behavior part
     public BehaviorType judgeHistory() {
         Hashtable<BehaviorType, Integer> behaviorFrequency = new Hashtable<>();
-        BehaviorType leaseBehaviorType = BehaviorType.Normal;
+        //BehaviorType leaseBehaviorType = BehaviorType.Normal;
         int maxCount = 0;
+        /*
         for (ResourceStat resourceStat : mStats) {
             if (behaviorFrequency.get(resourceStat.mBehaviorType) == null) {
                 behaviorFrequency.put(resourceStat.mBehaviorType, 1);
@@ -159,8 +160,8 @@ public class StatHistory {
                     maxCount = frequency;
                 }
             }
-        }
-        return leaseBehaviorType;
+        }*/
+        return getCurrentStat().mBehaviorType;
     }
 
     public void noteAcquire() {

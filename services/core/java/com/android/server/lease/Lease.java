@@ -104,8 +104,8 @@ public class Lease {
     public void create(long now) {
         mRenewal = 0;
         mStatus = LeaseStatus.ACTIVE;
-        mLength = USER_DEFINE_TERM_MS;
-        mDelayInterval = USER_DEFINE_DELAY_TIME;
+        mLength = DEFAULT_NORMAL_TERM_MS;
+        mDelayInterval = DEFAULT_NORMAL_DELAY_MS;
         mDelayCounter = 0;
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
@@ -316,15 +316,17 @@ public class Lease {
                 expire();
                 return true;
             case RENEW:
+                Slog.d(TAG, "Start renew action for decision " + decision.mBehaviorType);
                 mLength = DEFAULT_NORMAL_TERM_MS;
                 renew(true); // skip checking the status as we just transit from end of term
                 return true;
-            default:
-                Slog.e(TAG, "Start action for decision " + decision.mBehaviorType);
+            case DELAY:
+                Slog.e(TAG, "Start delay action for decision " + decision.mBehaviorType);
                 expire();
                 sechduleNextLeaseTerm(decision);
                 return false;
         }
+        return false;
     }
 
     public void sechduleNextLeaseTerm(Decision decision) {
@@ -337,8 +339,8 @@ public class Lease {
                 scheduleDelay(mDelayInterval);
                 break;
             case LongHolding:
-                mDelayInterval = DEFAULT_LONGHOLD_TERM_MS;
-                mLength = DEFAULT_LONGHOLD_DELAY_MS;
+                mDelayInterval = DEFAULT_LONGHOLD_DELAY_MS;
+                mLength = DEFAULT_LONGHOLD_TERM_MS;
                 scheduleDelay(mDelayInterval);
                 break;
             case LowUtility:

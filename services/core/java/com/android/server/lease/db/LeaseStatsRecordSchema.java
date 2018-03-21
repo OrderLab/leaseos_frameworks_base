@@ -28,7 +28,7 @@ import android.provider.BaseColumns;
 public class LeaseStatsRecordSchema implements BaseColumns {
 
 
-    public static final String TABLE_NAME = "leaseStats";
+    public static final String TABLE_NAME = "leasestats";
 
     public static final int ID_PATH_POSITION = 1;
 
