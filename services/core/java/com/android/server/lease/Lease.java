@@ -46,6 +46,7 @@ public class Lease {
 
     private static final int DEFAULT_NORMAL_TERM_MS = 15 * TimeUtils.MILLIS_PER_SECOND;
     private static final int DEFAULT_NORMAL_DELAY_MS = 2 * TimeUtils.MILLIS_PER_SECOND;
+    public static final int DEFAULT_PROBING_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
 
     public boolean UserDefined;
     protected long mLeaseId; // The identifier of lease
@@ -317,7 +318,11 @@ public class Lease {
                 return true;
             case RENEW:
                 Slog.d(TAG, "Start renew action for decision " + decision.mBehaviorType);
-                mLength = DEFAULT_NORMAL_TERM_MS;
+                if (isProxy) {
+                    mLength = DEFAULT_PROBING_TERM_MS;
+                } else {
+                    mLength = DEFAULT_NORMAL_TERM_MS;
+                }
                 renew(true); // skip checking the status as we just transit from end of term
                 return true;
             case DELAY:
