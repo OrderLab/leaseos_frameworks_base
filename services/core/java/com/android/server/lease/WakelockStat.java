@@ -119,7 +119,7 @@ public class WakelockStat extends ResourceStat {
     //TODO: implment the judge method
     @Override
     public void judge() {
-        if ((float)mUsageTime/mHoldingTime < 0.1) {
+        if ((float)mUsageTime/mHoldingTime < 0.1 && mHoldingTime > 100) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
             mBehaviorType = BehaviorType.LongHolding;
         } else {
