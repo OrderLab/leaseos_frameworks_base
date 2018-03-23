@@ -392,15 +392,18 @@ public final class BatteryStatsService extends IBatteryStats.Stub
                 mStats.updateKernelWakelocksLocked();
             }
             BatteryStatsImpl.Uid u = mStats.getUidStatsLocked(uid);
-            ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = u.getProcessStats();
-            int NP = processStats.size();
-            Slog.d(TAG, "the processStat size is " + NP + ", for uid " + u.getUid());
+            //ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = u.getProcessStats();
+            //int NP = processStats.size();
+            Slog.d(TAG, "the processStat size is 1 , for uid " + u.getUid());
+            /*
             for (int ip = 0; ip < NP; ip++) {
                 Slog.d(TAG, "ProcessStat name = " + processStats.keyAt(ip));
                 BatteryStatsImpl.Uid.Proc ps = (BatteryStatsImpl.Uid.Proc) processStats.valueAt(ip);
                 totalTime += ps.getUserTime(BatteryStatsImpl.STATS_ABSOLUTE);
                 totalTime += ps.getSystemTime(BatteryStatsImpl.STATS_ABSOLUTE);
-            }
+            }*/
+            totalTime += (u.getUserCpuTimeUs(BatteryStatsImpl.STATS_ABSOLUTE)/1000);
+            totalTime += (u.getSystemCpuTimeUs(BatteryStatsImpl.STATS_ABSOLUTE)/1000);
         }
         return totalTime;
     }
