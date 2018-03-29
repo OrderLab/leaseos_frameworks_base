@@ -46,6 +46,7 @@ import android.util.LongSparseArray;
 import android.util.Slog;
 import android.util.SparseArray;
 
+import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
 
@@ -166,6 +167,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             lease.create(now); // at last when proxy and worker thread is ready, create this lease
             mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
             mLastLeaseId++;
+
             return lease.mLeaseId;
         }
     }

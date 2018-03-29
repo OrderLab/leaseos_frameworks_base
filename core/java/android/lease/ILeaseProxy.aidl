@@ -26,7 +26,7 @@ import android.lease.LeaseSettings;
  * Callback interface for lease manager service to notify the proxy to carry out certain action, such
  * as blocking.
  *
- * {@hide}
+ *
  */
 oneway interface ILeaseProxy {
     /* perform the actual expiration for a specific type of lease */

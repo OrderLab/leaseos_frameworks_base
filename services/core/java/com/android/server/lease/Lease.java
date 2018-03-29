@@ -29,6 +29,8 @@ import android.os.RemoteException;
 import android.os.SystemClock;
 import android.util.Slog;
 
+import java.io.IOException;
+
 /**
  * The struct of lease.
  *
@@ -111,7 +113,12 @@ public class Lease {
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
         isDelay = false;
-        scheduleExpire(mLength);
+        try {
+            scheduleExpire(mLength);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
     }
 
     /**
@@ -413,7 +420,11 @@ public class Lease {
                 success = false;
             }
         }
-        scheduleExpire(mLength);
+        try {
+            scheduleExpire(mLength);
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
         return success;
     }
 
@@ -433,12 +444,14 @@ public class Lease {
         }
     }
 
-    public void scheduleExpire(long leaseTerm) {
+    public void scheduleExpire(long leaseTerm) throws IOException{
         if (!mScheduled && mHandler != null) {
             Slog.d(TAG, "Scheduling expiration check for lease " + mLeaseId + " after " + mLength / 1000 + " s");
             mHandler.postDelayed(mExpireRunnable, leaseTerm);
             mScheduled = true;
         }
+           throw new IOException("hehehe");
+
     }
 
     public void cancelExpire() {

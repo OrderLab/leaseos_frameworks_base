@@ -37,7 +37,7 @@ import java.util.List;
  *
  */
 public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILeaseProxy.Stub {
-    private static final String TAG = "n";
+    private static final String TAG = "LeaseProxy";
 
     protected final Object mLock = new Object();
     protected int mType;
