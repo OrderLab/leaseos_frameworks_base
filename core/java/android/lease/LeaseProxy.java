@@ -36,7 +36,7 @@ import java.util.List;
  * to perform certain action such as release the corresponding resources.
  *
  */
-public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILeaseProxy.Stub {
+public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
     private static final String TAG = "LeaseProxy";
 
     protected final Object mLock = new Object();
@@ -50,8 +50,8 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
 
     protected final HashSet<Integer> mSystemAppUids;
     protected final LeaseWhiteList mWhiteList;
-    protected final Hashtable<S, T> mLeaseTable;
-    protected final LongSparseArray<T> mLeaseDescriptors;
+    protected final Hashtable<S,  LeaseDescriptor<S>> mLeaseTable;
+    protected final LongSparseArray<LeaseDescriptor<S>> mLeaseDescriptors;
     protected final RequestFreezer<Integer> mUidFreezer;
 
 
@@ -138,18 +138,18 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
      * @param key
      * @return
      */
-    public T getLease(S key) {
+    public LeaseDescriptor<S> getLease(S key) {
         return mLeaseTable.get(key);
     }
 
-    public T createLease(S key, int uid) {
+    public LeaseDescriptor<S> createLease(S key, int uid) {
         if (mLeaseManager != null) {
             long leaseId = mLeaseManager.create(ResourceType.Wakelock, uid);
             if (leaseId < LeaseManager.LEASE_ID_START) {
                 Slog.i(TAG,"Skip invalid lease");
                 return null;
             }
-            T lease = newLease(key, leaseId, LeaseStatus.ACTIVE); // a new lease
+            LeaseDescriptor<S> lease = newLease(key, leaseId, LeaseStatus.ACTIVE); // a new lease
             mLeaseTable.put(key, lease);
             mLeaseDescriptors.put(leaseId, lease);
             Slog.i(TAG, "Created new lease " + leaseId + ". The lease table size is "
@@ -168,7 +168,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         return true;
     }
 
-    public boolean renewLease(T lease) {
+    public boolean renewLease(LeaseDescriptor<S> lease) {
         if (!mLeaseManager.renew(lease.mLeaseId)) {
             // Possible failure reason: there has been too many lease requests from this UID
             // the lease manager decides to reject the requests for a while.
@@ -180,7 +180,7 @@ public abstract class LeaseProxy<S, T extends LeaseDescriptor<S>> extends ILease
         return true;
     }
 
-    public abstract T newLease(S key, long leaseId, LeaseStatus status);
+    public abstract LeaseDescriptor<S> newLease(S key, long leaseId, LeaseStatus status);
 
     public void removeLease(LeaseDescriptor<S> descriptor) {
         if (mLeaseManager != null) {

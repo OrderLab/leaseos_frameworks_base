@@ -944,7 +944,7 @@ public final class PowerManagerService extends SystemService
                     // deny any lease creation request for a given UID instead of deny a
                     // specific lease ID, in this case, we should check if the package/uid has
                     // been temporarily banned, and if so we should just return.
-                    lease = mLeaseProxy.getLease(lock);
+                    lease = (WakelockLease) mLeaseProxy.getLease(lock);
                     if (lease != null) {
                         mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
@@ -963,7 +963,7 @@ public final class PowerManagerService extends SystemService
                     if (mLeaseProxy.exempt(packageName, uid)) {
                         Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                     } else if (!fromProxy) {
-                        lease = mLeaseProxy.createLease(lock, uid);
+                        lease = (WakelockLease) mLeaseProxy.createLease(lock, uid);
                         if (lease != null) {
                             // hold the internal data structure in case we need it later
                             lease.mLeaseValue = wakeLock;
@@ -1027,7 +1027,7 @@ public final class PowerManagerService extends SystemService
             int index = findWakeLockIndexLocked(lock);
             /***LeaseOS changes***/
             if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
-                WakelockLease lease = mLeaseProxy.getLease(lock);
+                WakelockLease lease = (WakelockLease)mLeaseProxy.getLease(lock);
                 if (lease != null) {
                     Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
                     // TODO: notify ResourceStatManager about the release event
@@ -1091,7 +1091,7 @@ public final class PowerManagerService extends SystemService
         }
     }
 
-    private class WakelockLeaseProxy extends LeaseProxy<IBinder, WakelockLease> {
+    private class WakelockLeaseProxy extends LeaseProxy<IBinder> {
 
         public WakelockLeaseProxy(Context context) {
             super(LeaseManager.WAKELOCK_LEASE_PROXY, "PMS_PROXY", context);
@@ -1111,7 +1111,7 @@ public final class PowerManagerService extends SystemService
         @Override
         public void onExpire(long leaseId) throws RemoteException {
             Slog.d(TAG, "LeaseManagerService instruct me to expire lease " + leaseId);
-            WakelockLease lease = mLeaseDescriptors.get(leaseId);
+            WakelockLease lease = (WakelockLease) mLeaseDescriptors.get(leaseId);
             if (lease != null) {
                 WakeLock lock;
                 synchronized (mLock) {
@@ -1138,7 +1138,7 @@ public final class PowerManagerService extends SystemService
         @Override
         public void onRenew(long leaseId) throws RemoteException {
             Slog.d(TAG, "LeaseManagerService instruct me to renew lease " + leaseId);
-            WakelockLease lease = mLeaseDescriptors.get(leaseId);
+            WakelockLease lease = (WakelockLease)mLeaseDescriptors.get(leaseId);
             if (lease != null) {
                 WakeLock lock = lease.mLeaseValue;
                 if (lock == null) {
