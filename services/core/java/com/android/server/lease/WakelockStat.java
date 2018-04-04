@@ -38,6 +38,7 @@ public class WakelockStat extends ResourceStat {
     protected long mHoldingTime;
     protected long mUsageTime;
     protected long mExceptionFrequency;
+    protected long mAcquiringFrequency;
     protected int mUid;
 
     protected long mBaseCPUTime;
@@ -54,11 +55,12 @@ public class WakelockStat extends ResourceStat {
             return;
         }
         mHoldingTime = holdingTime;
-        mFrequency = frequency;
+        mAcquiringFrequency = frequency;
         mCurCPUTime = bm.getCPUTime(mUid);
         Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
+        mExceptionFrequency = bm.getExceptionNumber(mUid);
         judge();
         // TODO: uncomment inserting db to make it work
         LeaseStatsRecord record = createRecord(uid);
@@ -77,6 +79,7 @@ public class WakelockStat extends ResourceStat {
 
     public WakelockStat(long beginTime, int uid, Context context) {
         super(beginTime);
+        BatteryMonitor.getInstance(context).getExceptionNumber(mUid);
         mContext = context;
         mFrequency = 0;
         mHoldingTime = 0;
@@ -122,10 +125,15 @@ public class WakelockStat extends ResourceStat {
         if ((float)mUsageTime/mHoldingTime < 0.1 && mHoldingTime > 100) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
             mBehaviorType = BehaviorType.LongHolding;
+        } else if ((float)mUsageTime /(mHoldingTime * mExceptionFrequency) < 0.1 && mHoldingTime > 100) {
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
+            mBehaviorType = BehaviorType.LowUtility;
+        } else if ((float) mUsageTime / (mHoldingTime * mExceptionFrequency * mAcquiringFrequency) < 0.1 && mHoldingTime > 100) {
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");
+            mBehaviorType = BehaviorType.HighDamage;
         } else {
-            Slog.d(TAG, "For process " + mUid + ", this lease term has a normal behavior");
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a Normal behavior");
             mBehaviorType = BehaviorType.Normal;
         }
-
     }
 }

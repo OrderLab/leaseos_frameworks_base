@@ -46,6 +46,12 @@ public class Lease {
     private static final int DEFAULT_LONGHOLD_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
     private static final int DEFAULT_LONGHOLD_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
 
+    private static final int DEFAULT_LOWUTILITY_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_LOWUTILITY_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
+
+    private static final int DEFAULT_HIGHDAMAGE_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_HIGHDAMAGEY_DELAY_MS = 2 * TimeUtils.MILLIS_PER_SECOND;
+
     private static final int DEFAULT_NORMAL_TERM_MS = 15 * TimeUtils.MILLIS_PER_SECOND;
     private static final int DEFAULT_NORMAL_DELAY_MS = 2 * TimeUtils.MILLIS_PER_SECOND;
     public static final int DEFAULT_PROBING_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
@@ -356,13 +362,13 @@ public class Lease {
                 scheduleDelay(mDelayInterval);
                 break;
             case LowUtility:
-                mDelayInterval = USER_DEFINE_DELAY_TIME;
-                mLength = USER_DEFINE_TERM_MS /mDelayCounter;
+                mDelayInterval = DEFAULT_LOWUTILITY_TERM_MS;
+                mLength = DEFAULT_LOWUTILITY_DELAY_MS /mDelayCounter;
                 scheduleDelay(mDelayInterval);
                 break;
             case HighDamage:
-                mDelayInterval = USER_DEFINE_DELAY_TIME;
-                mLength = USER_DEFINE_TERM_MS;
+                mDelayInterval = DEFAULT_HIGHDAMAGE_TERM_MS;
+                mLength = DEFAULT_HIGHDAMAGEY_DELAY_MS;
                 scheduleDelay(mDelayInterval);
                 break;
         }
