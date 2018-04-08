@@ -58,7 +58,8 @@ public class Lease {
 
     public boolean UserDefined;
     protected long mLeaseId; // The identifier of lease
-    protected int mOwnerId;  // The identifier of the owner of lease. This variable usually means the UID
+    protected int mOwnerId;
+            // The identifier of the owner of lease. This variable usually means the UID
     protected ResourceType mType; // The type of resource the lease is assigned
     protected LeaseStatus mStatus; // The status of the lease
     protected int mLength; // The length of this lease term in millisecond
@@ -66,13 +67,15 @@ public class Lease {
     protected long mEndTime; // The EndTime of this lease term
     protected int mRenewal; // The number of current lease term
     protected final Context mContext; // The context in which the lease is created
-    protected ResourceStatManager mRStatManager; // The record of the history lease term for this lease
+    protected ResourceStatManager mRStatManager;
+            // The record of the history lease term for this lease
     protected ILeaseProxy mProxy; // the associated lease proxy
     protected long mDelayInterval; // the time interval between two leases
     protected int mDelayCounter; // the counter of delaying times
     BatteryMonitor mBatteryMonitor; // the instance of Battery Monitor
     protected boolean isCharging; // true if the phone is charged during this lease term
     protected boolean isDelay;
+    protected boolean isProbing;
 
     private LeaseWorkerHandler mHandler;
     private boolean mScheduled;
@@ -105,6 +108,7 @@ public class Lease {
         mHandler = handler;
         mContext = context;
         mBatteryMonitor = BatteryMonitor.getInstance(context);
+        isProbing = false;
     }
 
     /**
@@ -119,12 +123,7 @@ public class Lease {
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
         isDelay = false;
-        try {
-            scheduleExpire(mLength);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
+        scheduleExpire(mLength);
     }
 
     /**
@@ -150,7 +149,7 @@ public class Lease {
         isCharging = mBatteryMonitor.isCharging();
         if (mStatus == LeaseStatus.ACTIVE || isCharging) {
             return true;
-        } else if (mStatus == LeaseStatus.EXPIRED && !isDelay ) {
+        } else if (mStatus == LeaseStatus.EXPIRED && !isDelay) {
             return RenewDescison(true);
         } else if (mStatus == LeaseStatus.EXPIRED && isDelay) {
             return false;
@@ -158,7 +157,7 @@ public class Lease {
         return false;
     }
 
-    public boolean isActive () {
+    public boolean isActive() {
         return mStatus == LeaseStatus.ACTIVE;
     }
 
@@ -191,8 +190,6 @@ public class Lease {
 
     /**
      * Get start time of this lease
-     *
-     * @return
      */
     public long getBeginTime() {
         return mBeginTime;
@@ -218,8 +215,6 @@ public class Lease {
 
     /**
      * Return the current resource stat of the lease
-     *
-     * @return
      */
     public ResourceStat getCurrentStat() {
         return mRStatManager.getCurrentStat(mLeaseId);
@@ -227,8 +222,6 @@ public class Lease {
 
     /**
      * Return the history of resource stat of the lease.
-     *
-     * @return
      */
     public StatHistory getStatHistory() {
         return mRStatManager.getStatsHistory(mLeaseId);
@@ -236,8 +229,6 @@ public class Lease {
 
     /**
      * Set the associated lease proxy.
-     *
-     * @param proxy
      */
     public void setProxy(ILeaseProxy proxy) {
         mProxy = proxy;
@@ -245,16 +236,15 @@ public class Lease {
 
     /**
      * Set the associated worker thread for this lease.
-     *
-     * @param handler
      */
     public void setHandler(LeaseWorkerHandler handler) {
         mHandler = handler;
     }
 
-    public static void setDefaultParameter (long leaseTerm, long delayInterval) {
-        Slog.d(TAG, "Set the lease term as " + leaseTerm/1000 + " seconds and delay interval as " + delayInterval/1000 + " seconds");
-        USER_DEFINE_TERM_MS = (int)leaseTerm;
+    public static void setDefaultParameter(long leaseTerm, long delayInterval) {
+        Slog.d(TAG, "Set the lease term as " + leaseTerm / 1000 + " seconds and delay interval as "
+                + delayInterval / 1000 + " seconds");
+        USER_DEFINE_TERM_MS = (int) leaseTerm;
         USER_DEFINE_DELAY_TIME = (int) delayInterval;
     }
 
@@ -294,7 +284,8 @@ public class Lease {
     public boolean freeze() {
         if (mProxy != null) {
             try {
-                Slog.d(TAG, "Calling onFreeze for uid " + mOwnerId + " to freeze for " + mDelayInterval);
+                Slog.d(TAG, "Calling onFreeze for uid " + mOwnerId + " to freeze for " +
+                mDelayInterval);
                 mProxy.onFreeze(mOwnerId, mDelayInterval, MAX_DELAY_NUMBER);
             } catch (RemoteException e) {
                 Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
@@ -307,6 +298,7 @@ public class Lease {
         }
     }
 */
+
     /**
      * One lease term has come to an end.
      */
@@ -315,14 +307,14 @@ public class Lease {
         // update the stats for this lease term
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
-            Slog.d(TAG,"The phone is in charing, immediately renew for lease " + mLeaseId);
+            Slog.d(TAG, "The phone is in charing, immediately renew for lease " + mLeaseId);
             renew(true);
             return;
         }
         RenewDescison(false);
     }
 
-    public boolean RenewDescison (boolean isProxy) {
+    public boolean RenewDescison(boolean isProxy) {
         Decision decision = LeasePolicyRuler.behaviorJudge(this, isProxy);
         switch (decision.mDecision) {
             case EXPIRE:
@@ -333,6 +325,7 @@ public class Lease {
                 Slog.d(TAG, "Start renew action for decision " + decision.mBehaviorType);
                 if (isProxy) {
                     mLength = DEFAULT_PROBING_TERM_MS;
+                    isProbing = true;
                 } else {
                     mLength = DEFAULT_NORMAL_TERM_MS;
                 }
@@ -350,25 +343,38 @@ public class Lease {
     public void sechduleNextLeaseTerm(Decision decision) {
         isDelay = true;
         mDelayCounter++;
+        boolean flag = false;
         switch (decision.mBehaviorType) {
             case FrequencyAsking:
                 mDelayInterval = USER_DEFINE_DELAY_TIME;
                 mLength = USER_DEFINE_TERM_MS;
+                if (isProbing) {
+                    renew(true);
+                }
                 scheduleDelay(mDelayInterval);
                 break;
             case LongHolding:
                 mDelayInterval = DEFAULT_LONGHOLD_DELAY_MS;
                 mLength = DEFAULT_LONGHOLD_TERM_MS;
+                if (isProbing) {
+                    renew(true);
+                }
                 scheduleDelay(mDelayInterval);
                 break;
             case LowUtility:
                 mDelayInterval = DEFAULT_LOWUTILITY_TERM_MS;
-                mLength = DEFAULT_LOWUTILITY_DELAY_MS /mDelayCounter;
+                mLength = DEFAULT_LOWUTILITY_DELAY_MS / mDelayCounter;
+                if (isProbing) {
+                    renew(true);
+                }
                 scheduleDelay(mDelayInterval);
                 break;
             case HighDamage:
                 mDelayInterval = DEFAULT_HIGHDAMAGE_TERM_MS;
                 mLength = DEFAULT_HIGHDAMAGEY_DELAY_MS;
+                if (isProbing) {
+                    renew(true);
+                }
                 scheduleDelay(mDelayInterval);
                 break;
         }
@@ -377,7 +383,8 @@ public class Lease {
     /**
      * Renew a new lease term for the lease. There are two types of renewal. One is automatic
      * renewal that's granted at the end of a lease term (the original meaning of renew). The other
-     * is delayed renewal that's requested from the proxy, e.g., a lease has been expired and then after
+     * is delayed renewal that's requested from the proxy, e.g., a lease has been expired and
+     * then after
      * 5ms an app tries to access the resource again.
      *
      * @param auto should the lease status be checked
@@ -426,15 +433,11 @@ public class Lease {
                 success = false;
             }
         }
-        try {
-            scheduleExpire(mLength);
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
+        scheduleExpire(mLength);
         return success;
     }
 
-    public void scheduleDelay (long delayInterval) {
+    public void scheduleDelay(long delayInterval) {
         if (!mScheduled && mHandler != null) {
             Slog.d(TAG, "Renew lease " + mLeaseId + " after " + delayInterval / 1000 + " s");
             mHandler.postDelayed(mRenewRunnable, delayInterval);
@@ -442,7 +445,7 @@ public class Lease {
         }
     }
 
-    public void cancelDelay () {
+    public void cancelDelay() {
         if (mScheduled && mHandler != null) {
             Slog.d(TAG, "Cancelling delay renew for lease " + mLeaseId);
             mHandler.removeCallbacks(mRenewRunnable);
@@ -450,14 +453,14 @@ public class Lease {
         }
     }
 
-    public void scheduleExpire(long leaseTerm) throws IOException{
+    public void scheduleExpire(long leaseTerm) {
         if (!mScheduled && mHandler != null) {
-            Slog.d(TAG, "Scheduling expiration check for lease " + mLeaseId + " after " + mLength / 1000 + " s");
+            Slog.d(TAG,
+                    "Scheduling expiration check for lease " + mLeaseId + " after " + mLength / 1000
+                            + " s");
             mHandler.postDelayed(mExpireRunnable, leaseTerm);
             mScheduled = true;
         }
-           throw new IOException("hehehe");
-
     }
 
     public void cancelExpire() {
