@@ -41,10 +41,12 @@ public class StatHistory {
     protected static final int MAX_HISTORY_STATS = 10;
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
+    public LinkedList<Long> mHoldTimes;
 
     public StatHistory() {
         mStats = new LinkedList<>();
         mEventList = new LinkedList<>();
+        mHoldTimes = new LinkedList<>();
         mOpenIndex = -1;
         frequencyCount = 0;
     }
@@ -181,6 +183,12 @@ public class StatHistory {
             return;
         }
         e.releaseTime = SystemClock.elapsedRealtime();
+        if(mHoldTimes.size() < 10) {
+            mHoldTimes.addLast(e.releaseTime-e.acquireTime);
+        } else {
+            mHoldTimes.removeFirst();
+            mHoldTimes.addLast(e.releaseTime-e.acquireTime);
+        }
         Slog.d(TAG, "Add the release event at " + e.releaseTime);
         frequencyCount++;
     }
