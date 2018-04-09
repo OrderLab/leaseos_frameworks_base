@@ -450,8 +450,6 @@ public class Lease {
             mHandler.postDelayed(mExpireRunnable, leaseTerm);
             mScheduled = true;
         }
-           throw new IOException("hehehe");
-
     }
 
     public void cancelExpire() {

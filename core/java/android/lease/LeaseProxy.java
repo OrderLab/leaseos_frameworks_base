@@ -26,6 +26,8 @@ import android.content.pm.PackageManager;
 import android.util.LongSparseArray;
 import android.util.Slog;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -222,13 +224,15 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
             if (mContext != null) {
                 final PackageManager pm = mContext.getPackageManager();
                 if (pm != null) {
-                    final List<ApplicationInfo> appInfos = pm.getInstalledApplications(PackageManager.GET_META_DATA);
+                    final List<ApplicationInfo> appInfos = pm.getInstalledApplications(
+                            PackageManager.GET_META_DATA);
                     for (ApplicationInfo appInfo : appInfos) {
                         // First it must be an APP
                         if (appInfo.uid >= android.os.Process.FIRST_APPLICATION_UID &&
                                 appInfo.uid <= android.os.Process.LAST_APPLICATION_UID) {
                             // Only add these system uids in app UID range
                             if ((appInfo.flags & ApplicationInfo.FLAG_SYSTEM) != 0) {
+
                                 mSystemAppUids.add(appInfo.uid);
                             }
                         }
@@ -239,6 +243,20 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
                     Slog.e(TAG, "Package manager is not ready yet");
                 }
             }
+
+            String fileName = "/data/system/exemptlist.txt";
+
+            try {
+                File file = new File(fileName);
+                FileWriter writer = new FileWriter(file);
+                file.setReadable(true, false);
+                writer.write(mSystemAppUids.toString());
+                writer.close();
+            } catch (Exception e) {
+                e.printStackTrace();
+            }
+
+
         }
     }
 
