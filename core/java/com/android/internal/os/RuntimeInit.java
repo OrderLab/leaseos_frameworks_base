@@ -19,27 +19,39 @@ package com.android.internal.os;
 import android.app.ActivityManagerNative;
 import android.app.ActivityThread;
 import android.app.ApplicationErrorReport;
+import android.content.Context;
+import android.lease.ILeaseManager;
 import android.os.Build;
 import android.os.DeadObjectException;
 import android.os.Debug;
 import android.os.IBinder;
 import android.os.Process;
+import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.SystemProperties;
 import android.os.Trace;
 import android.util.Log;
 import android.util.Slog;
+
 import com.android.internal.logging.AndroidConfig;
 import com.android.server.NetworkManagementSocketTagger;
+
 import dalvik.system.VMRuntime;
+
+import org.apache.harmony.luni.internal.util.TimezoneGetter;
+
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Hashtable;
 import java.util.TimeZone;
 import java.util.logging.LogManager;
-import org.apache.harmony.luni.internal.util.TimezoneGetter;
 
 /**
  * Main entry point for runtime initialization.  Not for
  * public consumption.
+ *
  * @hide
  */
 public class RuntimeInit {
@@ -54,7 +66,9 @@ public class RuntimeInit {
     private static volatile boolean mCrashing = false;
 
     private static final native void nativeZygoteInit();
+
     private static final native void nativeFinishInit();
+
     private static final native void nativeSetExitWithoutCleanup(boolean exitWithoutCleanup);
 
     private static int Clog_e(String tag, String msg, Throwable tr) {
@@ -67,6 +81,7 @@ public class RuntimeInit {
      * this should only matter for threads created by applications.
      */
     private static class UncaughtHandler implements Thread.UncaughtExceptionHandler {
+
         public void uncaughtException(Thread t, Throwable e) {
             try {
                 // Don't re-enter -- avoid infinite loops if crash-reporting crashes.
@@ -114,12 +129,57 @@ public class RuntimeInit {
         }
     }
 
+    private static class NoteHandler implements Thread.ExceptionNoteHandler {
+        public static final int FIRST_APPLICATION_UID = 10000;
+        public static final int LAST_APPLICATION_UID = 19999;
+        private Hashtable<Integer, Integer> mExceptionTable = new Hashtable<>();
+        private ArrayList<Integer> mExemptTable = new ArrayList<>(Arrays.asList(10008, 10081, 10037,
+                10036, 10003, 10019, 10077, 10084, 10041, 10012, 10016, 10059, 10025, 10013, 10083,
+                10078, 10010, 10026, 10066, 10051, 10004, 10007, 10049, 10035, 10022, 10054,
+                10013, 10001, 10071, 10031, 10005, 10073, 10088, 10074, 10029, 10030, 10000,
+                10076, 10044, 10086, 10087, 10024, 10063, 10070, 10006, 10055, 10057, 10056,
+                10072, 10047, 10052, 10075, 10011, 10020, 10058, 10015, 10021, 10027, 10028,
+                10061, 10017, 10068, 10048, 10023, 10067, 10080, 10039, 10062, 10034, 10032,
+                10065, 10046, 10042, 10043, 10079, 10009, 10053, 10038, 10060, 10064, 10014,
+                10033, 10045, 10085, 10069, 10082, 10002, 10050, 10040, 10018));
+
+        public void exceptionNote(int uid, Throwable e) {
+            String processName = ActivityThread.currentProcessName();
+            if (!isExempt(uid)) {
+                Slog.d(TAG,
+                        "The process is " + processName + " for " + uid + ", for exception " + e);
+                try {
+                    IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
+                    ILeaseManager service = ILeaseManager.Stub.asInterface(b);
+                    service.noteException(uid);
+                } catch (RemoteException re) {
+                    e.printStackTrace();
+                }
+                return;
+            }
+
+        }
+
+        public boolean isExempt(int uid) {
+            //Slog.d(TAG, "Check the exempt");
+            synchronized (this) {
+                if (uid < FIRST_APPLICATION_UID || uid > LAST_APPLICATION_UID) {
+                    return true;
+                }
+
+                //Slog.d(TAG, "This is " + this + ", The table is " + mExemptTable + ", The length of exempt tables are  " + mExemptTable.size());
+                return mExemptTable.contains(uid);
+            }
+        }
+
+    }
+
     private static final void commonInit() {
         if (DEBUG) Slog.d(TAG, "Entered RuntimeInit!");
 
         /* set default handler; this applies to all threads in the VM */
         Thread.setDefaultUncaughtExceptionHandler(new UncaughtHandler());
-
+        Thread.setDefaultExceptionNoteHandler(new NoteHandler());
         /*
          * Install a TimezoneGetter subclass for ZoneInfo.db
          */
@@ -202,8 +262,8 @@ public class RuntimeInit {
      * Converts various failing exceptions into RuntimeExceptions, with
      * the assumption that they will then cause the VM instance to exit.
      *
-     * @param className Fully-qualified class name
-     * @param argv Argument vector for main()
+     * @param className   Fully-qualified class name
+     * @param argv        Argument vector for main()
      * @param classLoader the classLoader to load {@className} with
      */
     private static void invokeStaticMain(String className, String[] argv, ClassLoader classLoader)
@@ -220,7 +280,7 @@ public class RuntimeInit {
 
         Method m;
         try {
-            m = cl.getMethod("main", new Class[] { String[].class });
+            m = cl.getMethod("main", new Class[]{String[].class});
         } catch (NoSuchMethodException ex) {
             throw new RuntimeException(
                     "Missing static main on " + className, ex);
@@ -230,7 +290,7 @@ public class RuntimeInit {
         }
 
         int modifiers = m.getModifiers();
-        if (! (Modifier.isStatic(modifiers) && Modifier.isPublic(modifiers))) {
+        if (!(Modifier.isStatic(modifiers) && Modifier.isPublic(modifiers))) {
             throw new RuntimeException(
                     "Main method is not public and static on " + className);
         }
@@ -271,13 +331,14 @@ public class RuntimeInit {
      *
      * Current recognized args:
      * <ul>
-     *   <li> <code> [--] &lt;start class name&gt;  &lt;args&gt;
+     * <li> <code> [--] &lt;start class name&gt;  &lt;args&gt;
      * </ul>
      *
      * @param targetSdkVersion target SDK version
-     * @param argv arg strings
+     * @param argv             arg strings
      */
-    public static final void zygoteInit(int targetSdkVersion, String[] argv, ClassLoader classLoader)
+    public static final void zygoteInit(int targetSdkVersion, String[] argv,
+            ClassLoader classLoader)
             throws ZygoteInit.MethodAndArgsCaller {
         if (DEBUG) Slog.d(TAG, "RuntimeInit: Starting application from zygote");
 
@@ -298,7 +359,7 @@ public class RuntimeInit {
      * So we don't need to call commonInit() here.
      *
      * @param targetSdkVersion target SDK version
-     * @param argv arg strings
+     * @param argv             arg strings
      */
     public static void wrapperInit(int targetSdkVersion, String[] argv)
             throws ZygoteInit.MethodAndArgsCaller {
@@ -307,7 +368,8 @@ public class RuntimeInit {
         applicationInit(targetSdkVersion, argv, null);
     }
 
-    private static void applicationInit(int targetSdkVersion, String[] argv, ClassLoader classLoader)
+    private static void applicationInit(int targetSdkVersion, String[] argv,
+            ClassLoader classLoader)
             throws ZygoteInit.MethodAndArgsCaller {
         // If the application calls System.exit(), terminate the process
         // immediately without running any shutdown hooks.  It is not possible to
@@ -352,7 +414,7 @@ public class RuntimeInit {
      * the process to terminate (depends on system settings).
      *
      * @param tag to record with the error
-     * @param t exception describing the error site and conditions
+     * @param t   exception describing the error site and conditions
      */
     public static void wtf(String tag, Throwable t, boolean system) {
         try {
@@ -397,7 +459,7 @@ public class RuntimeInit {
      *
      * Current recognized args:
      * <ul>
-     *   <li> <code> [--] &lt;start class name&gt;  &lt;args&gt;
+     * <li> <code> [--] &lt;start class name&gt;  &lt;args&gt;
      * </ul>
      */
     static class Arguments {
@@ -409,8 +471,8 @@ public class RuntimeInit {
 
         /**
          * Constructs instance and parses args
+         *
          * @param args runtime command-line args
-         * @throws IllegalArgumentException
          */
         Arguments(String args[]) throws IllegalArgumentException {
             parseArgs(args);

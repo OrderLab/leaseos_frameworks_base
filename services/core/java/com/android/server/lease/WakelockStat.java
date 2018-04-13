@@ -60,7 +60,6 @@ public class WakelockStat extends ResourceStat {
         Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
-        mExceptionFrequency = bm.getExceptionNumber(mUid);
         judge();
         // TODO: uncomment inserting db to make it work
         LeaseStatsRecord record = createRecord(uid);
@@ -79,7 +78,6 @@ public class WakelockStat extends ResourceStat {
 
     public WakelockStat(long beginTime, int uid, Context context) {
         super(beginTime);
-        BatteryMonitor.getInstance(context).getExceptionNumber(mUid);
         mContext = context;
         mFrequency = 0;
         mHoldingTime = 0;

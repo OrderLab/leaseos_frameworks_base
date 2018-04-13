@@ -118,18 +118,6 @@ public class BatteryMonitor {
     }
 
 
-    /**
-     * Get the Exception number for a UID.
-     * @param uid
-     * @return
-     */
-    public long getExceptionNumber(int uid) {
-        if (!getService()) {
-            Slog.e(TAG, "Fail to get IBatteryStatsService");
-            return -1;
-        }
-        return Libcore.os.getAndClearException(uid);
-    }
 
 }
 

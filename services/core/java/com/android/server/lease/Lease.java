@@ -22,6 +22,7 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.ILeaseProxy;
+import android.lease.LeaseManager;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.lease.TimeUtils;
@@ -67,8 +68,8 @@ public class Lease {
     protected long mEndTime; // The EndTime of this lease term
     protected int mRenewal; // The number of current lease term
     protected final Context mContext; // The context in which the lease is created
-    protected ResourceStatManager mRStatManager;
-            // The record of the history lease term for this lease
+    protected ResourceStatManager mRStatManager;  // The record of the history lease term for this lease
+    protected LeaseManagerService mLeaseManagerService;
     protected ILeaseProxy mProxy; // the associated lease proxy
     protected long mDelayInterval; // the time interval between two leases
     protected int mDelayCounter; // the counter of delaying times
@@ -98,7 +99,7 @@ public class Lease {
     };
 
     public Lease(long lid, int Oid, ResourceType type, ResourceStatManager RStatManager,
-            ILeaseProxy proxy, LeaseWorkerHandler handler, Context context) {
+            ILeaseProxy proxy, LeaseWorkerHandler handler, LeaseManagerService leaseManagerService, Context context) {
         mLeaseId = lid;
         mOwnerId = Oid;
         mType = type;
@@ -109,6 +110,7 @@ public class Lease {
         mContext = context;
         mBatteryMonitor = BatteryMonitor.getInstance(context);
         isProbing = false;
+        mLeaseManagerService = leaseManagerService;
     }
 
     /**
@@ -123,6 +125,8 @@ public class Lease {
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
         isDelay = false;
+        int exceptions = mLeaseManagerService.getException(mOwnerId);
+        Slog.d(TAG, "The exception are " + exceptions + " for process " + mOwnerId);
         scheduleExpire(mLength);
     }
 
@@ -248,7 +252,6 @@ public class Lease {
         USER_DEFINE_DELAY_TIME = (int) delayInterval;
     }
 
-
     /**
      * Expire the lease
      *
@@ -306,6 +309,8 @@ public class Lease {
         mEndTime = SystemClock.elapsedRealtime();
         // update the stats for this lease term
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
+        int exceptions = mLeaseManagerService.getException(mOwnerId);
+        Slog.d(TAG, "The exception are " + exceptions + " for process" + mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
             Slog.d(TAG, "The phone is in charing, immediately renew for lease " + mLeaseId);
             renew(true);

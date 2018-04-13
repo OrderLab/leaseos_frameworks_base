@@ -26,8 +26,11 @@ import android.content.pm.PackageManager;
 import android.util.LongSparseArray;
 import android.util.Slog;
 
+import libcore.io.Libcore;
+
 import java.io.File;
 import java.io.FileWriter;
+import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
@@ -50,11 +53,12 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
     public boolean mLeaseServiceEnabled;
     protected LeaseSettings mSettings;
 
-    protected final HashSet<Integer> mSystemAppUids;
+    protected final ArrayList<Integer> mSystemAppUids;
     protected final LeaseWhiteList mWhiteList;
     protected final Hashtable<S,  LeaseDescriptor<S>> mLeaseTable;
     protected final LongSparseArray<LeaseDescriptor<S>> mLeaseDescriptors;
     protected final RequestFreezer<Integer> mUidFreezer;
+    private int index = 0;
 
 
     protected LeaseManager mLeaseManager;
@@ -65,7 +69,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         mContext = context;
         mSystemAppQueried = false;
         mReady = false;
-        mSystemAppUids = new HashSet<>();
+        mSystemAppUids = new ArrayList<>();
         mSettings = LeaseSettings.getDefaultSettings();
         mWhiteList = new LeaseWhiteList(mSettings.whiteList);
         mLeaseTable = new Hashtable<>();
@@ -238,27 +242,14 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
                         }
                     }
                     mSystemAppQueried = true;
-                    Slog.d(TAG, "Updated system app list with " + mSystemAppUids.size() + " apps");
+                    Slog.d(TAG, "Updated system app list with " + mSystemAppUids.size() + " apps " + mSystemAppUids);
                 } else {
                     Slog.e(TAG, "Package manager is not ready yet");
                 }
             }
-
-            String fileName = "/data/system/exemptlist.txt";
-
-            try {
-                File file = new File(fileName);
-                FileWriter writer = new FileWriter(file);
-                file.setReadable(true, false);
-                writer.write(mSystemAppUids.toString());
-                writer.close();
-            } catch (Exception e) {
-                e.printStackTrace();
-            }
-
-
         }
     }
+
 
     /**
      * Inform lease proxy that the lease settings has changed
