@@ -22,7 +22,6 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.BehaviorType;
-import android.lease.LeaseStatus;
 import android.util.Slog;
 
 import com.android.server.lease.db.LeaseStatsDBHelper;
@@ -47,7 +46,8 @@ public class WakelockStat extends ResourceStat {
     protected Context mContext;
 
     @Override
-    public void update(long holdingTime, int frequency, Context context, int uid) {
+    public void update(long holdingTime, int frequency, Context context, int uid, int exception,
+            double lastUtility) {
         final BatteryMonitor bm = BatteryMonitor.getInstance(context);
         if (bm.isCharging()) {
             // if the phone is charging skill updating resource stat
@@ -57,9 +57,13 @@ public class WakelockStat extends ResourceStat {
         mHoldingTime = holdingTime;
         mAcquiringFrequency = frequency;
         mCurCPUTime = bm.getCPUTime(mUid);
-        Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
+        //Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
-        Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime + ", the CPU usage time is " + mUsageTime);
+        mExceptionFrequency = exception;
+        mUtility = lastUtility + 0.1 - mExceptionFrequency;
+        Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime
+                + ", the CPU usage time is " + mUsageTime + ", the number of exceptions are "
+                + mExceptionFrequency + ", the utility is " + mUtility);
         judge();
         // TODO: uncomment inserting db to make it work
         LeaseStatsRecord record = createRecord(uid);
@@ -84,7 +88,7 @@ public class WakelockStat extends ResourceStat {
         mUid = uid;
         mBaseCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
         mBehaviorType = BehaviorType.Normal;
-        Slog.d(TAG,"The base time is " + mBaseCPUTime + ", for uid " + mUid);
+        Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
 
     public void setEndTime(long endTime) {
@@ -120,13 +124,17 @@ public class WakelockStat extends ResourceStat {
     //TODO: implment the judge method
     @Override
     public void judge() {
-        if ((float)mUsageTime/mHoldingTime < 0.1 && mHoldingTime > 100) {
-            Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
-            mBehaviorType = BehaviorType.LongHolding;
-        } else if ((float)mUsageTime /(mHoldingTime * mExceptionFrequency) < 0.1 && mHoldingTime > 100) {
+        if(mUtility <= -2) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
             mBehaviorType = BehaviorType.LowUtility;
-        } else if ((float) mUsageTime / (mHoldingTime * mExceptionFrequency * mAcquiringFrequency) < 0.1 && mHoldingTime > 100) {
+            return;
+        }
+
+        if ((float) mUsageTime / mHoldingTime < 0.1 && mHoldingTime > 100) {
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
+            mBehaviorType = BehaviorType.LongHolding;
+        } else if ((float) mUsageTime / (mHoldingTime * mAcquiringFrequency)
+                < 0.1 && mHoldingTime > 100) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");
             mBehaviorType = BehaviorType.HighDamage;
         } else {

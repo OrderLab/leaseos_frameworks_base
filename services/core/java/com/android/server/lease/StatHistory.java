@@ -58,7 +58,14 @@ public class StatHistory {
         return mStats.get(mStats.size() - 1);
     }
 
-    public void update(long startTime, long endTime, Context context, int uid) {
+    public ResourceStat getLastStat() {
+        if (mStats.size() == 0 || mStats.size() == 1) {
+            return null;
+        }
+        return mStats.get(mStats.size() - 2);
+    }
+
+    public void update(long startTime, long endTime, Context context, int uid, int exception) {
         long holdingTime = 0;
         int frequency = 0;
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
@@ -118,7 +125,14 @@ public class StatHistory {
         }
         mOpenIndex -= stale;
         ResourceStat resourceStat = getCurrentStat();
-        resourceStat.update(holdingTime, frequency, context, uid);
+        ResourceStat lastResourceStat = getLastStat();
+        double lastUtility;
+        if (lastResourceStat == null) {
+            lastUtility = 0;
+        } else {
+            lastUtility = lastResourceStat.mUtility;
+        }
+        resourceStat.update(holdingTime, frequency, context, uid, exception, lastUtility);
     }
 
     public boolean hasActivateEvent() {

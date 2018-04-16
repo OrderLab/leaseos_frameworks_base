@@ -28,7 +28,7 @@ import android.lease.LeaseStatus;
  */
 public class LocationStat extends ResourceStat {
     @Override
-    public void update(long holdingTime, int frequency, Context context, int uid) {
+    public void update(long holdingTime, int frequency, Context context, int uid, int exception, double lastUtility) {
     }
 
     public LocationStat(long BeginTime) {

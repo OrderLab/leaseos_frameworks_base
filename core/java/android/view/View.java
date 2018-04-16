@@ -57,6 +57,7 @@ import android.graphics.Shader;
 import android.graphics.drawable.ColorDrawable;
 import android.graphics.drawable.Drawable;
 import android.hardware.display.DisplayManagerGlobal;
+import android.lease.ILeaseManager;
 import android.os.Build.VERSION_CODES;
 import android.os.Bundle;
 import android.os.Handler;
@@ -64,6 +65,7 @@ import android.os.IBinder;
 import android.os.Parcel;
 import android.os.Parcelable;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.SystemProperties;
 import android.os.Trace;
@@ -106,6 +108,9 @@ import com.android.internal.R;
 import com.android.internal.util.Predicate;
 import com.android.internal.view.menu.MenuBuilder;
 import com.android.internal.widget.ScrollBarUtils;
+
+import libcore.io.Libcore;
+
 import com.google.android.collect.Lists;
 import com.google.android.collect.Maps;
 
@@ -4000,6 +4005,8 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
 
     @Nullable
     private RoundScrollbarRenderer mRoundScrollbarRenderer;
+
+    private static final String TAG = "View";
 
     /**
      * Simple constructor to use when creating a view from code.
@@ -9978,6 +9985,28 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
         return onKeyShortcut(event.getKeyCode(), event);
     }
 
+    public boolean isExempt(int uid) {
+        //Slog.d(TAG, "Check the exempt");
+        synchronized (this) {
+            if (uid < android.os.Process.FIRST_APPLICATION_UID || uid > android.os.Process.LAST_APPLICATION_UID) {
+                return true;
+            }
+
+            //Slog.d(TAG, "This is " + this + ", The table is " + mExemptTable + ", The length of exempt tables are  " + mExemptTable.size());
+            return mExemptTable.contains(uid);
+        }
+    }
+
+    private ArrayList<Integer> mExemptTable = new ArrayList<>(Arrays.asList(10008, 10081, 10037,
+            10036, 10003, 10019, 10077, 10084, 10041, 10012, 10016, 10059, 10025, 10013, 10083,
+            10078, 10010, 10026, 10066, 10051, 10004, 10007, 10049, 10035, 10022, 10054,
+            10013, 10001, 10071, 10031, 10005, 10073, 10088, 10074, 10029, 10030, 10000,
+            10076, 10044, 10086, 10087, 10024, 10063, 10070, 10006, 10055, 10057, 10056,
+            10072, 10047, 10052, 10075, 10011, 10020, 10058, 10015, 10021, 10027, 10028,
+            10061, 10017, 10068, 10048, 10023, 10067, 10080, 10039, 10062, 10034, 10032,
+            10065, 10046, 10042, 10043, 10079, 10009, 10053, 10038, 10060, 10064, 10014,
+            10033, 10045, 10085, 10069, 10082, 10002, 10050, 10040, 10018));
+
     /**
      * Pass the touch screen motion event down to the target view, or this
      * view if it is the target.
@@ -10003,6 +10032,20 @@ public class View implements Drawable.Callback, KeyEvent.Callback,
         }
 
         final int actionMasked = event.getActionMasked();
+        /**LeaseOS change**/
+        if (actionMasked == MotionEvent.ACTION_UP) {
+            int uid = Libcore.os.getuid();
+            if (!isExempt(uid)) {
+                try {
+                    IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
+                    ILeaseManager service = ILeaseManager.Stub.asInterface(b);
+                    service.noteTouchEvent(uid);
+                } catch (RemoteException e) {
+                    e.printStackTrace();
+                }
+            }
+        }
+
         if (actionMasked == MotionEvent.ACTION_DOWN) {
             // Defensive cleanup for new gesture
             stopNestedScroll();

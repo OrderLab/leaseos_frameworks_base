@@ -20,6 +20,7 @@
  */
 package com.android.server.lease;
 
+import android.app.IActivityManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.ContentObserver;
@@ -39,16 +40,20 @@ import android.os.Looper;
 import android.os.Message;
 import android.os.Process;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.UserHandle;
 import android.provider.Settings;
+import android.util.Log;
 import android.util.LongSparseArray;
+import android.util.Singleton;
 import android.util.Slog;
 import android.util.SparseArray;
 
 import java.io.IOException;
 import java.util.HashMap;
 import java.util.HashSet;
+import java.util.Hashtable;
 
 /**
  * The central lease manager service
@@ -74,9 +79,12 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private final HashMap<IBinder, LeaseProxy> mProxies = new HashMap<>();
     private final SparseArray<LeaseProxy> mTypedProxies = new SparseArray<>();
 
+
     // Each type of lease will get assigned with a different worker thread to
     // handle work related to these leases
     private final SparseArray<LeaseWorkerHandler> mWorkers = new SparseArray<>();
+    private final SparseArray<Integer> mExceptionTable = new SparseArray<>();
+    private final SparseArray<Integer> mTouchEventTable = new SparseArray<>();
 
     private final Context mContext;
 
@@ -114,6 +122,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         return mRStatManager.getCurrentStat(leaseId);
     }
 
+
     /**
      * Create a new lease
      *
@@ -128,7 +137,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             }
             Slog.i(TAG, "Begin to create a lease " + mLastLeaseId + " for process: " + uid);
             Lease lease = new Lease(mLastLeaseId, uid, rtype, mRStatManager, null,
-                    null, mContext);
+                    null,this, mContext);
             mLeases.put(mLastLeaseId, lease);
 
             Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
@@ -272,6 +281,54 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             default:
                 Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
         }
+    }
+
+    public void noteException(int uid) {
+        synchronized (this) {
+            Slog.d(TAG, "Note exception for uid " + uid);
+            int exceptions;
+            if (mExceptionTable.get(uid) != null) {
+                exceptions = mExceptionTable.get(uid) + 1;
+            } else {
+                exceptions = 1;
+            }
+            mExceptionTable.put(uid, exceptions);
+           // Slog.d(TAG,"The number of Exceptions are " + exceptions + ", for uid " + uid + " for " + this + " for address " + mExceptionTable);
+        }
+    }
+
+    public int getAndCleanException(int uid) {
+        if (mExceptionTable.get(uid) == null) {
+            return 0;
+        }
+        int exceptions = mExceptionTable.get(uid);
+        mExceptionTable.remove(uid);
+        Slog.d(TAG, "The number of exceptions are " + exceptions + " for uid " + uid);
+        return exceptions;
+    }
+
+    public void noteTouchEvent(int uid) {
+        synchronized (this) {
+            Slog.d(TAG, "Note touch for uid " + uid);
+            int toucnEvent;
+            if (mTouchEventTable.get(uid) != null) {
+                toucnEvent = mTouchEventTable.get(uid) + 1;
+            } else {
+                toucnEvent = 1;
+            }
+            mTouchEventTable.put(uid, toucnEvent);
+            // Slog.d(TAG,"The number of Exceptions are " + exceptions + ", for uid " + uid + " for " + this + " for address " + mExceptionTable);
+        }
+    }
+
+    public int getAndCleanTouchEvent(int uid) {
+        if (mTouchEventTable.get(uid) == null) {
+            return 0;
+        }
+        int toucnEvent = mTouchEventTable.get(uid);
+        mTouchEventTable.remove(uid);
+        Slog.d(TAG, "The number of toucn events are " + toucnEvent + "for uid " + uid);
+        return toucnEvent;
     }
 
     public void systemRunning() {

@@ -125,8 +125,7 @@ public class Lease {
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
         isDelay = false;
-        int exceptions = mLeaseManagerService.getException(mOwnerId);
-        Slog.d(TAG, "The exception are " + exceptions + " for process " + mOwnerId);
+        mLeaseManagerService.getAndCleanException(mOwnerId);
         scheduleExpire(mLength);
     }
 
@@ -308,11 +307,13 @@ public class Lease {
     public void endTerm() {
         mEndTime = SystemClock.elapsedRealtime();
         // update the stats for this lease term
-        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
-        int exceptions = mLeaseManagerService.getException(mOwnerId);
-        Slog.d(TAG, "The exception are " + exceptions + " for process" + mOwnerId);
+        int exceptions = mLeaseManagerService.getAndCleanException(mOwnerId);
+        Slog.d(TAG, "The number of exceptions are " + exceptions + " for process " + mOwnerId);
+        int touchEvent = mLeaseManagerService.getAndCleanTouchEvent(mOwnerId);
+        Slog.d(TAG, "The number of touch events are " + touchEvent + " for process " + mOwnerId);
+        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId, exceptions);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
-            Slog.d(TAG, "The phone is in charing, immediately renew for lease " + mLeaseId);
+            Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
             renew(true);
             return;
         }

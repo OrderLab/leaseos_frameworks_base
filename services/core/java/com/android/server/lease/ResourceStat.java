@@ -34,11 +34,11 @@ public abstract class ResourceStat {
     protected long mConsumption; //The number of resource consumed in this lease term
     protected long mWork; //The number of work made in this lease term
     protected int mFrequency; //The asking frequency
-    protected long mEfficientRatio; //The ratio of useful work and useless work
+    protected double mUtility; //The ratio of useful work and useless work
     protected long mSysDamage; //The number of system damage caused by this lease term
     protected BehaviorType mBehaviorType; // the behavior type of this lease term
 
-    public abstract void update(long holdingTime, int frequency, Context context, int uid);
+    public abstract void update(long holdingTime, int frequency, Context context, int uid, int exception, double lastUtility);
 
     public ResourceStat(long BeginTime) {
           mBeginTime = BeginTime;

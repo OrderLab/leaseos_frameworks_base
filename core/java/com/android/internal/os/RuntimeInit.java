@@ -153,7 +153,7 @@ public class RuntimeInit {
                     ILeaseManager service = ILeaseManager.Stub.asInterface(b);
                     service.noteException(uid);
                 } catch (RemoteException re) {
-                    e.printStackTrace();
+                    re.printStackTrace();
                 }
                 return;
             }
@@ -173,6 +173,8 @@ public class RuntimeInit {
         }
 
     }
+
+
 
     private static final void commonInit() {
         if (DEBUG) Slog.d(TAG, "Entered RuntimeInit!");

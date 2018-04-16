@@ -56,4 +56,6 @@ interface ILeaseManager {
     boolean unregisterProxy(ILeaseProxy proxy);
 
     void noteException(int uid);
+
+    void noteTouchEvent(int uid);
 }
