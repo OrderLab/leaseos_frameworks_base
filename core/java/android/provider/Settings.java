@@ -6460,6 +6460,9 @@ public final class Settings {
          */
         public static final String LEASEOS_SENSOR_LEASE_ENABLED = "leaseos_sensor_lease_enabled";
 
+        public static final String LEASEOS_BATTERY_TRACING_ENABLED = "leaseos_battery_tracing_enable";
+        public static final String LEASEOS_BATTERY_TRACING_INTERVAL = "leaseos_battery_tracing_interval";
+
         /**
          * This are the settings to be backed up.
          *

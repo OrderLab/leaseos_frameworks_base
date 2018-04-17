@@ -26,11 +26,22 @@ import android.lease.LeaseManager;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.lease.TimeUtils;
+import android.os.BatteryStats;
+import android.os.Parcel;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.os.UserHandle;
 import android.util.Slog;
+import android.util.SparseArray;
+
+import com.android.internal.os.BatterySipper;
+import com.android.internal.os.BatteryStatsHelper;
+import com.android.internal.os.BatteryStatsImpl;
 
 import java.io.IOException;
+import java.util.ArrayList;
+import java.util.List;
+import java.util.Map;
 
 /**
  * The struct of lease.
@@ -126,6 +137,8 @@ public class Lease {
         mBeginTime = now;
         isDelay = false;
         mLeaseManagerService.getAndCleanException(mOwnerId);
+        BatteryMonitor bm = BatteryMonitor.getInstance(mContext);
+        bm.getStat();
         scheduleExpire(mLength);
     }
 
@@ -312,6 +325,8 @@ public class Lease {
         int touchEvent = mLeaseManagerService.getAndCleanTouchEvent(mOwnerId);
         Slog.d(TAG, "The number of touch events are " + touchEvent + " for process " + mOwnerId);
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId, exceptions);
+        BatteryMonitor bm = BatteryMonitor.getInstance(mContext);
+        bm.getStat();
         if (isCharging == true || mBatteryMonitor.isCharging()) {
             Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
             renew(true);

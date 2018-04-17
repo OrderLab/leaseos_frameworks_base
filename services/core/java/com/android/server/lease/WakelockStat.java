@@ -60,7 +60,11 @@ public class WakelockStat extends ResourceStat {
         //Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         mExceptionFrequency = exception;
-        mUtility = lastUtility + 0.1 - mExceptionFrequency;
+        if (lastUtility == 0 && mExceptionFrequency == 0) {
+            mUtility = 0;
+        } else {
+            mUtility = lastUtility + 0.1 - mExceptionFrequency;
+        }
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime
                 + ", the CPU usage time is " + mUsageTime + ", the number of exceptions are "
                 + mExceptionFrequency + ", the utility is " + mUtility);

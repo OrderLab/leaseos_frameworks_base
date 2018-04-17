@@ -57,6 +57,7 @@ import android.util.TimeUtils;
 
 import com.android.internal.annotations.GuardedBy;
 import com.android.internal.app.IBatteryStats;
+import com.android.internal.os.BatterySipper;
 import com.android.internal.os.BatteryStatsHelper;
 import com.android.internal.os.BatteryStatsImpl;
 import com.android.internal.os.PowerProfile;
@@ -374,6 +375,7 @@ public final class BatteryStatsService extends IBatteryStats.Stub
         }
     }
 
+    /**LeaseOS Change**/
     public long getCPUTimeLOS(int uid, boolean force) {
         if (mContext == null) {
             Slog.e(TAG, "No context yet for getCPUTimeLOS");
@@ -407,6 +409,22 @@ public final class BatteryStatsService extends IBatteryStats.Stub
         }
         return totalTime;
     }
+
+    public void refreshStatic() {
+        Slog.d(TAG, "refersh the static");
+        BatteryStatsHelper helper = new BatteryStatsHelper(mContext, false, false);
+        helper.create(mStats);
+        helper.refreshStats(BatteryStats.STATS_SINCE_CHARGED, UserHandle.USER_ALL);
+        List<BatterySipper> sippers = helper.getUsageList();
+        if (sippers != null && sippers.size() > 0) {
+            for (int i=0; i<sippers.size(); i++) {
+                final BatterySipper bs = sippers.get(i);
+                int uid = bs.getUid();
+                Slog.d(TAG, "The uid is " + uid + " The CPU usage is " + bs.cpuTimeMs + " The Energy is " + bs.totalPowerMah);
+            }
+        }
+    }
+
 
     public boolean isCharging() {
         synchronized (mStats) {

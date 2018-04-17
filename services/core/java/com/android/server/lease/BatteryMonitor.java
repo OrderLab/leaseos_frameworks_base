@@ -117,8 +117,18 @@ public class BatteryMonitor {
         }
     }
 
-
-
+    public void getStat() {
+        if (!getService()) {
+            Slog.e(TAG, "Fail to get IBatteryStatsService");
+            return ;
+        }
+        try {
+            mService.refreshStatic();
+        }catch (RemoteException e) {
+            Slog.e(TAG, "Fail to refreshStatic");
+            return ;
+        }
+    }
 }
 
 

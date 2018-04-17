@@ -93,6 +93,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private LeaseSettings mSettings;
     private SettingsObserver mSettingsObserver;
 
+    private long mBatteryTracingInterval;
+
     private static final String[] OBSERVE_SETTINGS = new String[] {
             /*** Global settings ***/
             Settings.Secure.LEASE_SERVICE_ENABLED,
@@ -104,6 +106,10 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             Settings.Secure.LEASEOS_WAKELOCK_LEASE_ENABLED,
             Settings.Secure.LEASEOS_LOCATION_LEASE_ENABLED,
             Settings.Secure.LEASEOS_SENSOR_LEASE_ENABLED,
+
+            /**Battery tracing**/
+            Settings.Secure.LEASEOS_BATTERY_TRACING_ENABLED,
+            Settings.Secure.LEASEOS_BATTERY_TRACING_INTERVAL,
     };
 
     public LeaseManagerService(Context context) {
@@ -374,6 +380,23 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
+    private void runBatteryTracing(LeaseSettings newSettings) {
+        Slog.d(TAG, "The default tracing interval is " + newSettings.batteryTracingInterval);
+        mBatteryTracingInterval = newSettings.batteryTracingInterval;
+        BatteryMonitor.getInstance(mContext).getStat();
+        scheduleBatteryTracing();
+    }
+
+    private void stopBatteryTracing() {
+        mHandler.removeCallbacks(mBatterTracker);
+    }
+
+    private void scheduleBatteryTracing() {
+        mHandler.postDelayed(mBatterTracker, mBatteryTracingInterval);
+    }
+
+
+
     /**
      * Called during initial service start or when related settings changed
      */
@@ -381,6 +404,17 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         // If it's service enabling/disabling change, we need to start
         // or stop the leases
         Slog.d(TAG, "Updating setting");
+        if (mSettings.batteryTracingEnabled != newSettings.batteryTracingEnabled) {
+            if (newSettings.batteryTracingEnabled) {
+                mSettings = newSettings;
+                runBatteryTracing(newSettings);
+            } else {
+                mSettings = newSettings;
+                stopBatteryTracing();
+            }
+            return;
+        }
+
         if (mSettings.serviceEnabled != newSettings.serviceEnabled) {
             if (newSettings.serviceEnabled) {
                 mSettings = newSettings;
@@ -558,6 +592,13 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     }
 
+    private Runnable mBatterTracker = new Runnable() {
+        @Override
+        public void run() {
+            BatteryMonitor.getInstance(mContext).getStat();
+            scheduleBatteryTracing();
+        }
+    };
 
     /**
      * Create a lease proxy wrapper and link to death

@@ -35,11 +35,14 @@ public class LeaseSettings implements Parcelable {
     public static final String WHITE_LIST_DEFAULT = "android,com.android.phone,com.quicin.trepn";
     public static final long LEASE_TERM_DEFAULT = (long)0.5 * MILLIS_PER_MINUTE; // 30 seconds
     public static final long DELAY_INTERVAL_DEFAULT = (long)0.5 * MILLIS_PER_MINUTE; // 10 minutes
+    public static final long BATTERY_TRACING_INTERVAL_DEFAULT = (long) 3 * MILLIS_PER_MINUTE;
     public static final LeaseSettings DEFAULT_SETTINGS = getDefaultSettings();
 
     public static final boolean WAKELOCK_LEASE_ENABLED = true;
     public static final boolean LOCATION_LEASE_ENABLED = true;
     public static final boolean SENSOR_LEASE_ENABLED = true;
+
+    public static final boolean BATTERY_TRACING_ENABLED = true;
 
     // Whether the service is enabled or not
     public boolean serviceEnabled;
@@ -54,6 +57,9 @@ public class LeaseSettings implements Parcelable {
     public boolean gpsLeaseEnabled;
     public boolean sensorLeaseEnabled;
 
+    public boolean batteryTracingEnabled;
+    public long batteryTracingInterval;
+
     public LeaseSettings() {
     }
 
@@ -66,6 +72,9 @@ public class LeaseSettings implements Parcelable {
         wakelockLeaseEnabled = (in.readInt() != 0);
         gpsLeaseEnabled = (in.readInt() != 0);
         sensorLeaseEnabled = (in.readInt() != 0);
+
+        batteryTracingEnabled = (in.readInt() != 0);
+        batteryTracingInterval = in.readLong();
     }
 
     public static LeaseSettings getDefaultSettings() {
@@ -78,6 +87,10 @@ public class LeaseSettings implements Parcelable {
         settings.wakelockLeaseEnabled = WAKELOCK_LEASE_ENABLED;
         settings.gpsLeaseEnabled = LOCATION_LEASE_ENABLED;
         settings.sensorLeaseEnabled = SENSOR_LEASE_ENABLED;
+
+        settings.batteryTracingEnabled = BATTERY_TRACING_ENABLED;
+        settings.batteryTracingInterval = BATTERY_TRACING_INTERVAL_DEFAULT;
+
         return settings;
     }
 
@@ -103,6 +116,9 @@ public class LeaseSettings implements Parcelable {
         dest.writeInt(wakelockLeaseEnabled ? 1 : 0);
         dest.writeInt(gpsLeaseEnabled ? 1 : 0);
         dest.writeInt(sensorLeaseEnabled ? 1 : 0);
+
+        dest.writeInt(batteryTracingEnabled? 1 : 0);
+        dest.writeLong(batteryTracingInterval);
     }
 
     public static final Creator<LeaseSettings> CREATOR = new Creator<LeaseSettings>() {

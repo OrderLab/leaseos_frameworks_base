@@ -21,8 +21,13 @@
 package android.lease;
 
 import android.content.Context;
+import android.os.BatteryStats;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.util.Log;
+import android.util.Slog;
+
+import com.android.internal.app.IBatteryStats;
 
 /**
  *The manager class for Lease, the wrapper of LeaseManagerServices
@@ -204,6 +209,31 @@ public final class LeaseManager {
                 return SENSOR_PROXY_STR;
             default:
                 return UNKNOWN_PROXY_STR;
+        }
+    }
+
+
+    private IBatteryStats mBatteryStatsService;
+
+    private boolean getService() {
+        if (mBatteryStatsService == null) {
+            Log.d(TAG, "Getting IBatteryStatsService");
+            mBatteryStatsService = IBatteryStats.Stub.asInterface(
+                    ServiceManager.getService(BatteryStats.SERVICE_NAME));
+        }
+        return mBatteryStatsService != null;
+    }
+
+    public void getStat() {
+        if (!getService()) {
+            Log.e(TAG, "Fail to get IBatteryStatsService");
+            return ;
+        }
+        try {
+            mBatteryStatsService.refreshStatic();
+        }catch (RemoteException e) {
+            Log.e(TAG, "Fail to refreshStatic");
+            return ;
         }
     }
 }

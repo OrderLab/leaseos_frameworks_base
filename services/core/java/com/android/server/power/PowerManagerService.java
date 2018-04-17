@@ -949,7 +949,7 @@ public final class PowerManagerService extends SystemService
                         mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
                             lease.mLeaseValue = wakeLock;
-                            releaseWakeLockInternal(lock, flags, false, true);
+                            releaseWakeLockInternal(lock, flags, false);
                             Slog.d(TAG, uid + " has been disruptive to lease manager service,"
                                     + " freezing lease requests for a while..");
                             return;
@@ -1022,7 +1022,7 @@ public final class PowerManagerService extends SystemService
         }
     }
 
-    private void releaseWakeLockInternal(IBinder lock, int flags, boolean finalized, boolean fromProxy) {
+    private void releaseWakeLockInternal(IBinder lock, int flags, boolean fromProxy) {
         synchronized (mLock) {
             int index = findWakeLockIndexLocked(lock);
             /***LeaseOS changes***/
@@ -1040,10 +1040,6 @@ public final class PowerManagerService extends SystemService
                         Slog.d(TAG, "Note the release event");
                         lease.mLeaseValue = null;
                         mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_RELEASE);
-                    }
-                    if (finalized) {
-                        Slog.i(TAG, "Final removal of lease " + lease.mLeaseId);
-                        mLeaseProxy.removeLease(lease);
                     }
                 }
             }
@@ -1129,7 +1125,7 @@ public final class PowerManagerService extends SystemService
                 }
                 if (lock != null) {
                     Slog.e(TAG, "Release wakelock object for lease " + leaseId);
-                    releaseWakeLockInternal(lock.mLock, lock.mFlags, false, true);
+                    releaseWakeLockInternal(lock.mLock, lock.mFlags, false);
                 }
                 lease.mLeaseStatus = LeaseStatus.EXPIRED;
             }
@@ -3607,7 +3603,7 @@ public final class PowerManagerService extends SystemService
         }
 
         @Override // Binder call
-        public void releaseWakeLock(IBinder lock, int flags, boolean finalized) {
+        public void releaseWakeLock(IBinder lock, int flags) {
             if (lock == null) {
                 throw new IllegalArgumentException("lock must not be null");
             }
@@ -3616,7 +3612,7 @@ public final class PowerManagerService extends SystemService
 
             final long ident = Binder.clearCallingIdentity();
             try {
-                releaseWakeLockInternal(lock, flags, finalized, false);
+                releaseWakeLockInternal(lock, flags,false);
             } finally {
                 Binder.restoreCallingIdentity(ident);
             }

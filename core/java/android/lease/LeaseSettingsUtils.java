@@ -87,6 +87,15 @@ public class LeaseSettingsUtils {
                 Settings.Secure.LEASEOS_SENSOR_LEASE_ENABLED,
                 LeaseSettings.SENSOR_LEASE_ENABLED ? 1 : 0,
                 UserHandle.USER_CURRENT) != 0);
+
+        settings.batteryTracingEnabled = (Settings.Secure.getIntForUser(resolver,
+                Settings.Secure.LEASEOS_BATTERY_TRACING_ENABLED,
+                LeaseSettings.BATTERY_TRACING_ENABLED ? 1 : 0,
+                UserHandle.USER_CURRENT) != 0);
+        settings.batteryTracingInterval = Settings.Secure.getLongForUser(resolver,
+                Settings.Secure.LEASEOS_BATTERY_TRACING_INTERVAL,
+                LeaseSettings.BATTERY_TRACING_INTERVAL_DEFAULT,
+                UserHandle.USER_CURRENT);
         
         return settings;
     }
@@ -124,6 +133,16 @@ public class LeaseSettingsUtils {
     public static void writeSensorLeaseEnabled(boolean enabled, ContentResolver resolver) {
         Settings.Secure.putInt(resolver,
                 Settings.Secure.LEASEOS_SENSOR_LEASE_ENABLED, enabled ? 1 : 0);
+    }
+
+    public static void writeBatteryTracingEnabled(boolean enabled, ContentResolver resolver) {
+        Settings.Secure.putInt(resolver,
+                Settings.Secure.LEASEOS_BATTERY_TRACING_ENABLED, enabled ? 1 : 0);
+    }
+
+    public static void writeBatteryTracingInterval(long rateLimitWindow, ContentResolver resolver) {
+        Settings.Secure.putLong(resolver,
+                Settings.Secure.LEASEOS_BATTERY_TRACING_INTERVAL, rateLimitWindow);
     }
 
 }
