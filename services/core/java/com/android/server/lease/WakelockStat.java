@@ -46,7 +46,7 @@ public class WakelockStat extends ResourceStat {
     protected Context mContext;
 
     @Override
-    public void update(long holdingTime, int frequency, Context context, int uid, int exception,
+    public void update(long holdingTime, int frequency, Context context, int uid, double utility,
             double lastUtility) {
         final BatteryMonitor bm = BatteryMonitor.getInstance(context);
         if (bm.isCharging()) {
@@ -59,11 +59,10 @@ public class WakelockStat extends ResourceStat {
         mCurCPUTime = bm.getCPUTime(mUid);
         //Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
-        mExceptionFrequency = exception;
         if (lastUtility == 0 && mExceptionFrequency == 0) {
             mUtility = 0;
         } else {
-            mUtility = lastUtility + 0.1 - mExceptionFrequency;
+            mUtility = lastUtility + 0.1 - utility;
         }
         Slog.d(TAG, "For process " + uid + ", the Holding time is " + mHoldingTime
                 + ", the CPU usage time is " + mUsageTime + ", the number of exceptions are "

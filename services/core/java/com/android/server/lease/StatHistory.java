@@ -65,7 +65,7 @@ public class StatHistory {
         return mStats.get(mStats.size() - 2);
     }
 
-    public void update(long startTime, long endTime, Context context, int uid, int exception) {
+    public void update(long startTime, long endTime, Context context, int uid, double utility) {
         long holdingTime = 0;
         int frequency = 0;
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
@@ -132,7 +132,7 @@ public class StatHistory {
         } else {
             lastUtility = lastResourceStat.mUtility;
         }
-        resourceStat.update(holdingTime, frequency, context, uid, exception, lastUtility);
+        resourceStat.update(holdingTime, frequency, context, uid, utility, lastUtility);
     }
 
     public boolean hasActivateEvent() {

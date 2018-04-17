@@ -321,10 +321,11 @@ public class Lease {
         mEndTime = SystemClock.elapsedRealtime();
         // update the stats for this lease term
         int exceptions = mLeaseManagerService.getAndCleanException(mOwnerId);
-        Slog.d(TAG, "The number of exceptions are " + exceptions + " for process " + mOwnerId);
+        //Slog.d(TAG, "The number of exceptions are " + exceptions + " for process " + mOwnerId);
         int touchEvent = mLeaseManagerService.getAndCleanTouchEvent(mOwnerId);
-        Slog.d(TAG, "The number of touch events are " + touchEvent + " for process " + mOwnerId);
-        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId, exceptions);
+        //Slog.d(TAG, "The number of touch events are " + touchEvent + " for process " + mOwnerId);
+        double utility = exceptions - 0.1 * touchEvent;
+        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId, utility);
         BatteryMonitor bm = BatteryMonitor.getInstance(mContext);
         bm.getStat();
         if (isCharging == true || mBatteryMonitor.isCharging()) {

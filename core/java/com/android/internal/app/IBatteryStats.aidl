@@ -144,5 +144,6 @@ interface IBatteryStats {
 
     // LeaseOS changes
     long getCPUTimeLOS(int uid, boolean force);
+    void refreshStatic();
 
 }

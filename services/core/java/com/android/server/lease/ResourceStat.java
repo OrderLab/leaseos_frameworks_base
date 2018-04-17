@@ -38,7 +38,7 @@ public abstract class ResourceStat {
     protected long mSysDamage; //The number of system damage caused by this lease term
     protected BehaviorType mBehaviorType; // the behavior type of this lease term
 
-    public abstract void update(long holdingTime, int frequency, Context context, int uid, int exception, double lastUtility);
+    public abstract void update(long holdingTime, int frequency, Context context, int uid, double utility, double lastUtility);
 
     public ResourceStat(long BeginTime) {
           mBeginTime = BeginTime;

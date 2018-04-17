@@ -28,7 +28,7 @@ import android.lease.LeaseStatus;
  */
 public class SensorStat extends ResourceStat {
     @Override
-    public void update(long holdingTime, int frequency, Context context, int uid, int exception, double lastUtility) {
+    public void update(long holdingTime, int frequency, Context context, int uid, double utility, double lastUtility) {
     }
 
     public SensorStat(long BeginTime) {
