@@ -16,31 +16,6 @@
 
 package com.android.server;
 
-import android.content.pm.PackageManagerInternal;
-import com.android.internal.content.PackageMonitor;
-import com.android.internal.location.ProviderProperties;
-import com.android.internal.location.ProviderRequest;
-import com.android.internal.os.BackgroundThread;
-import com.android.internal.util.ArrayUtils;
-import com.android.server.location.ActivityRecognitionProxy;
-import com.android.server.location.FlpHardwareProvider;
-import com.android.server.location.FusedProxy;
-import com.android.server.location.GeocoderProxy;
-import com.android.server.location.GeofenceManager;
-import com.android.server.location.GeofenceProxy;
-import com.android.server.location.GnssLocationProvider;
-import com.android.server.location.GnssMeasurementsProvider;
-import com.android.server.location.GnssNavigationMessageProvider;
-import com.android.server.location.LocationBlacklist;
-import com.android.server.location.LocationFudger;
-import com.android.server.location.LocationProviderInterface;
-import com.android.server.location.LocationProviderProxy;
-import com.android.server.location.LocationRequestStatistics;
-import com.android.server.location.LocationRequestStatistics.PackageProviderKey;
-import com.android.server.location.LocationRequestStatistics.PackageStatistics;
-import com.android.server.location.MockProvider;
-import com.android.server.location.PassiveProvider;
-
 import android.app.AppOpsManager;
 import android.app.PendingIntent;
 import android.content.BroadcastReceiver;
@@ -52,20 +27,27 @@ import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageInfo;
 import android.content.pm.PackageManager;
 import android.content.pm.PackageManager.NameNotFoundException;
+import android.content.pm.PackageManagerInternal;
 import android.content.pm.ResolveInfo;
 import android.content.pm.Signature;
 import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.hardware.location.ActivityRecognitionHardware;
+import android.lease.LeaseDescriptor;
+import android.lease.LeaseEvent;
+import android.lease.LeaseManager;
+import android.lease.LeaseProxy;
+import android.lease.LeaseStatus;
+import android.lease.ResourceType;
 import android.location.Address;
 import android.location.Criteria;
 import android.location.GeocoderParams;
 import android.location.Geofence;
 import android.location.IGnssMeasurementsListener;
+import android.location.IGnssNavigationMessageListener;
 import android.location.IGnssStatusListener;
 import android.location.IGnssStatusProvider;
 import android.location.IGpsGeofenceHardware;
-import android.location.IGnssNavigationMessageListener;
 import android.location.ILocationListener;
 import android.location.ILocationManager;
 import android.location.INetInitiatedListener;
@@ -91,6 +73,30 @@ import android.text.TextUtils;
 import android.util.EventLog;
 import android.util.Log;
 import android.util.Slog;
+
+import com.android.internal.content.PackageMonitor;
+import com.android.internal.location.ProviderProperties;
+import com.android.internal.location.ProviderRequest;
+import com.android.internal.os.BackgroundThread;
+import com.android.internal.util.ArrayUtils;
+import com.android.server.location.ActivityRecognitionProxy;
+import com.android.server.location.FlpHardwareProvider;
+import com.android.server.location.FusedProxy;
+import com.android.server.location.GeocoderProxy;
+import com.android.server.location.GeofenceManager;
+import com.android.server.location.GeofenceProxy;
+import com.android.server.location.GnssLocationProvider;
+import com.android.server.location.GnssMeasurementsProvider;
+import com.android.server.location.GnssNavigationMessageProvider;
+import com.android.server.location.LocationBlacklist;
+import com.android.server.location.LocationFudger;
+import com.android.server.location.LocationProviderInterface;
+import com.android.server.location.LocationProviderProxy;
+import com.android.server.location.LocationRequestStatistics;
+import com.android.server.location.LocationRequestStatistics.PackageProviderKey;
+import com.android.server.location.LocationRequestStatistics.PackageStatistics;
+import com.android.server.location.MockProvider;
+import com.android.server.location.PassiveProvider;
 
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
@@ -219,6 +225,10 @@ public class LocationManagerService extends ILocationManager.Stub {
 
     private GnssLocationProvider.GnssSystemInfoProvider mGnssSystemInfoProvider;
 
+    /*** LeaseOS changes ***/
+    private LocationLeaseProxy mLeaseProxy;
+    /************************/
+
     public LocationManagerService(Context context) {
         super();
         mContext = context;
@@ -292,6 +302,15 @@ public class LocationManagerService extends ILocationManager.Stub {
             // prepare providers
             loadProvidersLocked();
             updateProvidersLocked();
+
+            /*** LeaseOS changes ***/
+            mLeaseProxy = new LocationLeaseProxy(mContext);
+            if (!mLeaseProxy.start()) {
+                Slog.e(TAG, "Failed to start LocationLeaseProxy");
+            } else {
+                Slog.i(TAG, "LocationLeaseProxy started");
+            }
+            /**********************/
         }
 
         // listen for settings changes
@@ -927,7 +946,7 @@ public class LocationManagerService extends ILocationManager.Stub {
             if (D) Log.d(TAG, "Location listener died");
 
             synchronized (mLock) {
-                removeUpdatesLocked(this);
+                removeUpdatesLocked(this, false);
             }
             synchronized (this) {
                 clearPendingBroadcastsLocked();
@@ -1388,7 +1407,7 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         if (deadReceivers != null) {
             for (int i = deadReceivers.size() - 1; i >= 0; i--) {
-                removeUpdatesLocked(deadReceivers.get(i));
+                removeUpdatesLocked(deadReceivers.get(i), false);
             }
         }
 
@@ -1518,7 +1537,7 @@ public class LocationManagerService extends ILocationManager.Stub {
 
                 // and also remove the Receiver if it has no more update records
                 if (removeReceiver && receiverRecords.size() == 0) {
-                    removeUpdatesLocked(mReceiver);
+                    removeUpdatesLocked(mReceiver, false);
                 }
             }
         }
@@ -1636,7 +1655,9 @@ public class LocationManagerService extends ILocationManager.Stub {
 
     @Override
     public void requestLocationUpdates(LocationRequest request, ILocationListener listener,
-            PendingIntent intent, String packageName) {
+            PendingIntent intent, String packageName, String className) {
+        Slog.d(TAG,"The class name is " + className);
+
         if (request == null) request = DEFAULT_LOCATION_REQUEST;
         checkPackageName(packageName);
         int allowedResolutionLevel = getCallerAllowedResolutionLevel();
@@ -1662,9 +1683,9 @@ public class LocationManagerService extends ILocationManager.Stub {
             checkLocationAccess(pid, uid, packageName, allowedResolutionLevel);
 
             synchronized (mLock) {
-                Receiver recevier = checkListenerOrIntentLocked(listener, intent, pid, uid,
+                Receiver receiver = checkListenerOrIntentLocked(listener, intent, pid, uid,
                         packageName, workSource, hideFromAppOps);
-                requestLocationUpdatesLocked(sanitizedRequest, recevier, pid, uid, packageName);
+                requestLocationUpdatesLocked(sanitizedRequest, receiver, pid, uid, packageName, false, className);
             }
         } finally {
             Binder.restoreCallingIdentity(identity);
@@ -1672,7 +1693,7 @@ public class LocationManagerService extends ILocationManager.Stub {
     }
 
     private void requestLocationUpdatesLocked(LocationRequest request, Receiver receiver,
-            int pid, int uid, String packageName) {
+            int pid, int uid, String packageName, boolean fromProxy, String activityName) {
         // Figure out the provider. Either its explicitly request (legacy use cases), or
         // use the fused provider
         if (request == null) request = DEFAULT_LOCATION_REQUEST;
@@ -1680,6 +1701,10 @@ public class LocationManagerService extends ILocationManager.Stub {
         if (name == null) {
             throw new IllegalArgumentException("provider name must not be null");
         }
+        /**LeaseOS change**/
+        Log.d(TAG, "request " + Integer.toHexString(System.identityHashCode(receiver))
+                + " " + name + " " + request + " from " + packageName + "(" + uid + ")");
+        /****************/
 
         if (D) Log.d(TAG, "request " + Integer.toHexString(System.identityHashCode(receiver))
                 + " " + name + " " + request + " from " + packageName + "(" + uid + ")");
@@ -1695,8 +1720,56 @@ public class LocationManagerService extends ILocationManager.Stub {
         }
 
         boolean isProviderEnabled = isAllowedByUserSettingsLocked(name, uid);
+        Slog.d(TAG,"The provide is " + isProviderEnabled);
         if (isProviderEnabled) {
             applyRequirementsLocked(name);
+            /*** LeaseOS changes ***/
+            if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                // First, check if any lease has been created for this request or should the request
+                // be denied for a while.
+                LocationLease lease = null;
+                if (!fromProxy) {
+                    // For frequent asking problem, the lease manager might decides to
+                    // deny any lease creation request for a given UID instead of deny a
+                    // specific lease ID, in this case, we should check if the package/uid has
+                    // been temporarily banned, and if so we should just return.
+                    lease = (LocationLease) mLeaseProxy.getLease(receiver);
+                    if (lease != null) {
+                        mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
+                        if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
+                            lease.mLeaseValue = receiver;
+                            lease.mRequest = request;
+                            lease.mActivityName = activityName;
+                            removeUpdatesLocked(lease.mLeaseValue, true);
+                            Slog.d(TAG, uid + " has been disruptive to lease manager service,"
+                                    + " freezing lease requests for a while..");
+                            return;
+                        }
+                    }
+                }
+                /*********************/
+                // Second, if no lease has been created for this request, try to request a lease
+                // from the lease manager
+                if (lease == null) {
+                    if (mLeaseProxy.exempt(packageName, uid)) {
+                        Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
+                    } else if (!fromProxy) {
+                        lease = (LocationLease) mLeaseProxy.createLease(receiver, uid, ResourceType.Location);
+                        if (lease != null) {
+                            // hold the internal data structure in case we need it later
+                            lease.mLeaseValue = receiver;
+                            lease.mRequest = request;
+                            lease.mActivityName = activityName;
+                            // TODO: invoke check and notify ResourceStatManager
+                            mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
+                        }
+                    }
+                } else {
+                    // update the internal data structure in case we need it later
+                    lease.mLeaseValue = receiver;
+                }
+            }
+            /*********************/
         } else {
             // Notify the listener that updates are currently disabled
             receiver.callProviderEnabledLocked(name, false);
@@ -1714,6 +1787,7 @@ public class LocationManagerService extends ILocationManager.Stub {
         final int pid = Binder.getCallingPid();
         final int uid = Binder.getCallingUid();
 
+
         synchronized (mLock) {
             WorkSource workSource = null;
             boolean hideFromAppOps = false;
@@ -1723,16 +1797,39 @@ public class LocationManagerService extends ILocationManager.Stub {
             // providers may use public location API's, need to clear identity
             long identity = Binder.clearCallingIdentity();
             try {
-                removeUpdatesLocked(receiver);
+                removeUpdatesLocked(receiver, false);
             } finally {
                 Binder.restoreCallingIdentity(identity);
             }
         }
     }
 
-    private void removeUpdatesLocked(Receiver receiver) {
+    private void removeUpdatesLocked(Receiver receiver, boolean fromProxy) {
+        Log.i(TAG, "remove " + Integer.toHexString(System.identityHashCode(receiver)));
         if (D) Log.i(TAG, "remove " + Integer.toHexString(System.identityHashCode(receiver)));
 
+
+        /***LeaseOS changes***/
+        if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+            LocationLease lease = (LocationLease)mLeaseProxy.getLease(receiver);
+            if (lease != null) {
+                Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
+                // TODO: notify ResourceStatManager about the release event
+                if (!fromProxy) {
+                    // if the release is not called from within the lease proxy
+                    // we let the lease manager service know this event
+                    // otherwise, we don't note the event because the callback to
+                    // the proxy is from lease manager service who should be expecting
+                    // this event
+                    Slog.d(TAG, "Note the release event");
+                    lease.mLeaseValue = null;
+                    lease.mRequest = null;
+                    lease.mActivityName = null;
+                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_RELEASE);
+                }
+            }
+        }
+        /*********************/
         if (mReceivers.remove(receiver.mKey) != null && receiver.isListener()) {
             receiver.getListener().asBinder().unlinkToDeath(receiver, 0);
             synchronized (receiver) {
@@ -1765,6 +1862,104 @@ public class LocationManagerService extends ILocationManager.Stub {
             applyRequirementsLocked(provider);
         }
     }
+
+    /*** LeaseOS changes ***/
+    private class LocationLease extends LeaseDescriptor<Receiver> implements IBinder.DeathRecipient {
+        public Receiver mLeaseValue;
+        public LocationRequest mRequest;
+        public String mActivityName;
+
+        public LocationLease(Receiver key, long lid, LeaseStatus status) {
+            super(key, lid, status);
+        }
+
+        @Override
+        public void binderDied() {
+            // Wake lock requester is dead. We need to clean up.
+            // The reason that we didn't use the WakeLock's death recipient method is that upon the
+            // release, power manager service will call unlinkToDeath, which will deregister the
+            // recipient. But the lease table lives longer than the release period.
+            mLeaseProxy.removeLease(this);
+            Slog.i(TAG, "Death of wakelock. Removed lease " + mLeaseId);
+        }
+    }
+
+
+    private class LocationLeaseProxy extends LeaseProxy<Receiver> {
+
+        public LocationLeaseProxy(Context context) {
+            super(LeaseManager.LOCATION_LEASE_PROXY, "PMS_PROXY", context);
+        }
+
+        @Override
+        public LeaseDescriptor<Receiver> newLease(Receiver key, long leaseId, LeaseStatus status) {
+            LocationLease lease = new LocationLease(key, leaseId, status);
+            try {
+                key.getListener().asBinder().linkToDeath(lease, 0);
+            } catch (RemoteException ex) {
+                throw new IllegalArgumentException("Wake lock is already dead.");
+            }
+            return lease;
+        }
+
+        @Override
+        public void onExpire(long leaseId) throws RemoteException {
+            Slog.d(TAG, "LeaseManagerService instruct me to expire lease " + leaseId);
+            LocationLease lease = (LocationLease) mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                Receiver receiver;
+                synchronized (mLock) {
+                    receiver = lease.mLeaseValue;
+                    if (receiver == null) {
+                            receiver = mReceivers.get(lease.mLeaseKey.mKey);
+                            lease.mLeaseValue = receiver;
+                            Slog.e(TAG, "Found location receiver object for lease " + leaseId);
+                    }
+                }
+                if (receiver != null) {
+                    Slog.e(TAG, "Release wakelock object for lease " + leaseId);
+                    removeUpdatesLocked(receiver, true);
+                }
+                lease.mLeaseStatus = LeaseStatus.EXPIRED;
+            }
+        }
+
+        @Override
+        public void onRenew(long leaseId) throws RemoteException {
+            Slog.d(TAG, "LeaseManagerService instruct me to renew lease " + leaseId);
+            LocationLease lease = (LocationLease)mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                Receiver receiver = lease.mLeaseValue;
+                if (receiver == null) {
+                    Slog.e(TAG, "Cannot renew because no receiver object is found for lease "
+                            + leaseId);
+                } else {
+                    if (lease.mLeaseStatus != LeaseStatus.EXPIRED) {
+                        Slog.e(TAG, "Skip renewing because lease " + leaseId + " has not been expire before");
+                    } else {
+                        // re-acquire the lock
+                        requestLocationUpdatesLocked(lease.mRequest,receiver, receiver.mPid,receiver.mUid,receiver.mPackageName,true, lease.mActivityName);
+                    }
+                    // assume that after this point the lease is active
+                    lease.mLeaseStatus = LeaseStatus.ACTIVE;
+                }
+            }
+        }
+
+        @Override
+        public void onReject(int uid) throws RemoteException {
+
+        }
+
+        @Override
+        public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
+
+        }
+
+
+    }
+
+    /*********************/
 
     private void applyAllProviderRequirementsLocked() {
         for (LocationProviderInterface p : mProviders) {
@@ -2351,7 +2546,7 @@ public class LocationManagerService extends ILocationManager.Stub {
         // remove dead records and receivers outside the loop
         if (deadReceivers != null) {
             for (Receiver receiver : deadReceivers) {
-                removeUpdatesLocked(receiver);
+                removeUpdatesLocked(receiver, false);
             }
         }
         if (deadUpdateRecords != null) {
@@ -2426,7 +2621,7 @@ public class LocationManagerService extends ILocationManager.Stub {
                 // perform removal outside of mReceivers loop
                 if (deadReceivers != null) {
                     for (Receiver receiver : deadReceivers) {
-                        removeUpdatesLocked(receiver);
+                        removeUpdatesLocked(receiver, false);
                     }
                 }
             }

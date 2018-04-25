@@ -64,6 +64,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public static final int FAILED = -1;
     private static final String TAG = "LeaseManagerService";
     private final Object mLock = new Object();
+    public final static int ACTIVITY_START = 1;
+    public final static int ACTIVITY_STOP = 0;
 
     private HandlerThread mHandlerThread;
     private LeaseHandler mHandler;
@@ -85,6 +87,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private final SparseArray<LeaseWorkerHandler> mWorkers = new SparseArray<>();
     private final SparseArray<Integer> mExceptionTable = new SparseArray<>();
     private final SparseArray<Integer> mTouchEventTable = new SparseArray<>();
+    private final Hashtable<String,Integer> mActivityTable = new Hashtable<>();
 
     private final Context mContext;
 
@@ -146,28 +149,36 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                     null,this, mContext);
             mLeases.put(mLastLeaseId, lease);
 
-            Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
-            StatHistory statHistory = new StatHistory();
-            Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
+           // Slog.d(TAG, "Start to Create a StatHistory for the " + mLastLeaseId);
+            StatHistory statHistory;
+           // Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
 
             LeaseProxy proxy = null;
             LeaseWorkerHandler handler = null;
             long now = SystemClock.elapsedRealtime();
             switch (rtype) {
                 case Wakelock:
-                    WakelockStat wStat = new WakelockStat(now, uid, mContext);
+                    statHistory = new StatHistory(ResourceType.Wakelock, this);
+                    WakelockStat wStat = new WakelockStat(now, uid, mContext, this);
                     statHistory.addItem(wStat);
                     proxy = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
                     handler = mWorkers.get(LeaseManager.WAKELOCK_LEASE_PROXY);
                     break;
                 case Location:
+                    statHistory = new StatHistory(ResourceType.Location, this);
+                    LocationStat lStat = new LocationStat(now, uid, mContext, this);
+                    statHistory.addItem(lStat);
                     proxy = mTypedProxies.get(LeaseManager.LOCATION_LEASE_PROXY);
                     handler = mWorkers.get(LeaseManager.LOCATION_LEASE_PROXY);
                     break;
                 case Sensor:
+                    statHistory = new StatHistory(ResourceType.Sensor, this);
                     proxy = mTypedProxies.get(LeaseManager.SENSOR_LEASE_PROXY);
                     handler = mWorkers.get(LeaseManager.SENSOR_LEASE_PROXY);
                     break;
+                default:
+                    statHistory = new StatHistory(ResourceType.Wakelock, this);
+
             }
             if (proxy != null && proxy.mProxy != null) {
                 lease.setProxy(proxy.mProxy); // set the proxy for this lease
@@ -277,13 +288,41 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         switch (event) {
             case WAKELOCK_ACQUIRE:
-                Slog.d(TAG, "Note acquire event for lease " + leaseId);
-                statHistory.noteAcquire();
+                Slog.d(TAG, "Note acquire wakelock event for lease " + leaseId);
+                statHistory.noteAcquire(null);
                 break;
             case WAKELOCK_RELEASE:
-                Slog.d(TAG, "Note release event for lease " + leaseId);
+                Slog.d(TAG, "Note release wakelock event for lease " + leaseId);
                 statHistory.noteRelease();
                 break;
+            default:
+                Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
+        }
+    }
+
+
+    public void noteLocationEvent (long leaseId, LeaseEvent event, String activityName) {
+        StatHistory statHistory;
+        synchronized (mLock) {
+            Lease lease = mLeases.get(leaseId);
+            if (lease == null || !lease.isValid()) {
+                // if lease is no longer active, ignore the event
+                return;
+            }
+            statHistory = mRStatManager.getStatsHistory(leaseId);
+            if (statHistory == null) {
+                Slog.e(TAG, "No stat history exist for lease " + leaseId + ", possibly a bug");
+                return;
+            }
+        }
+        switch (event) {
+            case LOCATION_ACQUIRE:
+                Slog.d(TAG,"Note acquire location event for lease " + leaseId);
+                statHistory.noteAcquire(activityName);
+                break;
+            case LOCATION_RELEASE:
+                Slog.d(TAG, "Note release location event for lease " + leaseId);
+                statHistory.noteRelease();
             default:
                 Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
         }
@@ -333,9 +372,35 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         int toucnEvent = mTouchEventTable.get(uid);
         mTouchEventTable.remove(uid);
-        Slog.d(TAG, "The number of toucn events are " + toucnEvent + "for uid " + uid);
+       // Slog.d(TAG, "The number of toucn events are " + toucnEvent + " for uid " + uid);
         return toucnEvent;
     }
+
+    public void noteStartEvent(String activityName) {
+        synchronized (this) {
+            int index = activityName.indexOf('@');
+            activityName = activityName.substring(0,index);
+            Slog.d(TAG, "Start the activity " + activityName);
+            mActivityTable.put(activityName, ACTIVITY_START);
+        }
+    }
+
+    public void noteStopEvent(String activityName) {
+        synchronized (this) {
+            int index = activityName.indexOf('@');
+            activityName = activityName.substring(0,index);
+            Slog.d(TAG, "Stop the activity " + activityName);
+            mActivityTable.put(activityName, ACTIVITY_STOP);
+        }
+    }
+
+    public int getActivityStatus(String activityName) {
+        if (mActivityTable.get(activityName) == null) {
+            return -1;
+        }
+        return mActivityTable.get(activityName);
+    }
+
 
     public void systemRunning() {
         Slog.d(TAG, "Ready to start lease");

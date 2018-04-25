@@ -58,4 +58,10 @@ interface ILeaseManager {
     void noteException(int uid);
 
     void noteTouchEvent(int uid);
+
+    void noteLocationEvent(long leaseId,in LeaseEvent event, String activityName);
+
+    void noteStopEvent(String activityName);
+
+    void noteStartEvent(String activityName);
 }

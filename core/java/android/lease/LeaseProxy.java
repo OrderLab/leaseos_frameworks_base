@@ -148,9 +148,9 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         return mLeaseTable.get(key);
     }
 
-    public LeaseDescriptor<S> createLease(S key, int uid) {
+    public LeaseDescriptor<S> createLease(S key, int uid, ResourceType resourceType) {
         if (mLeaseManager != null) {
-            long leaseId = mLeaseManager.create(ResourceType.Wakelock, uid);
+            long leaseId = mLeaseManager.create(resourceType, uid);
             if (leaseId < LeaseManager.LEASE_ID_START) {
                 Slog.i(TAG,"Skip invalid lease");
                 return null;
@@ -199,6 +199,12 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
     public void noteEvent(long leaseId, LeaseEvent event) {
         if (mLeaseManager != null) {
             mLeaseManager.noteEvent(leaseId, event);
+        }
+    }
+
+    public void noteLocationEvent(long leaseId, LeaseEvent event, String activityName) {
+        if (mLeaseManager != null) {
+            mLeaseManager.noteLocationEvent(leaseId, event, activityName);
         }
     }
 

@@ -22,8 +22,11 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.BehaviorType;
+import android.lease.ResourceType;
 import android.os.SystemClock;
 import android.util.Slog;
+
+import com.android.server.LocationManagerService;
 
 import java.util.ArrayList;
 import java.util.Hashtable;
@@ -42,13 +45,18 @@ public class StatHistory {
     // Number of sessions (resource request OPEN, CLOSE pairs)
     public int frequencyCount;
     public LinkedList<Long> mHoldTimes;
+    public String mActivityName;
+    public ResourceType mType;
+    public LeaseManagerService mLeaseManagerService;
 
-    public StatHistory() {
+    public StatHistory(ResourceType type, LeaseManagerService leaseManagerService) {
         mStats = new LinkedList<>();
         mEventList = new LinkedList<>();
         mHoldTimes = new LinkedList<>();
         mOpenIndex = -1;
         frequencyCount = 0;
+        mType = type;
+        mLeaseManagerService = leaseManagerService;
     }
 
     public ResourceStat getCurrentStat() {
@@ -65,65 +73,13 @@ public class StatHistory {
         return mStats.get(mStats.size() - 2);
     }
 
-    public void update(long startTime, long endTime, Context context, int uid, double utility) {
+    public void update(long startTime, long endTime, Context context, int uid) {
         long holdingTime = 0;
         int frequency = 0;
         ArrayList<Integer> staleEventsIndex = new ArrayList<>();
         int index = 0;
         int stale = 0;
-        for (Event e : mEventList) {
-            if (e.acquireTime < e.releaseTime && e.acquireTime < startTime
-                    && e.releaseTime < startTime) {
-                staleEventsIndex.add(index);
-                Slog.d(TAG, "Stale wakelock");
-                index++;
-                stale++;
-            } else if (e.acquireTime < e.releaseTime && e.acquireTime >= startTime
-                    && e.releaseTime <= endTime) {
-                staleEventsIndex.add(index);
-                holdingTime += e.releaseTime - e.acquireTime;
-                Slog.d(TAG, "The wakelock has been released. For process " + uid
-                        + ", the Holding time is " + holdingTime);
-                frequency++;
-                index++;
-                stale++;
-            } else if (e.acquireTime < e.releaseTime && e.acquireTime < startTime
-                    && e.releaseTime <= endTime) {
-                staleEventsIndex.add(index);
-                holdingTime += e.releaseTime - startTime;
-                Slog.d(TAG,
-                        "The wakelock has been released but is not acquired in this lease term. "
-                                + "For process "
-                                + uid
-                                + ", the Holding time is " + holdingTime);
-                frequency++;
-                index++;
-                stale++;
-            } else if (e.acquireTime == e.releaseTime && e.acquireTime >= startTime) {
-                holdingTime += endTime - e.acquireTime;
-                Slog.d(TAG,
-                        "The wakelock has not been released yet but is acquired in this lease "
-                                + "term. For process "
-                                + uid
-                                + ", the Holding time is " + holdingTime);
-                frequency++;
-                index++;
-            } else if (e.acquireTime == e.releaseTime && e.acquireTime <= startTime) {
-                holdingTime += endTime - startTime;
-                Slog.d(TAG, "The wakelock has not been released yet. For process " + uid
-                        + ", the Holding time is " + holdingTime);
-                frequency++;
-                index++;
-            } else {
-                Slog.d(TAG, "UnKnow type");
-            }
-        }
-
-        for (int i = staleEventsIndex.size() - 1; i >= 0; i--) {
-            int idx = staleEventsIndex.get(i);
-            mEventList.remove(idx);
-        }
-        mOpenIndex -= stale;
+        boolean locationLease = false;
         ResourceStat resourceStat = getCurrentStat();
         ResourceStat lastResourceStat = getLastStat();
         double lastUtility;
@@ -132,7 +88,80 @@ public class StatHistory {
         } else {
             lastUtility = lastResourceStat.mUtility;
         }
-        resourceStat.update(holdingTime, frequency, context, uid, utility, lastUtility);
+
+        synchronized (mEventList) {
+            for (Event e : mEventList) {
+                if (e.acquireTime < e.releaseTime && e.acquireTime < startTime
+                        && e.releaseTime < startTime) {
+                    staleEventsIndex.add(index);
+                    Slog.d(TAG, "Stale wakelock");
+                    index++;
+                    stale++;
+                } else if (e.acquireTime < e.releaseTime && e.acquireTime >= startTime
+                        && e.releaseTime <= endTime) {
+                    staleEventsIndex.add(index);
+                    holdingTime += e.releaseTime - e.acquireTime;
+                    Slog.d(TAG, "The wakelock has been released. For process " + uid
+                            + ", the Holding time is " + holdingTime);
+                    frequency++;
+                    index++;
+                    stale++;
+                } else if (e.acquireTime < e.releaseTime && e.acquireTime < startTime
+                        && e.releaseTime <= endTime) {
+                    staleEventsIndex.add(index);
+                    holdingTime += e.releaseTime - startTime;
+                    Slog.d(TAG,
+                            "The wakelock has been released but is not acquired in this lease term. "
+                                    + "For process "
+                                    + uid
+                                    + ", the Holding time is " + holdingTime);
+                    frequency++;
+                    index++;
+                    stale++;
+                } else if (e.acquireTime == e.releaseTime && e.acquireTime >= startTime) {
+                    holdingTime += endTime - e.acquireTime;
+                    Slog.d(TAG,
+                            "The wakelock has not been released yet but is acquired in this lease "
+                                    + "term. For process "
+                                    + uid
+                                    + ", the Holding time is " + holdingTime);
+                    if(mType == ResourceType.Location) {
+                        if(mLeaseManagerService.getActivityStatus(e.activityName) == LeaseManagerService.ACTIVITY_STOP){
+                            if (resourceStat instanceof LocationStat) {
+                                ((LocationStat)resourceStat).setLocationLeak();
+                            }
+                        }
+                    }
+                    frequency++;
+                    index++;
+                } else if (e.acquireTime == e.releaseTime && e.acquireTime <= startTime) {
+                    holdingTime += endTime - startTime;
+                    Slog.d(TAG, "The wakelock has not been released yet. For process " + uid
+                            + ", the Holding time is " + holdingTime);
+                    if(mType == ResourceType.Location) {
+                      //  Slog.d(TAG, "The activity name is " + e.activityName + ", the status is " + mLeaseManagerService.getActivityStatus(e.activityName));
+                        if(mLeaseManagerService.getActivityStatus(e.activityName) == LeaseManagerService.ACTIVITY_STOP){
+                            if (resourceStat instanceof LocationStat) {
+                                ((LocationStat)resourceStat).setLocationLeak();
+                            }
+                        }
+                    }
+                    frequency++;
+                    index++;
+                } else {
+                    Slog.d(TAG, "UnKnow type");
+                }
+            }
+
+            for (int i = staleEventsIndex.size() - 1; i >= 0; i--) {
+                int idx = staleEventsIndex.get(i);
+                mEventList.remove(idx);
+            }
+        }
+        mOpenIndex -= stale;
+
+        resourceStat.update(holdingTime, frequency, context, lastUtility);
+
     }
 
     public boolean hasActivateEvent() {
@@ -180,36 +209,45 @@ public class StatHistory {
         return getCurrentStat().mBehaviorType;
     }
 
-    public void noteAcquire() {
-        Event e = new Event(SystemClock.elapsedRealtime());
-        mEventList.add(e);
-        Slog.d(TAG, "Add the acquire event at " + e.acquireTime);
+    public void noteAcquire(String activityName) {
+        synchronized (mEventList) {
+            Event e = new Event(SystemClock.elapsedRealtime());
+            mEventList.add(e);
+            if (mType == ResourceType.Location) {
+               e.activityName = activityName;
+               Slog.d(TAG, "The activity is " + activityName);
+            }
+            Slog.d(TAG, "Add the acquire event at " + e.acquireTime);
+        }
     }
 
     public void noteRelease() {
-        if (mOpenIndex + 1 >= mEventList.size()) {
-            Slog.d(TAG, "There is no associated event for this release");
-            return;
+        synchronized (mEventList) {
+            if (mOpenIndex + 1 >= mEventList.size()) {
+                Slog.d(TAG, "There is no associated event for this release");
+                return;
+            }
+            mOpenIndex++;
+            Event e = mEventList.get(mOpenIndex);
+            if (e.releaseTime > e.acquireTime) {
+                return;
+            }
+            e.releaseTime = SystemClock.elapsedRealtime();
+            if(mHoldTimes.size() < 10) {
+                mHoldTimes.addLast(e.releaseTime-e.acquireTime);
+            } else {
+                mHoldTimes.removeFirst();
+                mHoldTimes.addLast(e.releaseTime-e.acquireTime);
+            }
+            Slog.d(TAG, "Add the release event at " + e.releaseTime);
+            frequencyCount++;
         }
-        mOpenIndex++;
-        Event e = mEventList.get(mOpenIndex);
-        if (e.releaseTime > e.acquireTime) {
-            return;
-        }
-        e.releaseTime = SystemClock.elapsedRealtime();
-        if(mHoldTimes.size() < 10) {
-            mHoldTimes.addLast(e.releaseTime-e.acquireTime);
-        } else {
-            mHoldTimes.removeFirst();
-            mHoldTimes.addLast(e.releaseTime-e.acquireTime);
-        }
-        Slog.d(TAG, "Add the release event at " + e.releaseTime);
-        frequencyCount++;
     }
 
     public class Event {
         public long acquireTime;
         public long releaseTime;
+        public String activityName;
 
         public Event(long acquireTime) {
             this.acquireTime = acquireTime;

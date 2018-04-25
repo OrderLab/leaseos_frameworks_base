@@ -137,8 +137,6 @@ public class Lease {
         mBeginTime = now;
         isDelay = false;
         mLeaseManagerService.getAndCleanException(mOwnerId);
-        BatteryMonitor bm = BatteryMonitor.getInstance(mContext);
-        bm.getStat();
         scheduleExpire(mLength);
     }
 
@@ -320,14 +318,7 @@ public class Lease {
     public void endTerm() {
         mEndTime = SystemClock.elapsedRealtime();
         // update the stats for this lease term
-        int exceptions = mLeaseManagerService.getAndCleanException(mOwnerId);
-        //Slog.d(TAG, "The number of exceptions are " + exceptions + " for process " + mOwnerId);
-        int touchEvent = mLeaseManagerService.getAndCleanTouchEvent(mOwnerId);
-        //Slog.d(TAG, "The number of touch events are " + touchEvent + " for process " + mOwnerId);
-        double utility = exceptions - 0.1 * touchEvent;
-        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId, utility);
-        BatteryMonitor bm = BatteryMonitor.getInstance(mContext);
-        bm.getStat();
+        mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
             Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
             renew(true);
@@ -427,12 +418,13 @@ public class Lease {
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId, mContext);
+                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId, mContext, mLeaseManagerService);
                 mStatus = LeaseStatus.ACTIVE;
                 success = mRStatManager.addResourceStat(mLeaseId, wStat);
                 break;
             case Location:
-                LocationStat lStat = new LocationStat(mBeginTime);
+                LocationStat lStat = new LocationStat(mBeginTime, mOwnerId, mContext, mLeaseManagerService);
+                mStatus = LeaseStatus.ACTIVE;
                 success = mRStatManager.addResourceStat(mLeaseId, lStat);
                 break;
             case Sensor:

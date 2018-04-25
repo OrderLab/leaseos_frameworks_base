@@ -39,7 +39,7 @@ import com.android.internal.location.ProviderProperties;
 interface ILocationManager
 {
     void requestLocationUpdates(in LocationRequest request, in ILocationListener listener,
-            in PendingIntent intent, String packageName);
+            in PendingIntent intent, String packageName, String className);
     void removeUpdates(in ILocationListener listener, in PendingIntent intent, String packageName);
 
     void requestGeofence(in LocationRequest request, in Geofence geofence,

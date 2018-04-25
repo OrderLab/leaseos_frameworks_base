@@ -58,14 +58,14 @@ public final class LeaseManager {
     /**
      * Create a new lease instance, call LeaseManagerService
      *
-     * @param rtype the resource type
+     * @param resourceType the resource type
      * @param uid the owner id
      * @return lease id
      */
-    public long create(ResourceType rtype, int uid) {
+    public long create(ResourceType resourceType, int uid) {
         long leaseId = -1;
         try {
-           leaseId = mService.create(rtype, uid);
+           leaseId = mService.create(resourceType, uid);
         } catch (RemoteException e) {
             Log.wtf(TAG, "Fail to create new lease");
         }
@@ -156,7 +156,18 @@ public final class LeaseManager {
         try {
             mService.noteEvent(leaseId, event);
         }catch (RemoteException e){
-            Log.wtf(TAG, "Fail to remove the lease");
+            Log.wtf(TAG, "Fail to note the event");
+        }
+        return;
+    }
+
+    public void noteLocationEvent(long leaseId, LeaseEvent event, String activityName) {
+        if (leaseId < LEASE_ID_START)
+            return;
+        try {
+            mService.noteLocationEvent(leaseId, event, activityName);
+        }catch (RemoteException e){
+            Log.wtf(TAG, "Fail to note the location event");
         }
         return;
     }
@@ -236,4 +247,7 @@ public final class LeaseManager {
             return ;
         }
     }
+
+
+
 }

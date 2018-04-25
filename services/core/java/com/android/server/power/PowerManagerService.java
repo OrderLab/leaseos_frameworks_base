@@ -43,6 +43,7 @@ import android.lease.LeaseManager;
 import android.lease.LeaseProxy;
 import android.lease.LeaseStatus;
 import android.lease.RequestFreezer;
+import android.lease.ResourceType;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.BatteryManagerInternal;
@@ -963,7 +964,7 @@ public final class PowerManagerService extends SystemService
                     if (mLeaseProxy.exempt(packageName, uid)) {
                         Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                     } else if (!fromProxy) {
-                        lease = (WakelockLease) mLeaseProxy.createLease(lock, uid);
+                        lease = (WakelockLease) mLeaseProxy.createLease(lock, uid, ResourceType.Wakelock);
                         if (lease != null) {
                             // hold the internal data structure in case we need it later
                             lease.mLeaseValue = wakeLock;

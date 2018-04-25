@@ -21,6 +21,8 @@ import com.android.internal.location.ProviderProperties;
 import android.annotation.RequiresPermission;
 import android.annotation.SystemApi;
 import android.annotation.TestApi;
+import android.app.Activity;
+import android.app.ActivityManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
@@ -440,6 +442,28 @@ public class LocationManager {
         }
     }
 
+    /**LeaseOS change**/
+    public ActivityManager.RunningTaskInfo getActivity() {
+        ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.RunningTaskInfo info;
+        if (manager != null) {
+            if (manager.getRunningTasks(1).size() == 0) {
+                return null;
+            } else {
+                info = manager.getRunningTasks(1).get(0);
+                return info;
+            }
+
+        } else {
+            Log.d(TAG,"Can not get the service");
+            return null;
+        }
+    }
+
+
+    /******************/
+
+
     /**
      * Register for location updates using the named provider, and a
      * pending intent.
@@ -465,7 +489,6 @@ public class LocationManager {
             LocationListener listener) {
         checkProvider(provider);
         checkListener(listener);
-
         LocationRequest request = LocationRequest.createFromDeprecatedProvider(
                 provider, minTime, minDistance, false);
         requestLocationUpdates(request, listener, null, null);
@@ -879,12 +902,19 @@ public class LocationManager {
             Looper looper, PendingIntent intent) {
 
         String packageName = mContext.getPackageName();
+        ActivityManager.RunningTaskInfo info = null;
+        info = getActivity();
 
         // wrap the listener class
         ListenerTransport transport = wrapListener(listener, looper);
 
         try {
-            mService.requestLocationUpdates(request, transport, intent, packageName);
+            if (info == null) {
+                mService.requestLocationUpdates(request, transport, intent, packageName, null);
+            } else {
+                mService.requestLocationUpdates(request, transport, intent, packageName, info.topActivity.getClassName());
+            }
+
        } catch (RemoteException e) {
            throw e.rethrowFromSystemServer();
        }

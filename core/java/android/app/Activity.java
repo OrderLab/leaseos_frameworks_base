@@ -54,6 +54,7 @@ import android.graphics.Canvas;
 import android.graphics.Color;
 import android.graphics.drawable.Drawable;
 import android.hardware.input.InputManager;
+import android.lease.ILeaseManager;
 import android.media.AudioManager;
 import android.media.session.MediaController;
 import android.net.Uri;
@@ -66,6 +67,7 @@ import android.os.Looper;
 import android.os.Parcelable;
 import android.os.PersistableBundle;
 import android.os.RemoteException;
+import android.os.ServiceManager;
 import android.os.StrictMode;
 import android.os.SystemProperties;
 import android.os.UserHandle;
@@ -120,11 +122,14 @@ import com.android.internal.app.ToolbarActionBar;
 import com.android.internal.app.WindowDecorActionBar;
 import com.android.internal.policy.PhoneWindow;
 
+import libcore.io.Libcore;
+
 import java.io.FileDescriptor;
 import java.io.PrintWriter;
 import java.lang.annotation.Retention;
 import java.lang.annotation.RetentionPolicy;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.List;
 
@@ -1188,6 +1193,18 @@ public class Activity extends ContextThemeWrapper
         mFragments.doLoaderStart();
 
         getApplication().dispatchActivityStarted(this);
+
+        int uid = Libcore.os.getuid();
+        if (!isExempt(uid)) {
+            try {
+                String activityName = this.toString();
+                IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
+                ILeaseManager service = ILeaseManager.Stub.asInterface(b);
+                service.noteStartEvent(activityName);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
     }
 
     /**
@@ -1770,12 +1787,45 @@ public class Activity extends ContextThemeWrapper
     @CallSuper
     protected void onStop() {
         if (DEBUG_LIFECYCLE) Slog.v(TAG, "onStop " + this);
+        int uid = Libcore.os.getuid();
+        if (!isExempt(uid)) {
+            try {
+                String activityName = this.toString();
+                IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
+                ILeaseManager service = ILeaseManager.Stub.asInterface(b);
+                service.noteStopEvent(activityName);
+            } catch (RemoteException e) {
+                e.printStackTrace();
+            }
+        }
         if (mActionBar != null) mActionBar.setShowHideAnimationEnabled(false);
         mActivityTransitionState.onStop();
         getApplication().dispatchActivityStopped(this);
         mTranslucentCallback = null;
         mCalled = true;
     }
+
+    public boolean isExempt(int uid) {
+        //Slog.d(TAG, "Check the exempt");
+        synchronized (this) {
+            if (uid < android.os.Process.FIRST_APPLICATION_UID || uid > android.os.Process.LAST_APPLICATION_UID) {
+                return true;
+            }
+           // Slog.d(TAG, "This is " + this + ", The table is " + mExemptTable + ", The length of exempt tables are  " + mExemptTable.size());
+            return mExemptTable.contains(uid);
+        }
+    }
+
+    private ArrayList<Integer> mExemptTable = new ArrayList<>(Arrays.asList(10008, 10081, 10037,
+            10036, 10003, 10019, 10077, 10084, 10041, 10012, 10016, 10059, 10025, 10013, 10083,
+            10078, 10010, 10026, 10066, 10051, 10004, 10007, 10049, 10035, 10022, 10054,
+            10013, 10001, 10071, 10031, 10005, 10073, 10088, 10074, 10029, 10030, 10000,
+            10076, 10044, 10086, 10087, 10024, 10063, 10070, 10006, 10055, 10057, 10056,
+            10072, 10047, 10052, 10075, 10011, 10020, 10058, 10015, 10021, 10027, 10028,
+            10061, 10017, 10068, 10048, 10023, 10067, 10080, 10039, 10062, 10034, 10032,
+            10065, 10046, 10042, 10043, 10079, 10009, 10053, 10038, 10060, 10064, 10014,
+            10033, 10045, 10085, 10069, 10082, 10002, 10050, 10040, 10018));
+
 
     /**
      * Perform any final cleanup before an activity is destroyed.  This can

@@ -50,7 +50,6 @@ import android.telephony.DataConnectionRealTimeInfo;
 import android.telephony.ModemActivityInfo;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
-import android.util.ArrayMap;
 import android.util.IntArray;
 import android.util.Slog;
 import android.util.TimeUtils;
@@ -63,6 +62,10 @@ import com.android.internal.os.BatteryStatsImpl;
 import com.android.internal.os.PowerProfile;
 import com.android.server.LocalServices;
 import com.android.server.ServiceThread;
+import com.android.server.am.db.AppStatsDBHelper;
+import com.android.server.am.db.AppStatsRecord;
+
+import libcore.io.Libcore;
 
 import java.io.File;
 import java.io.FileDescriptor;
@@ -101,6 +104,7 @@ public final class BatteryStatsService extends IBatteryStats.Stub
     private Context mContext;
     private IWifiManager mWifiManager;
     private TelephonyManager mTelephony;
+    BatteryStatsHelper mHelper;
 
     // Lock acquired when extracting data from external sources.
     private final Object mExternalStatsLock = new Object();
@@ -412,18 +416,49 @@ public final class BatteryStatsService extends IBatteryStats.Stub
 
     public void refreshStatic() {
         Slog.d(TAG, "refersh the static");
-        BatteryStatsHelper helper = new BatteryStatsHelper(mContext, false, false);
-        helper.create(mStats);
-        helper.refreshStats(BatteryStats.STATS_SINCE_CHARGED, UserHandle.USER_ALL);
-        List<BatterySipper> sippers = helper.getUsageList();
+        if (mHelper == null) {
+            mHelper = new BatteryStatsHelper(mContext, false, false);
+            mHelper.create(mStats);
+        }
+        mHelper.refreshStats(BatteryStats.STATS_SINCE_CHARGED, UserHandle.USER_ALL);
+        List<BatterySipper> sippers = mHelper.getUsageList();
         if (sippers != null && sippers.size() > 0) {
             for (int i=0; i<sippers.size(); i++) {
                 final BatterySipper bs = sippers.get(i);
                 int uid = bs.getUid();
-                Slog.d(TAG, "The uid is " + uid + " The CPU usage is " + bs.cpuTimeMs + " The Energy is " + bs.totalPowerMah);
+                AppStatsRecord record = createRecord(bs);
+                AppStatsDBHelper.getInstance(mContext).insert(record);
             }
         }
     }
+
+    public AppStatsRecord createRecord(BatterySipper bs) {
+        AppStatsRecord record = new AppStatsRecord();
+        record.uid = bs.getUid();
+        record.totalPowerMah = BatteryStatsHelper.makemAh(bs.totalPowerMah);
+        record.usageTimeMs = bs.usageTimeMs;
+        record.usagePowerMah = BatteryStatsHelper.makemAh(bs.usagePowerMah);
+        record.cpuTimeMs = bs.cpuTimeMs;
+        record.gpsTimeMs = bs.gpsTimeMs;
+        record.wifiRunningTimeMs = bs.wifiRunningTimeMs;
+        record.cpuFgTimeMs = bs.cpuFgTimeMs;
+        record.wakeLockTimeMs = bs.wakeLockTimeMs;
+        record.cameraTimeMs = bs.cameraTimeMs;
+        record.flashlightTimeMs = bs.flashlightTimeMs;
+        record.bluetoothRunningTimeMs = bs.bluetoothRunningTimeMs;
+        record.wifiPowerMah = BatteryStatsHelper.makemAh(bs.wifiPowerMah);
+        record.cpuPowerMah = BatteryStatsHelper.makemAh(bs.cpuPowerMah);
+        record.wakeLockPowerMah = BatteryStatsHelper.makemAh(bs.wakeLockPowerMah);
+        record.mobileRadioPowerMah = BatteryStatsHelper.makemAh(bs.mobileRadioPowerMah);
+        record.gpsPowerMah = BatteryStatsHelper.makemAh(bs.gpsPowerMah);
+        record.sensorPowerMah =BatteryStatsHelper.makemAh( bs.sensorPowerMah);
+        record.cameraPowerMah = BatteryStatsHelper.makemAh(bs.cameraPowerMah);
+        record.flashlightPowerMah = BatteryStatsHelper.makemAh(bs.flashlightPowerMah);
+        record.bluetoothPowerMah = BatteryStatsHelper.makemAh(bs.bluetoothPowerMah);
+        return record;
+    }
+
+
 
 
     public boolean isCharging() {

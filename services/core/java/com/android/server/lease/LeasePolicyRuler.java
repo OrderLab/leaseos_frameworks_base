@@ -40,7 +40,7 @@ public class LeasePolicyRuler {
      */
     public static Decision behaviorJudge(Lease lease, boolean isProxy) {
         // TODO: judge based on the lease's current resource stat or entire stat history.
-        StatHistory statHistory = new StatHistory();
+        StatHistory statHistory;
         statHistory = lease.getStatHistory();
         BehaviorType behavior = classify(lease.getStatHistory());
         Decision decision = new Decision();
