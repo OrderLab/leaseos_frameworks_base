@@ -30,7 +30,9 @@ public enum LeaseEvent implements Parcelable {
     WAKELOCK_ACQUIRE,
     WAKELOCK_RELEASE,
     LOCATION_ACQUIRE,
-    LOCATION_RELEASE;
+    LOCATION_RELEASE,
+    LOCATION_CHANGE,
+    BACKGROUDAPP;
 
 
     private static LeaseEvent[] VALUES = LeaseEvent.values();

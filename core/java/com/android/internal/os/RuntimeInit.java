@@ -142,24 +142,24 @@ public class RuntimeInit {
                 10061, 10017, 10068, 10048, 10023, 10067, 10080, 10039, 10062, 10034, 10032,
                 10065, 10046, 10042, 10043, 10079, 10009, 10053, 10038, 10060, 10064, 10014,
                 10033, 10045, 10085, 10069, 10082, 10002, 10050, 10040, 10018));
+        /*
+                public void exceptionNote(int uid, Throwable e) {
+                    String processName = ActivityThread.currentProcessName();
+                    if (!isExempt(uid)) {
+                        Slog.d(TAG,
+                                "The process is " + processName + " for " + uid + ", for exception " + e);
+                        try {
+                            IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
+                            ILeaseManager service = ILeaseManager.Stub.asInterface(b);
+                            service.noteException(uid);
+                        } catch (RemoteException re) {
+                            re.printStackTrace();
+                        }
+                        return;
+                    }
 
-        public void exceptionNote(int uid, Throwable e) {
-            String processName = ActivityThread.currentProcessName();
-            if (!isExempt(uid)) {
-                Slog.d(TAG,
-                        "The process is " + processName + " for " + uid + ", for exception " + e);
-                try {
-                    IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
-                    ILeaseManager service = ILeaseManager.Stub.asInterface(b);
-                    service.noteException(uid);
-                } catch (RemoteException re) {
-                    re.printStackTrace();
                 }
-                return;
-            }
-
-        }
-
+        */
         public boolean isExempt(int uid) {
             //Slog.d(TAG, "Check the exempt");
             synchronized (this) {
@@ -172,6 +172,14 @@ public class RuntimeInit {
             }
         }
 
+
+        public void exceptionNote(int uid, Throwable e) {
+            if (!isExempt(uid)) {
+                String processName = ActivityThread.currentProcessName();
+                Slog.d(TAG,
+                        "The process is " + processName + " for " + uid + ", for exception " + e);
+            }
+        }
     }
 
 

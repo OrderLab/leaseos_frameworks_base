@@ -948,13 +948,19 @@ public final class PowerManagerService extends SystemService
                     lease = (WakelockLease) mLeaseProxy.getLease(lock);
                     if (lease != null) {
                         mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
+                        long basetime = SystemClock.elapsedRealtimeNanos();
+                        Slog.d(TAG, "Begin to check a wakelock lease at " + basetime);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
                             lease.mLeaseValue = wakeLock;
                             releaseWakeLockInternal(lock, flags, false);
+                            long currtime = SystemClock.elapsedRealtimeNanos();
+                            Slog.d(TAG, "The time to reject a wakelock request is " + (currtime - basetime)/1000);
                             Slog.d(TAG, uid + " has been disruptive to lease manager service,"
                                     + " freezing lease requests for a while..");
                             return;
                         }
+                        long currtime = SystemClock.elapsedRealtimeNanos();
+                        Slog.d(TAG, "The time to accept a wakelock request is " + (currtime - basetime)/1000);
                     }
                 }
                 /*********************/
@@ -964,13 +970,18 @@ public final class PowerManagerService extends SystemService
                     if (mLeaseProxy.exempt(packageName, uid)) {
                         Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                     } else if (!fromProxy) {
+                        long basetime = SystemClock.elapsedRealtimeNanos();
+                        Slog.d(TAG, "Begin to create a wakelock lease at " + basetime);
                         lease = (WakelockLease) mLeaseProxy.createLease(lock, uid, ResourceType.Wakelock);
+                        long currtime = SystemClock.elapsedRealtimeNanos();
+                        Slog.d(TAG, "The time to create a wakelock lease is " + (currtime - basetime)/1000);
                         if (lease != null) {
                             // hold the internal data structure in case we need it later
                             lease.mLeaseValue = wakeLock;
                             // TODO: invoke check and notify ResourceStatManager
                             mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                         }
+
                     }
                 } else {
                     // update the internal data structure in case we need it later

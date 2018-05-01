@@ -24,6 +24,7 @@ import android.app.ActivityManager;
 import android.content.Context;
 import android.lease.BehaviorType;
 import android.lease.LeaseStatus;
+import android.os.SystemClock;
 import android.util.Log;
 import android.util.Slog;
 
@@ -40,23 +41,32 @@ public class LocationStat extends ResourceStat {
 
     protected long mHoldingTime;
     protected boolean isLeak;
+    protected boolean isWeak;
 
     protected long mBaseCPUTime;
     protected long mCurCPUTime;
     protected long mAcquiringFrequency;
     protected long mUsageTime;
     protected Context mContext;
+    protected LeaseWorkerHandler mHandler;
 
-    public LocationStat(long beginTime, int uid, Context context, LeaseManagerService leaseManagerService) {
+
+    public LocationStat(long beginTime, int uid, Context context, LeaseManagerService leaseManagerService, LeaseWorkerHandler handler) {
         super(beginTime);
         mContext = context;
         mUid = uid;
         mFrequency = 0;
         mHoldingTime = 0;
-        mBaseCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
+        mHandler = handler;
+        long baseTime = SystemClock.elapsedRealtimeNanos();
+        Slog.d(TAG, "Begin to get CPU time " + baseTime);
+        mBaseCPUTime = BatteryMonitor.getInstance(mContext).getCPUTime(mUid);
         mLeaseManagerService = leaseManagerService;
+        long currtime = SystemClock.elapsedRealtimeNanos();
+        Slog.d(TAG, "The time to update lease is " + (currtime - baseTime)/1000);
         isLeak = false;
-        Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
+        isWeak = false;
+        //Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
 
     @Override
@@ -68,26 +78,17 @@ public class LocationStat extends ResourceStat {
             return;
         }
         mHoldingTime = holdingTime;
-        mAcquiringFrequency = frequency;
+        mFrequency = frequency;
         mCurCPUTime = bm.getCPUTime(mUid);
         //Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
-        int exceptions = mLeaseManagerService.getAndCleanException(mUid);
         //Slog.d(TAG, "The number of exceptions are " + exceptions + " for process " + mOwnerId);
-        int touchEvent = mLeaseManagerService.getAndCleanTouchEvent(mUid);
-        //Slog.d(TAG, "The number of touch events are " + touchEvent + " for process " + mOwnerId);
-        double utility = exceptions - touchEvent;
-        if (lastUtility == 0 && utility == 0) {
-            mUtility = 0;
-        } else {
-            mUtility = lastUtility + 0.1 - utility;
-        }
-        Slog.d(TAG, "For process " + mUid + ", the Holding time is " + mHoldingTime
-                + ", the CPU usage time is " + mUsageTime + ", the utility is " + mUtility);
+       /* Slog.d(TAG, "For process " + mUid + ", the Holding time is " + mHoldingTime
+                + ", the CPU usage time is " + mUsageTime + ", the utility is " + mUtility);*/
         judge();
         // TODO: uncomment inserting db to make it work
-        LeaseStatsRecord record = createRecord(mUid);
-        LeaseStatsDBHelper.getInstance(context).insert(record);
+       // LeaseStatsRecord record = createRecord(mUid);
+       // LeaseStatsDBHelper.getInstance(context).insert(record);
     }
 
     public LeaseStatsRecord createRecord(int uid) {
@@ -101,8 +102,13 @@ public class LocationStat extends ResourceStat {
     }
 
     public void setLocationLeak() {
-        Slog.d(TAG, "set the location leak");
+     //   Slog.d(TAG, "set the location leak");
         isLeak = true;
+    }
+
+    public void setLocationWeak() {
+      //  Slog.d(TAG, "set the location Weak");
+        isWeak = true;
     }
 
     @Override
@@ -132,15 +138,31 @@ public class LocationStat extends ResourceStat {
 
     @Override
     public void judge() {
-        if(mUtility <= -20) {
-            Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
+
+        if (isLeak) {
+          //  Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
+            mBehaviorType = BehaviorType.LongHolding;
+            return;
+        }
+
+        if (isWeak) {
+           // Slog.d(TAG, "For process " + mUid + ", this lease term has a FrequencyAsking behavior");
+            mBehaviorType = BehaviorType.FrequencyAsking;
+            return;
+        }
+
+        if(mUsageTime <= 10) {
+           // Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
             mBehaviorType = BehaviorType.LowUtility;
             return;
         }
-        if (isLeak) {
-            Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
-            mBehaviorType = BehaviorType.LongHolding;
+
+        if(mFrequency > 2) {
+           // Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");
+            mBehaviorType = BehaviorType.HighDamage;
+            return;
         }
-        mBehaviorType = BehaviorType.LongHolding;
+
+        mBehaviorType = BehaviorType.Normal;
     }
 }

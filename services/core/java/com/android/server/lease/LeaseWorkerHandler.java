@@ -20,6 +20,7 @@
  */
 package com.android.server.lease;
 
+import android.content.Context;
 import android.os.Handler;
 import android.os.Looper;
 import android.os.Message;
@@ -30,18 +31,25 @@ import android.util.Slog;
  *
  */
 public class LeaseWorkerHandler extends Handler {
-    private static final int MSG_EXPIRE_LEASE = 1;
+    public static final int MSG_GET_CPU = 1;
+    public final static String ACTION_PREFIX = "com.android.server.lease";
+    public final static String NOTE_GET_CPU = ACTION_PREFIX + ".NOTE_GET_CPU";
     protected final String mName;
 
-    public LeaseWorkerHandler(String name, Looper looper) {
+    protected long mBaseCPUTime;
+
+    private Context mContext;
+
+    public LeaseWorkerHandler(String name, Looper looper, Context context) {
         super(looper, null, true /*async*/);
         mName = name;
+        mContext = context;
     }
 
     @Override
     public void handleMessage(Message msg) {
         switch (msg.what) {
-            case MSG_EXPIRE_LEASE:
+            case MSG_GET_CPU:
                 break;
             default:
                 Slog.wtf(mName, "Unknown lease worker message");

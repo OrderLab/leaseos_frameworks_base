@@ -51,6 +51,8 @@ import android.util.Slog;
 import android.util.SparseArray;
 
 import java.io.IOException;
+import java.lang.reflect.Array;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Hashtable;
@@ -159,17 +161,17 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             switch (rtype) {
                 case Wakelock:
                     statHistory = new StatHistory(ResourceType.Wakelock, this);
-                    WakelockStat wStat = new WakelockStat(now, uid, mContext, this);
+                    handler = mWorkers.get(LeaseManager.WAKELOCK_LEASE_PROXY);
+                    WakelockStat wStat = new WakelockStat(now, uid, mContext, this, handler);
                     statHistory.addItem(wStat);
                     proxy = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
-                    handler = mWorkers.get(LeaseManager.WAKELOCK_LEASE_PROXY);
                     break;
                 case Location:
                     statHistory = new StatHistory(ResourceType.Location, this);
-                    LocationStat lStat = new LocationStat(now, uid, mContext, this);
+                    handler = mWorkers.get(LeaseManager.LOCATION_LEASE_PROXY);
+                    LocationStat lStat = new LocationStat(now, uid, mContext, this, handler);
                     statHistory.addItem(lStat);
                     proxy = mTypedProxies.get(LeaseManager.LOCATION_LEASE_PROXY);
-                    handler = mWorkers.get(LeaseManager.LOCATION_LEASE_PROXY);
                     break;
                 case Sensor:
                     statHistory = new StatHistory(ResourceType.Sensor, this);
@@ -196,6 +198,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
             return lease.mLeaseId;
         }
+
     }
 
     /**
@@ -261,6 +264,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         //TODO: how to handler the logic of true or false
         lease.cancelExpire();
+        lease.cancelDelay();
         mRStatManager.removeStatHistory(lease.mLeaseId);
         mLeases.remove(leaseId);
         return true;
@@ -282,21 +286,33 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             }
             statHistory = mRStatManager.getStatsHistory(leaseId);
             if (statHistory == null) {
-                Slog.e(TAG, "No stat history exist for lease " + leaseId + ", possibly a bug");
+             //   Slog.e(TAG, "No stat history exist for lease " + leaseId + ", possibly a bug");
                 return;
             }
         }
         switch (event) {
             case WAKELOCK_ACQUIRE:
-                Slog.d(TAG, "Note acquire wakelock event for lease " + leaseId);
+               // Slog.d(TAG, "Note acquire wakelock event for lease " + leaseId);
                 statHistory.noteAcquire(null);
                 break;
             case WAKELOCK_RELEASE:
-                Slog.d(TAG, "Note release wakelock event for lease " + leaseId);
+              //  Slog.d(TAG, "Note release wakelock event for lease " + leaseId);
                 statHistory.noteRelease();
                 break;
+            case LOCATION_RELEASE:
+              //  Slog.d(TAG, "Note release location event for lease " + leaseId);
+                statHistory.noteRelease();
+                break;
+            case LOCATION_CHANGE:
+              //  Slog.d(TAG, "Note release location change for lease" + leaseId);
+                statHistory.notechange();
+                break;
+            case BACKGROUDAPP:
+               // Slog.d(TAG, "Note leak location for lease " + leaseId);
+                statHistory.setLeak();
+                break;
             default:
-                Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
+               // Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
         }
     }
 
@@ -311,26 +327,23 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             }
             statHistory = mRStatManager.getStatsHistory(leaseId);
             if (statHistory == null) {
-                Slog.e(TAG, "No stat history exist for lease " + leaseId + ", possibly a bug");
+                //Slog.e(TAG, "No stat history exist for lease " + leaseId + ", possibly a bug");
                 return;
             }
         }
         switch (event) {
             case LOCATION_ACQUIRE:
-                Slog.d(TAG,"Note acquire location event for lease " + leaseId);
+               // Slog.d(TAG,"Note acquire location event for lease " + leaseId);
                 statHistory.noteAcquire(activityName);
                 break;
-            case LOCATION_RELEASE:
-                Slog.d(TAG, "Note release location event for lease " + leaseId);
-                statHistory.noteRelease();
             default:
-                Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
+               // Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
         }
     }
 
     public void noteException(int uid) {
         synchronized (this) {
-            Slog.d(TAG, "Note exception for uid " + uid);
+            //Slog.d(TAG, "Note exception for uid " + uid);
             int exceptions;
             if (mExceptionTable.get(uid) != null) {
                 exceptions = mExceptionTable.get(uid) + 1;
@@ -348,13 +361,13 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         int exceptions = mExceptionTable.get(uid);
         mExceptionTable.remove(uid);
-        Slog.d(TAG, "The number of exceptions are " + exceptions + " for uid " + uid);
+        //Slog.d(TAG, "The number of exceptions are " + exceptions + " for uid " + uid);
         return exceptions;
     }
 
     public void noteTouchEvent(int uid) {
         synchronized (this) {
-            Slog.d(TAG, "Note touch for uid " + uid);
+            //Slog.d(TAG, "Note touch for uid " + uid);
             int toucnEvent;
             if (mTouchEventTable.get(uid) != null) {
                 toucnEvent = mTouchEventTable.get(uid) + 1;
@@ -389,7 +402,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         synchronized (this) {
             int index = activityName.indexOf('@');
             activityName = activityName.substring(0,index);
-            Slog.d(TAG, "Stop the activity " + activityName);
+           // Slog.d(TAG, "Stop the activity " + activityName);
             mActivityTable.put(activityName, ACTIVITY_STOP);
         }
     }
@@ -401,9 +414,12 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         return mActivityTable.get(activityName);
     }
 
+    public void setLocationChanged(long leaseId) {
+
+    }
 
     public void systemRunning() {
-        Slog.d(TAG, "Ready to start lease");
+        //Slog.d(TAG, "Ready to start lease");
         synchronized (mLock) {
             // We should ALWAYS register for settings changes!
             // Otherwise we won't get notified when users change
@@ -420,7 +436,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     private void registerSettingsListeners() {
-        Slog.d(TAG, "Registering content observer");
+        //Slog.d(TAG, "Registering content observer");
         mSettingsObserver = new SettingsObserver(mHandler);
         // Register for settings changes.
         final ContentResolver resolver = mContext.getContentResolver();
@@ -446,7 +462,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     private void runBatteryTracing(LeaseSettings newSettings) {
-        Slog.d(TAG, "The default tracing interval is " + newSettings.batteryTracingInterval);
+      //  Slog.d(TAG, "The default tracing interval is " + newSettings.batteryTracingInterval);
         mBatteryTracingInterval = newSettings.batteryTracingInterval;
         BatteryMonitor.getInstance(mContext).getStat();
         scheduleBatteryTracing();
@@ -468,7 +484,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private void updateSettingsLocked(LeaseSettings newSettings) {
         // If it's service enabling/disabling change, we need to start
         // or stop the leases
-        Slog.d(TAG, "Updating setting");
+       // Slog.d(TAG, "Updating setting");
         if (mSettings.batteryTracingEnabled != newSettings.batteryTracingEnabled) {
             if (newSettings.batteryTracingEnabled) {
                 mSettings = newSettings;
@@ -622,9 +638,15 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     private void stopAllLeaseLocked() {
         Slog.d(TAG, "Stopping all lease...");
+        Slog.d(TAG, "The size of lease table is " + mLeases.size());
+        ArrayList<Long> removeTable = new ArrayList<>();
         for (int i = 0; i < mLeases.size(); i++) {
-            Lease lease = mLeases.valueAt(i);
-            remove(lease.mLeaseId);
+            Long key = mLeases.keyAt(i);
+            Slog.d(TAG,"leaseid = " + key);
+            removeTable.add(key);
+        }
+        for (Long leaseId : removeTable) {
+            remove(leaseId);
         }
         mLeases.clear();
         mRStatManager.clearAll();
@@ -688,7 +710,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             String workerName = wrapper.toString() + "-worker";
             HandlerThread hthread = new HandlerThread(workerName);
             hthread.start();
-            LeaseWorkerHandler handler = new LeaseWorkerHandler(workerName, hthread.getLooper());
+            LeaseWorkerHandler handler = new LeaseWorkerHandler(workerName, hthread.getLooper(), mContext);
             mWorkers.put(type, handler);
             Slog.d(TAG, "Worker thread for " + LeaseManager.getProxyTypeString(type) + " is started");
         } else {

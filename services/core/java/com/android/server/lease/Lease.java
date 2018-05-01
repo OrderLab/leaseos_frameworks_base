@@ -22,26 +22,12 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.ILeaseProxy;
-import android.lease.LeaseManager;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.lease.TimeUtils;
-import android.os.BatteryStats;
-import android.os.Parcel;
 import android.os.RemoteException;
 import android.os.SystemClock;
-import android.os.UserHandle;
 import android.util.Slog;
-import android.util.SparseArray;
-
-import com.android.internal.os.BatterySipper;
-import com.android.internal.os.BatteryStatsHelper;
-import com.android.internal.os.BatteryStatsImpl;
-
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-import java.util.Map;
 
 /**
  * The struct of lease.
@@ -55,6 +41,9 @@ public class Lease {
     public static int USER_DEFINE_DELAY_TIME = 30 * 1000; // the delay time, default 30 seconds
     public static final int MAX_DELAY_NUMBER = 200;
 
+    private static final int DEFAULT_FREQUENCYASK_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_FREQUENCYASK_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
+
     private static final int DEFAULT_LONGHOLD_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
     private static final int DEFAULT_LONGHOLD_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
 
@@ -62,7 +51,7 @@ public class Lease {
     private static final int DEFAULT_LOWUTILITY_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
 
     private static final int DEFAULT_HIGHDAMAGE_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
-    private static final int DEFAULT_HIGHDAMAGEY_DELAY_MS = 2 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_HIGHDAMAGE_DELAY_MS = 2 * TimeUtils.MILLIS_PER_SECOND;
 
     private static final int DEFAULT_NORMAL_TERM_MS = 15 * TimeUtils.MILLIS_PER_SECOND;
     private static final int DEFAULT_NORMAL_DELAY_MS = 2 * TimeUtils.MILLIS_PER_SECOND;
@@ -256,8 +245,7 @@ public class Lease {
     }
 
     public static void setDefaultParameter(long leaseTerm, long delayInterval) {
-        Slog.d(TAG, "Set the lease term as " + leaseTerm / 1000 + " seconds and delay interval as "
-                + delayInterval / 1000 + " seconds");
+       // Slog.d(TAG, "Set the lease term as " + leaseTerm / 1000 + " seconds and delay interval as "+ delayInterval / 1000 + " seconds");
         USER_DEFINE_TERM_MS = (int) leaseTerm;
         USER_DEFINE_DELAY_TIME = (int) delayInterval;
     }
@@ -269,21 +257,21 @@ public class Lease {
      */
     public boolean expire() {
         if (mStatus != LeaseStatus.ACTIVE) {
-            Slog.e(TAG, "Skip expiring an inactive lease " + mLeaseId);
+            //Slog.e(TAG, "Skip expiring an inactive lease " + mLeaseId);
             return false;
         }
         mStatus = LeaseStatus.EXPIRED;
         if (mProxy != null) {
             try {
-                Slog.d(TAG, "Calling onExpire for lease " + mLeaseId);
+              // Slog.d(TAG, "Calling onExpire for lease " + mLeaseId);
                 mProxy.onExpire(mLeaseId);
             } catch (RemoteException e) {
-                Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
+               // Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
                 return false;
             }
             return true;
         } else {
-            Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
+            //Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
             return false;
         }
     }
@@ -317,10 +305,15 @@ public class Lease {
      */
     public void endTerm() {
         mEndTime = SystemClock.elapsedRealtime();
+
         // update the stats for this lease term
+        long baseTime = SystemClock.elapsedRealtimeNanos();
+        Slog.d(TAG, "Begin to update lease stats at " + baseTime);
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
+        long currtime = SystemClock.elapsedRealtimeNanos();
+        Slog.d(TAG, "The time to update lease is " + (currtime - baseTime)/1000);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
-            Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
+           // Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
             renew(true);
             return;
         }
@@ -359,8 +352,8 @@ public class Lease {
         boolean flag = false;
         switch (decision.mBehaviorType) {
             case FrequencyAsking:
-                mDelayInterval = USER_DEFINE_DELAY_TIME;
-                mLength = USER_DEFINE_TERM_MS;
+                mDelayInterval = DEFAULT_FREQUENCYASK_DELAY_MS;
+                mLength = DEFAULT_FREQUENCYASK_TERM_MS;
                 if (isProbing) {
                     renew(true);
                 }
@@ -376,7 +369,7 @@ public class Lease {
                 break;
             case LowUtility:
                 mDelayInterval = DEFAULT_LOWUTILITY_TERM_MS;
-                mLength = DEFAULT_LOWUTILITY_DELAY_MS / mDelayCounter;
+                mLength = DEFAULT_LOWUTILITY_DELAY_MS;
                 if (isProbing) {
                     renew(true);
                 }
@@ -384,7 +377,7 @@ public class Lease {
                 break;
             case HighDamage:
                 mDelayInterval = DEFAULT_HIGHDAMAGE_TERM_MS;
-                mLength = DEFAULT_HIGHDAMAGEY_DELAY_MS;
+                mLength = DEFAULT_HIGHDAMAGE_DELAY_MS;
                 if (isProbing) {
                     renew(true);
                 }
@@ -404,7 +397,7 @@ public class Lease {
      * @return true if the lease is renewed
      */
     public boolean renew(boolean auto) {
-        Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
+       // Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
         isDelay = false;
         if (!auto && mStatus != LeaseStatus.EXPIRED) {
             // if a renewal is not at the end of a lease term, we must check for status first
@@ -418,12 +411,12 @@ public class Lease {
         switch (mType) {
             case Wakelock:
                 // TODO: supply real argument for holding time and usage time.
-                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId, mContext, mLeaseManagerService);
+                WakelockStat wStat = new WakelockStat(mBeginTime, mOwnerId, mContext, mLeaseManagerService, mHandler);
                 mStatus = LeaseStatus.ACTIVE;
                 success = mRStatManager.addResourceStat(mLeaseId, wStat);
                 break;
             case Location:
-                LocationStat lStat = new LocationStat(mBeginTime, mOwnerId, mContext, mLeaseManagerService);
+                LocationStat lStat = new LocationStat(mBeginTime, mOwnerId, mContext, mLeaseManagerService, mHandler);
                 mStatus = LeaseStatus.ACTIVE;
                 success = mRStatManager.addResourceStat(mLeaseId, lStat);
                 break;
@@ -436,14 +429,14 @@ public class Lease {
             // if it's an automatic renewal, we must try to notify the lease proxy
             if (mProxy != null) {
                 try {
-                    Slog.d(TAG, "Calling onRenew for lease " + mLeaseId);
+                 //   Slog.d(TAG, "Calling onRenew for lease " + mLeaseId);
                     mProxy.onRenew(mLeaseId);
                 } catch (RemoteException e) {
-                    Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
+                //    Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
                     success = false;
                 }
             } else {
-                Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
+             //   Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
                 success = false;
             }
         }

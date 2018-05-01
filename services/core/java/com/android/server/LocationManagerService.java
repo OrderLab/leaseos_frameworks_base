@@ -114,7 +114,8 @@ import java.util.Set;
  */
 public class LocationManagerService extends ILocationManager.Stub {
     private static final String TAG = "LocationManagerService";
-    public static final boolean D = Log.isLoggable(TAG, Log.DEBUG);
+    public static final boolean D = true;
+           // Log.isLoggable(TAG, Log.DEBUG);
 
     private static final String WAKELOCK_KEY = TAG;
 
@@ -1656,8 +1657,7 @@ public class LocationManagerService extends ILocationManager.Stub {
     @Override
     public void requestLocationUpdates(LocationRequest request, ILocationListener listener,
             PendingIntent intent, String packageName, String className) {
-        Slog.d(TAG,"The class name is " + className);
-
+         Slog.d(TAG, "The activity is " + className);
         if (request == null) request = DEFAULT_LOCATION_REQUEST;
         checkPackageName(packageName);
         int allowedResolutionLevel = getCallerAllowedResolutionLevel();
@@ -1701,10 +1701,6 @@ public class LocationManagerService extends ILocationManager.Stub {
         if (name == null) {
             throw new IllegalArgumentException("provider name must not be null");
         }
-        /**LeaseOS change**/
-        Log.d(TAG, "request " + Integer.toHexString(System.identityHashCode(receiver))
-                + " " + name + " " + request + " from " + packageName + "(" + uid + ")");
-        /****************/
 
         if (D) Log.d(TAG, "request " + Integer.toHexString(System.identityHashCode(receiver))
                 + " " + name + " " + request + " from " + packageName + "(" + uid + ")");
@@ -1720,7 +1716,8 @@ public class LocationManagerService extends ILocationManager.Stub {
         }
 
         boolean isProviderEnabled = isAllowedByUserSettingsLocked(name, uid);
-        Slog.d(TAG,"The provide is " + isProviderEnabled);
+
+       // Slog.d(TAG,"The provide is " + isProviderEnabled);
         if (isProviderEnabled) {
             applyRequirementsLocked(name);
             /*** LeaseOS changes ***/
@@ -1754,6 +1751,8 @@ public class LocationManagerService extends ILocationManager.Stub {
                     if (mLeaseProxy.exempt(packageName, uid)) {
                         Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                     } else if (!fromProxy) {
+                        long basetime = SystemClock.elapsedRealtimeNanos();
+                        Slog.d(TAG, "Begin to create a location lease at " + basetime);
                         lease = (LocationLease) mLeaseProxy.createLease(receiver, uid, ResourceType.Location);
                         if (lease != null) {
                             // hold the internal data structure in case we need it later
@@ -1762,13 +1761,20 @@ public class LocationManagerService extends ILocationManager.Stub {
                             lease.mActivityName = activityName;
                             // TODO: invoke check and notify ResourceStatManager
                             mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
+                            if (!activityName.contains(packageName)) {
+                                mLeaseProxy.noteEvent(lease.mLeaseId,LeaseEvent.BACKGROUDAPP);
+                            }
                         }
+                        long currtime = SystemClock.elapsedRealtimeNanos();
+                        Slog.d(TAG, "The time to create a location lease is " + (currtime - basetime) /1000);
                     }
                 } else {
                     // update the internal data structure in case we need it later
                     lease.mLeaseValue = receiver;
                 }
             }
+
+
             /*********************/
         } else {
             // Notify the listener that updates are currently disabled
@@ -1811,7 +1817,7 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         /***LeaseOS changes***/
         if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
-            LocationLease lease = (LocationLease)mLeaseProxy.getLease(receiver);
+            LocationLease lease = (LocationLease) mLeaseProxy.getLease(receiver);
             if (lease != null) {
                 Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
                 // TODO: notify ResourceStatManager about the release event
@@ -2401,7 +2407,6 @@ public class LocationManagerService extends ILocationManager.Stub {
 
     private void handleLocationChangedLocked(Location location, boolean passive) {
         if (D) Log.d(TAG, "incoming location: " + location);
-
         long now = SystemClock.elapsedRealtime();
         String provider = (passive ? LocationManager.PASSIVE_PROVIDER : location.getProvider());
 
@@ -2499,6 +2504,10 @@ public class LocationManagerService extends ILocationManager.Stub {
             }
             if (notifyLocation != null) {
                 Location lastLoc = r.mLastFixBroadcast;
+                LocationLease lease = (LocationLease) mLeaseProxy.getLease(receiver);
+                if (lease != null) {
+                    mLeaseProxy.noteEvent(lease.mLeaseId,LeaseEvent.LOCATION_CHANGE);
+                }
                 if ((lastLoc == null) || shouldBroadcastSafe(notifyLocation, lastLoc, r, now)) {
                     if (lastLoc == null) {
                         lastLoc = new Location(notifyLocation);

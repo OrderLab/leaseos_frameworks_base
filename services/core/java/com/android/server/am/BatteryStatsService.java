@@ -50,8 +50,10 @@ import android.telephony.DataConnectionRealTimeInfo;
 import android.telephony.ModemActivityInfo;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
+import android.text.TextUtils;
 import android.util.IntArray;
 import android.util.Slog;
+import android.util.SparseLongArray;
 import android.util.TimeUtils;
 
 import com.android.internal.annotations.GuardedBy;
@@ -65,10 +67,10 @@ import com.android.server.ServiceThread;
 import com.android.server.am.db.AppStatsDBHelper;
 import com.android.server.am.db.AppStatsRecord;
 
-import libcore.io.Libcore;
-
+import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileDescriptor;
+import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;
@@ -379,43 +381,13 @@ public final class BatteryStatsService extends IBatteryStats.Stub
         }
     }
 
-    /**LeaseOS Change**/
-    public long getCPUTimeLOS(int uid, boolean force) {
-        if (mContext == null) {
-            Slog.e(TAG, "No context yet for getCPUTimeLOS");
-            // Don't do any work yet.
-            return -1;
-        }
-        long totalTime = 0;
-        synchronized (mStats) {
-            if (force) {
-                mStats.addHistoryEventLocked(
-                        SystemClock.elapsedRealtime(),
-                        SystemClock.uptimeMillis(),
-                        BatteryStats.HistoryItem.EVENT_COLLECT_EXTERNAL_STATS,
-                        "getCPUTimeLOS", 0);
-                mStats.updateCpuTimeLocked();
-                mStats.updateKernelWakelocksLocked();
-            }
-            BatteryStatsImpl.Uid u = mStats.getUidStatsLocked(uid);
-            //ArrayMap<String, ? extends BatteryStats.Uid.Proc> processStats = u.getProcessStats();
-            //int NP = processStats.size();
-            Slog.d(TAG, "the processStat size is 1 , for uid " + u.getUid());
-            /*
-            for (int ip = 0; ip < NP; ip++) {
-                Slog.d(TAG, "ProcessStat name = " + processStats.keyAt(ip));
-                BatteryStatsImpl.Uid.Proc ps = (BatteryStatsImpl.Uid.Proc) processStats.valueAt(ip);
-                totalTime += ps.getUserTime(BatteryStatsImpl.STATS_ABSOLUTE);
-                totalTime += ps.getSystemTime(BatteryStatsImpl.STATS_ABSOLUTE);
-            }*/
-            totalTime += (u.getUserCpuTimeUs(BatteryStatsImpl.STATS_ABSOLUTE)/1000);
-            totalTime += (u.getSystemCpuTimeUs(BatteryStatsImpl.STATS_ABSOLUTE)/1000);
-        }
-        return totalTime;
-    }
+
+     /*****LeaseOS change *****/
 
     public void refreshStatic() {
         Slog.d(TAG, "refersh the static");
+        long baseTime = SystemClock.elapsedRealtimeNanos();
+        Slog.d(TAG, "Begin to refersh the static" + baseTime);
         if (mHelper == null) {
             mHelper = new BatteryStatsHelper(mContext, false, false);
             mHelper.create(mStats);
@@ -423,13 +395,15 @@ public final class BatteryStatsService extends IBatteryStats.Stub
         mHelper.refreshStats(BatteryStats.STATS_SINCE_CHARGED, UserHandle.USER_ALL);
         List<BatterySipper> sippers = mHelper.getUsageList();
         if (sippers != null && sippers.size() > 0) {
-            for (int i=0; i<sippers.size(); i++) {
+            for (int i = 0; i < sippers.size(); i++) {
                 final BatterySipper bs = sippers.get(i);
                 int uid = bs.getUid();
                 AppStatsRecord record = createRecord(bs);
                 AppStatsDBHelper.getInstance(mContext).insert(record);
             }
         }
+        long currtime = SystemClock.elapsedRealtimeNanos();
+        Slog.d(TAG, "The time to get UID is " + (currtime - baseTime)/1000 );
     }
 
     public AppStatsRecord createRecord(BatterySipper bs) {
@@ -451,14 +425,12 @@ public final class BatteryStatsService extends IBatteryStats.Stub
         record.wakeLockPowerMah = BatteryStatsHelper.makemAh(bs.wakeLockPowerMah);
         record.mobileRadioPowerMah = BatteryStatsHelper.makemAh(bs.mobileRadioPowerMah);
         record.gpsPowerMah = BatteryStatsHelper.makemAh(bs.gpsPowerMah);
-        record.sensorPowerMah =BatteryStatsHelper.makemAh( bs.sensorPowerMah);
+        record.sensorPowerMah = BatteryStatsHelper.makemAh(bs.sensorPowerMah);
         record.cameraPowerMah = BatteryStatsHelper.makemAh(bs.cameraPowerMah);
         record.flashlightPowerMah = BatteryStatsHelper.makemAh(bs.flashlightPowerMah);
         record.bluetoothPowerMah = BatteryStatsHelper.makemAh(bs.bluetoothPowerMah);
         return record;
     }
-
-
 
 
     public boolean isCharging() {

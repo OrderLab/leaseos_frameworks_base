@@ -93,7 +93,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         if (mLeaseManager != null) {
             mLeaseManager.registerProxy(mType, mName, this);
             mReady = true;
-            Slog.i(TAG, "Lease proxy " + this + " started");
+           // Slog.i(TAG, "Lease proxy " + this + " started");
         } else {
             Slog.e(TAG, "Fail to start lease proxy " + this);
         }
@@ -108,7 +108,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         if (mReady) {
             mLeaseManager.unregisterProxy(this);
             mReady = false;
-            Slog.i(TAG, "Lease proxy " + this + " stopped");
+           // Slog.i(TAG, "Lease proxy " + this + " stopped");
             return true;
         } else {
             Slog.e(TAG, "Fail to stop lease proxy " + this);
@@ -152,14 +152,14 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         if (mLeaseManager != null) {
             long leaseId = mLeaseManager.create(resourceType, uid);
             if (leaseId < LeaseManager.LEASE_ID_START) {
-                Slog.i(TAG,"Skip invalid lease");
+              //  Slog.i(TAG,"Skip invalid lease");
                 return null;
             }
             LeaseDescriptor<S> lease = newLease(key, leaseId, LeaseStatus.ACTIVE); // a new lease
             mLeaseTable.put(key, lease);
             mLeaseDescriptors.put(leaseId, lease);
-            Slog.i(TAG, "Created new lease " + leaseId + ". The lease table size is "
-                    + mLeaseTable.size());
+           /* Slog.i(TAG, "Created new lease " + leaseId + ". The lease table size is "
+                    + mLeaseTable.size());*/
             return lease;
         } else {
             Slog.i(TAG, "LeaseManager is not ready");
@@ -178,10 +178,10 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         if (!mLeaseManager.renew(lease.mLeaseId)) {
             // Possible failure reason: there has been too many lease requests from this UID
             // the lease manager decides to reject the requests for a while.
-            Slog.d(TAG, "Failed to renew lease " + lease.mLeaseId + " from lease manager");
+           // Slog.d(TAG, "Failed to renew lease " + lease.mLeaseId + " from lease manager");
             return false;
         }
-        Slog.d(TAG, "Successfully renewed lease " + lease.mLeaseId + " from lease manager");
+       // Slog.d(TAG, "Successfully renewed lease " + lease.mLeaseId + " from lease manager");
         lease.mLeaseStatus = LeaseStatus.ACTIVE;
         return true;
     }
@@ -208,6 +208,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         }
     }
 
+
     /**
      * Should a given package name or UID be exempted. The package name can be empty
      * if a UID is specified. Package name is useful for white list.
@@ -230,7 +231,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
      */
     protected void updateSystemAppsLocked() {
         if (!mSystemAppQueried) {
-            Slog.d(TAG, "Trying to update system app list");
+           // Slog.d(TAG, "Trying to update system app list");
             if (mContext != null) {
                 final PackageManager pm = mContext.getPackageManager();
                 if (pm != null) {
@@ -248,7 +249,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
                         }
                     }
                     mSystemAppQueried = true;
-                    Slog.d(TAG, "Updated system app list with " + mSystemAppUids.size() + " apps " + mSystemAppUids);
+                 //   Slog.d(TAG, "Updated system app list with " + mSystemAppUids.size() + " apps " + mSystemAppUids);
                 } else {
                     Slog.e(TAG, "Package manager is not ready yet");
                 }
@@ -288,7 +289,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
      * Inform guardian it can start defense
      */
     public void startLease(LeaseSettings settings) {
-        Slog.d(TAG, "[" + mName + "]: Lease");
+       // Slog.d(TAG, "[" + mName + "]: Lease");
         synchronized (mLock) {
             if (!mSystemAppQueried) {
                 Slog.d(TAG, "[" + mName + "]: UPDATE SYSTEM APPS");

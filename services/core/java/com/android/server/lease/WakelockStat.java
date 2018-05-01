@@ -22,6 +22,7 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.BehaviorType;
+import android.os.SystemClock;
 import android.util.Slog;
 
 import com.android.server.lease.db.LeaseStatsDBHelper;
@@ -44,26 +45,32 @@ public class WakelockStat extends ResourceStat {
     protected long mCurCPUTime;
 
     protected Context mContext;
+    protected LeaseWorkerHandler mHandler;
 
 
-    public WakelockStat(long beginTime, int uid, Context context, LeaseManagerService leaseManagerService) {
+
+    public WakelockStat(long beginTime, int uid, Context context, LeaseManagerService leaseManagerService, LeaseWorkerHandler handler) {
         super(beginTime);
         mContext = context;
         mFrequency = 0;
         mHoldingTime = 0;
         mUid = uid;
-        mBaseCPUTime = BatteryMonitor.getInstance(context).getCPUTime(mUid);
+        mHandler = handler;
+       // long baseTime = SystemClock.elapsedRealtimeNanos();
+       // Slog.d(TAG, "Begin to get CPU time " + baseTime);
+        mBaseCPUTime = BatteryMonitor.getInstance(mContext).getCPUTime(mUid);
+       // long currtime = SystemClock.elapsedRealtimeNanos();
+       // Slog.d(TAG, "The time to update lease is " + (currtime - baseTime)/1000);
         mLeaseManagerService = leaseManagerService;
         Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
-
 
     @Override
     public void update(long holdingTime, int frequency, Context context, double lastUtility) {
         final BatteryMonitor bm = BatteryMonitor.getInstance(context);
         if (bm.isCharging()) {
             // if the phone is charging skill updating resource stat
-            Slog.d(TAG, "Phone is charging, skip updating WakelockStat");
+          //  Slog.d(TAG, "Phone is charging, skip updating WakelockStat");
             return;
         }
         int exceptions = mLeaseManagerService.getAndCleanException(mUid);
@@ -72,9 +79,9 @@ public class WakelockStat extends ResourceStat {
         //Slog.d(TAG, "The number of touch events are " + touchEvent + " for process " + mOwnerId);
         double utility = exceptions - touchEvent;
         mHoldingTime = holdingTime;
-        mAcquiringFrequency = frequency;
+        mFrequency = frequency;
         mCurCPUTime = bm.getCPUTime(mUid);
-        //Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
+        Slog.d(TAG,"The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         if (lastUtility == 0 && utility == 0) {
             mUtility = 0;
@@ -85,8 +92,8 @@ public class WakelockStat extends ResourceStat {
                 + ", the CPU usage time is " + mUsageTime + ", the utility is " + mUtility);
         judge();
         // TODO: uncomment inserting db to make it work
-        LeaseStatsRecord record = createRecord(mUid);
-        LeaseStatsDBHelper.getInstance(context).insert(record);
+       // LeaseStatsRecord record = createRecord(mUid);
+       // LeaseStatsDBHelper.getInstance(context).insert(record);
     }
 
     public LeaseStatsRecord createRecord(int uid) {
@@ -140,7 +147,7 @@ public class WakelockStat extends ResourceStat {
         if ((float) mUsageTime / mHoldingTime < 0.1 && mHoldingTime > 100) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
             mBehaviorType = BehaviorType.LongHolding;
-        } else if ((float) mUsageTime / (mHoldingTime * mAcquiringFrequency)
+        } else if ((float) mUsageTime / (mHoldingTime * mFrequency)
                 < 0.1 && mHoldingTime > 100) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");
             mBehaviorType = BehaviorType.HighDamage;
