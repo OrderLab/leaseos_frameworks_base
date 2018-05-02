@@ -140,25 +140,25 @@ public class LocationStat extends ResourceStat {
     public void judge() {
 
         if (isLeak) {
-          //  Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
             mBehaviorType = BehaviorType.LongHolding;
             return;
         }
 
         if (isWeak) {
-           // Slog.d(TAG, "For process " + mUid + ", this lease term has a FrequencyAsking behavior");
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a FrequencyAsking behavior");
             mBehaviorType = BehaviorType.FrequencyAsking;
             return;
         }
 
         if(mUsageTime <= 10) {
-           // Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
             mBehaviorType = BehaviorType.LowUtility;
             return;
         }
 
         if(mFrequency > 2) {
-           // Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");
             mBehaviorType = BehaviorType.HighDamage;
             return;
         }

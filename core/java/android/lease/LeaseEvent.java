@@ -32,6 +32,8 @@ public enum LeaseEvent implements Parcelable {
     LOCATION_ACQUIRE,
     LOCATION_RELEASE,
     LOCATION_CHANGE,
+    SENSOR_ACQUIRE,
+    SENSOR_RELEASE,
     BACKGROUDAPP;
 
 

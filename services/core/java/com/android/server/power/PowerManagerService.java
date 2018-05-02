@@ -951,10 +951,10 @@ public final class PowerManagerService extends SystemService
                         long basetime = SystemClock.elapsedRealtimeNanos();
                         Slog.d(TAG, "Begin to check a wakelock lease at " + basetime);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
-                            lease.mLeaseValue = wakeLock;
-                            releaseWakeLockInternal(lock, flags, false);
                             long currtime = SystemClock.elapsedRealtimeNanos();
                             Slog.d(TAG, "The time to reject a wakelock request is " + (currtime - basetime)/1000);
+                            lease.mLeaseValue = wakeLock;
+                            releaseWakeLockInternal(lock, flags, false);
                             Slog.d(TAG, uid + " has been disruptive to lease manager service,"
                                     + " freezing lease requests for a while..");
                             return;
@@ -1137,7 +1137,7 @@ public final class PowerManagerService extends SystemService
                 }
                 if (lock != null) {
                     Slog.e(TAG, "Release wakelock object for lease " + leaseId);
-                    releaseWakeLockInternal(lock.mLock, lock.mFlags, false);
+                    releaseWakeLockInternal(lock.mLock, lock.mFlags, true);
                 }
                 lease.mLeaseStatus = LeaseStatus.EXPIRED;
             }

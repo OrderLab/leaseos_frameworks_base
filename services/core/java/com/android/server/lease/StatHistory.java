@@ -94,6 +94,8 @@ public class StatHistory {
             Slog.d(TAG, "This is a wakelock lease");
         } else if (mType == ResourceType.Location) {
             Slog.d(TAG, "This is a location lease");
+        }  else if (mType == ResourceType.Sensor) {
+            Slog.d(TAG, "This is a sensor lease");
         }
 
         synchronized (mEventList) {
@@ -101,14 +103,14 @@ public class StatHistory {
                 if (e.acquireTime < e.releaseTime && e.acquireTime < startTime
                         && e.releaseTime < startTime) {
                     staleEventsIndex.add(index);
-                    //Slog.d(TAG, "Stale wakelock");
+                    Slog.d(TAG, "Stale wakelock");
                     index++;
                     stale++;
                 } else if (e.acquireTime < e.releaseTime && e.acquireTime >= startTime
                         && e.releaseTime <= endTime) {
                     staleEventsIndex.add(index);
                     holdingTime += e.releaseTime - e.acquireTime;
-                    //Slog.d(TAG, "The wakelock has been released. For process " + uid + ", the Holding time is " + holdingTime);
+                    Slog.d(TAG, "The wakelock has been released. For process " + uid + ", the Holding time is " + holdingTime);
                     frequency++;
                     index++;
                     stale++;
@@ -116,21 +118,21 @@ public class StatHistory {
                         && e.releaseTime <= endTime) {
                     staleEventsIndex.add(index);
                     holdingTime += e.releaseTime - startTime;
-                   /* Slog.d(TAG,
+                    Slog.d(TAG,
                             "The wakelock has been released but is not acquired in this lease term. "
                                     + "For process "
                                     + uid
-                                    + ", the Holding time is " + holdingTime);*/
+                                    + ", the Holding time is " + holdingTime);
                     frequency++;
                     index++;
                     stale++;
                 } else if (e.acquireTime == e.releaseTime && e.acquireTime >= startTime) {
                     holdingTime += endTime - e.acquireTime;
-                    /*Slog.d(TAG,
+                    Slog.d(TAG,
                             "The wakelock has not been released yet but is acquired in this lease "
                                     + "term. For process "
                                     + uid
-                                    + ", the Holding time is " + holdingTime);*/
+                                    + ", the Holding time is " + holdingTime);
                     if(mType == ResourceType.Location) {
                         if(mLeaseManagerService.getActivityStatus(e.activityName) == LeaseManagerService.ACTIVITY_STOP){
                             if (resourceStat instanceof LocationStat) {
@@ -143,14 +145,23 @@ public class StatHistory {
                             }
                         }
                     }
+
+                    if (mType == ResourceType.Sensor) {
+                        if(mLeaseManagerService.getActivityStatus(e.activityName) == LeaseManagerService.ACTIVITY_STOP){
+                            if (resourceStat instanceof SensorStat) {
+                                ((SensorStat)resourceStat).setLocationLeak();
+                            }
+                        }
+                    }
+
                     frequency++;
                     index++;
                 } else if (e.acquireTime == e.releaseTime && e.acquireTime <= startTime) {
                     holdingTime += endTime - startTime;
-                   /* Slog.d(TAG, "The wakelock has not been released yet. For process " + uid
-                            + ", the Holding time is " + holdingTime);*/
-                    if(mType == ResourceType.Location) {
-                      //  Slog.d(TAG, "The activity name is " + e.activityName + ", the status is " + mLeaseManagerService.getActivityStatus(e.activityName));
+                    Slog.d(TAG, "The wakelock has not been released yet. For process " + uid
+                            + ", the Holding time is " + holdingTime);
+                    if (mType == ResourceType.Location) {
+                        Slog.d(TAG, "The activity name is " + e.activityName + ", the status is " + mLeaseManagerService.getActivityStatus(e.activityName));
                         if(mLeaseManagerService.getActivityStatus(e.activityName) == LeaseManagerService.ACTIVITY_STOP){
                             if (resourceStat instanceof LocationStat) {
                                 ((LocationStat)resourceStat).setLocationLeak();
@@ -162,6 +173,16 @@ public class StatHistory {
                             }
                         }
                     }
+
+                    if (mType == ResourceType.Sensor) {
+                        Slog.d(TAG, "The activity name is " + e.activityName + ", the status is " + mLeaseManagerService.getActivityStatus(e.activityName));
+                        if(mLeaseManagerService.getActivityStatus(e.activityName) == LeaseManagerService.ACTIVITY_STOP){
+                            if (resourceStat instanceof SensorStat) {
+                                ((SensorStat)resourceStat).setLocationLeak();
+                            }
+                        }
+                    }
+
                     frequency++;
                     index++;
                 } else {
@@ -232,7 +253,7 @@ public class StatHistory {
         synchronized (mEventList) {
             Event e = new Event(SystemClock.elapsedRealtime());
             mEventList.add(e);
-            if (mType == ResourceType.Location) {
+            if (mType == ResourceType.Location || mType == ResourceType.Sensor) {
                e.activityName = activityName;
              //  Slog.d(TAG, "The activity is " + activityName);
             }

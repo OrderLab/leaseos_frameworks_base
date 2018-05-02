@@ -175,8 +175,10 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                     break;
                 case Sensor:
                     statHistory = new StatHistory(ResourceType.Sensor, this);
-                    proxy = mTypedProxies.get(LeaseManager.SENSOR_LEASE_PROXY);
                     handler = mWorkers.get(LeaseManager.SENSOR_LEASE_PROXY);
+                    SensorStat sStat = new SensorStat(now, uid, mContext, this, handler);
+                    statHistory.addItem(sStat);
+                    proxy = mTypedProxies.get(LeaseManager.SENSOR_LEASE_PROXY);
                     break;
                 default:
                     statHistory = new StatHistory(ResourceType.Wakelock, this);
@@ -292,27 +294,31 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         switch (event) {
             case WAKELOCK_ACQUIRE:
-               // Slog.d(TAG, "Note acquire wakelock event for lease " + leaseId);
+                Slog.d(TAG, "Note acquire wakelock event for lease " + leaseId);
                 statHistory.noteAcquire(null);
                 break;
             case WAKELOCK_RELEASE:
-              //  Slog.d(TAG, "Note release wakelock event for lease " + leaseId);
+                Slog.d(TAG, "Note release wakelock event for lease " + leaseId);
                 statHistory.noteRelease();
                 break;
             case LOCATION_RELEASE:
-              //  Slog.d(TAG, "Note release location event for lease " + leaseId);
+                Slog.d(TAG, "Note release location event for lease " + leaseId);
                 statHistory.noteRelease();
                 break;
             case LOCATION_CHANGE:
-              //  Slog.d(TAG, "Note release location change for lease" + leaseId);
+                Slog.d(TAG, "Note location change for lease" + leaseId);
                 statHistory.notechange();
                 break;
+            case SENSOR_RELEASE:
+                Slog.d(TAG, "Note release sensor event for lease " + leaseId);
+                statHistory.noteRelease();
+                break;
             case BACKGROUDAPP:
-               // Slog.d(TAG, "Note leak location for lease " + leaseId);
+                Slog.d(TAG, "Note leak location for lease " + leaseId);
                 statHistory.setLeak();
                 break;
             default:
-               // Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
+                Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
         }
     }
 
@@ -333,7 +339,11 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         switch (event) {
             case LOCATION_ACQUIRE:
-               // Slog.d(TAG,"Note acquire location event for lease " + leaseId);
+                Slog.d(TAG,"Note acquire location event for lease " + leaseId);
+                statHistory.noteAcquire(activityName);
+                break;
+            case SENSOR_ACQUIRE:
+                Slog.d(TAG,"Note acquire sensor event for lease " + leaseId);
                 statHistory.noteAcquire(activityName);
                 break;
             default:
@@ -402,7 +412,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         synchronized (this) {
             int index = activityName.indexOf('@');
             activityName = activityName.substring(0,index);
-           // Slog.d(TAG, "Stop the activity " + activityName);
+            Slog.d(TAG, "Stop the activity " + activityName);
             mActivityTable.put(activityName, ACTIVITY_STOP);
         }
     }

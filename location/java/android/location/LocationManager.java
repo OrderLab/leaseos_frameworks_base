@@ -912,6 +912,7 @@ public class LocationManager {
             if (info == null) {
                 mService.requestLocationUpdates(request, transport, intent, packageName, null);
             } else {
+                Log.d(TAG, "The class name is " + info.topActivity.getClassName());
                 mService.requestLocationUpdates(request, transport, intent, packageName, info.topActivity.getClassName());
             }
 

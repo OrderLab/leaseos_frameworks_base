@@ -45,6 +45,7 @@ public class LeasePolicyRuler {
         BehaviorType behavior = classify(lease.getStatHistory());
         Decision decision = new Decision();
         decision.mBehaviorType = behavior;
+
         if (isProxy || statHistory.hasActivateEvent()) {
             switch (behavior) {
                 case Normal:

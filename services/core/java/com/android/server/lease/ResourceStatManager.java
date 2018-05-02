@@ -62,8 +62,8 @@ public class ResourceStatManager {
             //Slog.e(TAG, "No statHistory for the lease " + leaseId);
             return;
         }
-      /*  Slog.d(TAG, "Starting update lease " + leaseId + ", the startTime is " + startTime
-                + ", the endTime is " + endTime);*/
+        Slog.d(TAG, "Starting update lease " + leaseId + ", the startTime is " + startTime
+                + ", the endTime is " + endTime);
         statHistory.update(startTime, endTime, mContext, uid);
     }
 

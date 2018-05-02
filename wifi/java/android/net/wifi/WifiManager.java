@@ -19,8 +19,13 @@ package android.net.wifi;
 import android.annotation.SdkConstant;
 import android.annotation.SdkConstant.SdkConstantType;
 import android.annotation.SystemApi;
-import android.bluetooth.BluetoothAdapter;
 import android.content.Context;
+import android.lease.LeaseDescriptor;
+import android.lease.LeaseEvent;
+import android.lease.LeaseManager;
+import android.lease.LeaseProxy;
+import android.lease.LeaseStatus;
+import android.lease.ResourceType;
 import android.net.ConnectivityManager;
 import android.net.DhcpInfo;
 import android.net.Network;
@@ -36,11 +41,15 @@ import android.os.Messenger;
 import android.os.RemoteException;
 import android.os.WorkSource;
 import android.util.Log;
+import android.util.Slog;
 import android.util.SparseArray;
 
 import com.android.internal.util.AsyncChannel;
 import com.android.internal.util.Protocol;
 import com.android.server.net.NetworkPinner;
+
+import libcore.io.Libcore;
+import libcore.util.Objects;
 
 import java.net.InetAddress;
 import java.util.List;
@@ -702,6 +711,10 @@ public class WifiManager {
     private CountDownLatch mConnected;
     private Looper mLooper;
 
+    /*** LeaseOS changes ***/
+    private WakelockLeaseProxy mLeaseProxy;
+    /************************/
+
     /**
      * Create a new WifiManager instance.
      * Applications will almost always want to use
@@ -717,6 +730,16 @@ public class WifiManager {
         mService = service;
         mLooper = looper;
         mTargetSdkVersion = context.getApplicationInfo().targetSdkVersion;
+
+        /*** LeaseOS changes ***/
+
+        mLeaseProxy = new WakelockLeaseProxy(mContext);
+        if (!mLeaseProxy.start()) {
+            Slog.e(TAG, "Failed to start WakelockLeaseProxy");
+        } else {
+            Slog.i(TAG, "WakelockLeaseProxy started");
+        }
+        /**********************/
     }
 
     /**
@@ -2193,6 +2216,98 @@ public class WifiManager {
         }
     }
 
+    /*** LeaseOS changes ***/
+    private class WakelockLease extends LeaseDescriptor<IBinder> implements IBinder.DeathRecipient {
+        public WifiLock mLeaseValue;
+        public String mPackageName;
+
+        public WakelockLease(IBinder key, long lid, LeaseStatus status) {
+            super(key, lid, status);
+        }
+
+        @Override
+        public void binderDied() {
+            // Wake lock requester is dead. We need to clean up.
+            // The reason that we didn't use the WakeLock's death recipient method is that upon the
+            // release, power manager service will call unlinkToDeath, which will deregister the
+            // recipient. But the lease table lives longer than the release period.
+            mLeaseProxy.removeLease(this);
+            Slog.i(TAG, "Death of wakelock. Removed lease " + mLeaseId);
+        }
+    }
+
+    public class WakelockLeaseProxy extends LeaseProxy<IBinder> {
+
+        public WakelockLeaseProxy(Context context) {
+            super(LeaseManager.WAKELOCK_LEASE_PROXY, "PMS_PROXY", context);
+        }
+
+        @Override
+        public WakelockLease newLease(IBinder key, long leaseId, LeaseStatus status) {
+            WakelockLease lease = new WakelockLease(key, leaseId, status);
+            try {
+                key.linkToDeath(lease, 0);
+            } catch (RemoteException ex) {
+                throw new IllegalArgumentException("Wake lock is already dead.");
+            }
+            return lease;
+        }
+
+        @Override
+        public void onExpire(long leaseId) throws RemoteException {
+            Slog.d(TAG, "LeaseManagerService instruct me to expire lease " + leaseId);
+            WakelockLease lease = (WakelockLease) mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                WifiLock lock;
+                synchronized (mLock) {
+                    lock = lease.mLeaseValue;
+                }
+                if (lock != null) {
+                    Slog.e(TAG, "Release wakelock object for lease " + leaseId);
+                    lease.mLeaseValue.fromProxy = true;
+                    lease.mLeaseValue.release();
+                    lease.mLeaseValue.fromProxy = false;
+                }
+                lease.mLeaseStatus = LeaseStatus.EXPIRED;
+            }
+        }
+
+        @Override
+        public void onRenew(long leaseId) throws RemoteException {
+            Slog.d(TAG, "LeaseManagerService instruct me to renew lease " + leaseId);
+            WakelockLease lease = (WakelockLease)mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                WifiLock lock = lease.mLeaseValue;
+                if (lock == null) {
+                    Slog.e(TAG, "Cannot renew because no wakelock object is found for lease "
+                            + leaseId);
+                } else {
+                    if (lease.mLeaseStatus != LeaseStatus.EXPIRED) {
+                        Slog.e(TAG, "Skip renewing because lease " + leaseId + " has not been expire before");
+                    } else {
+                        // re-acquire the lock
+                        lease.mLeaseValue.fromProxy = true;
+                        lease.mLeaseValue.acquire();
+                        lease.mLeaseValue.fromProxy = false;
+                    }
+                    // assume that after this point the lease is active
+                    lease.mLeaseStatus = LeaseStatus.ACTIVE;
+                }
+            }
+        }
+
+        @Override
+        public void onReject(int uid) throws RemoteException {
+            freezeUid(uid, -1, 1);
+        }
+
+        @Override
+        public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
+            freezeUid(uid, freezeDuration, freeCount);
+        }
+    }
+    /*********************/
+
     /**
      * Allows an application to keep the Wi-Fi radio awake.
      * Normally the Wi-Fi radio may turn off when the user has not used the device in a while.
@@ -2221,6 +2336,7 @@ public class WifiManager {
         private boolean mRefCounted;
         private boolean mHeld;
         private WorkSource mWorkSource;
+        public boolean fromProxy;
 
         private WifiLock(int lockType, String tag) {
             mTag = tag;
@@ -2229,6 +2345,7 @@ public class WifiManager {
             mRefCount = 0;
             mRefCounted = true;
             mHeld = false;
+            fromProxy = false;
         }
 
         /**
@@ -2244,9 +2361,60 @@ public class WifiManager {
          */
         public void acquire() {
             synchronized (mBinder) {
+                Log.d(TAG, "Acquire wifilock, the count is " + mRefCount + ", the wifilock is count " + mRefCounted + ", the wifilock is held " + mHeld );
                 if (mRefCounted ? (++mRefCount == 1) : (!mHeld)) {
                     try {
+                        String packageName = mContext.getPackageName();
+                        int uid = Libcore.os.getuid();
+                        Log.d(TAG, "Acquire wifilock, for " + packageName);
                         mService.acquireWifiLock(mBinder, mLockType, mTag, mWorkSource);
+
+
+
+                        Slog.d(TAG, "Acquire the wifi lock =" + Objects.hashCode(mBinder) + ", uid=" + uid + ", package = " + packageName);
+                        if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                            // First, check if any lease has been created for this request or should the request
+                            // be denied for a while.
+                            WakelockLease lease = null;
+                            if (!fromProxy) {
+                                // For frequent asking problem, the lease manager might decides to
+                                // deny any lease creation request for a given UID instead of deny a
+                                // specific lease ID, in this case, we should check if the package/uid has
+                                // been temporarily banned, and if so we should just return.
+                                lease = (WakelockLease) mLeaseProxy.getLease(mBinder);
+                                if (lease != null) {
+                                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
+                                    if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
+                                        lease.mLeaseValue = this;
+                                        lease.mPackageName = packageName;
+                                        Slog.d(TAG, uid + " has been disruptive to lease manager service,"
+                                                + " freezing lease requests for a while..");
+                                    }
+                                }
+                            }
+                            /*********************/
+                            // Second, if no lease has been created for this request, try to request a lease
+                            // from the lease manager
+
+                            if (lease == null) {
+                                if (mLeaseProxy.exempt(packageName, uid)) {
+                                    Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
+                                } else if (!fromProxy) {
+                                    lease = (WakelockLease) mLeaseProxy.createLease(mBinder, uid, ResourceType.Wakelock);
+                                    if (lease != null) {
+                                        // hold the internal data structure in case we need it later
+                                        lease.mLeaseValue = this;
+                                        // TODO: invoke check and notify ResourceStatManager
+                                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
+                                    }
+
+                                }
+                            } else {
+                                // update the internal data structure in case we need it later
+                                lease.mLeaseValue = this;
+                            }
+                        }
+                        /*********************/
                         synchronized (WifiManager.this) {
                             if (mActiveLockCount >= MAX_ACTIVE_LOCKS) {
                                 mService.releaseWifiLock(mBinder);
@@ -2279,6 +2447,26 @@ public class WifiManager {
             synchronized (mBinder) {
                 if (mRefCounted ? (--mRefCount == 0) : (mHeld)) {
                     try {
+                        /***LeaseOS changes***/
+                        Slog.d(TAG, "release the wifi lock =" + Objects.hashCode(mBinder));
+                        if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                            WakelockLease lease = (WakelockLease)mLeaseProxy.getLease(mBinder);
+                            if (lease != null) {
+                                Slog.i(TAG, "Release called on the lease " + lease.mLeaseId);
+                                // TODO: notify ResourceStatManager about the release event
+                                if (!fromProxy) {
+                                    // if the release is not called from within the lease proxy
+                                    // we let the lease manager service know this event
+                                    // otherwise, we don't note the event because the callback to
+                                    // the proxy is from lease manager service who should be expecting
+                                    // this event
+                                    Slog.d(TAG, "Note the release event");
+                                    lease.mLeaseValue = null;
+                                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_RELEASE);
+                                }
+                            }
+                        }
+                        /*********************/
                         mService.releaseWifiLock(mBinder);
                         synchronized (WifiManager.this) {
                             mActiveLockCount--;
@@ -2293,6 +2481,11 @@ public class WifiManager {
                 }
             }
         }
+
+
+
+
+
 
         /**
          * Controls whether this is a reference-counted or non-reference-counted WifiLock.
@@ -2480,6 +2673,7 @@ public class WifiManager {
          */
         public void acquire() {
             synchronized (mBinder) {
+                Log.d(TAG, "Acquire wifilock2");
                 if (mRefCounted ? (++mRefCount == 1) : (!mHeld)) {
                     try {
                         mService.acquireMulticastLock(mBinder, mTag);

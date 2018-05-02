@@ -16,22 +16,32 @@
 
 package android.hardware;
 
-import android.Manifest;
+import android.app.ActivityManager;
 import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
-import android.content.pm.PackageManager;
+import android.lease.LeaseDescriptor;
+import android.lease.LeaseEvent;
+import android.lease.LeaseManager;
+import android.lease.LeaseProxy;
+import android.lease.LeaseStatus;
+import android.lease.ResourceType;
 import android.os.Handler;
+import android.os.IBinder;
 import android.os.Looper;
 import android.os.MessageQueue;
+import android.os.RemoteException;
 import android.util.Log;
 import android.util.SparseArray;
 import android.util.SparseBooleanArray;
 import android.util.SparseIntArray;
-import dalvik.system.CloseGuard;
 
 import com.android.internal.annotations.GuardedBy;
+
+import dalvik.system.CloseGuard;
+
+import libcore.io.Libcore;
 
 import java.lang.ref.WeakReference;
 import java.util.ArrayList;
@@ -86,6 +96,12 @@ public class SystemSensorManager extends SensorManager {
     private final Context mContext;
     private final long mNativeInstance;
 
+    /*** LeaseOS changes ***/
+
+    private SensorLeaseProxy mLeaseProxy;
+    private boolean fromProxy = false;
+    /************************/
+
     /** {@hide} */
     public SystemSensorManager(Context context, Looper mainLooper) {
         synchronized(sLock) {
@@ -107,6 +123,16 @@ public class SystemSensorManager extends SensorManager {
             mFullSensorsList.add(sensor);
             mHandleToSensor.put(sensor.getHandle(), sensor);
         }
+
+        /*** LeaseOS changes ***/
+
+        mLeaseProxy = new SensorLeaseProxy(mContext);
+        if (!mLeaseProxy.start()) {
+            Log.e(TAG, "Failed to start SensorLeaseProxy");
+        } else {
+            Log.i(TAG, "SensorLeaseProxy started");
+        }
+        /**********************/
     }
 
 
@@ -130,6 +156,8 @@ public class SystemSensorManager extends SensorManager {
     @Override
     protected boolean registerListenerImpl(SensorEventListener listener, Sensor sensor,
             int delayUs, Handler handler, int maxBatchReportLatencyUs, int reservedFlags) {
+        String packageName = mContext.getPackageName();
+        Log.e(TAG, "register a sensor for app " + packageName);
         if (listener == null || sensor == null) {
             Log.e(TAG, "sensor or listener is null");
             return false;
@@ -161,6 +189,71 @@ public class SystemSensorManager extends SensorManager {
                     return false;
                 }
                 mSensorListeners.put(listener, queue);
+
+                /*** LeaseOS changes ***/
+                ActivityManager.RunningTaskInfo info = null;
+                info = getActivity();
+                String activityName = info.topActivity.getClassName();
+                int uid = Libcore.os.getuid();
+                Log.d(TAG, "The activity is " + activityName);
+
+                if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                    // First, check if any lease has been created for this request or should the request
+                    // be denied for a while.
+                    SensorLease lease = null;
+                    if (!fromProxy) {
+                        // For frequent asking problem, the lease manager might decides to
+                        // deny any lease creation request for a given UID instead of deny a
+                        // specific lease ID, in this case, we should check if the package/uid has
+                        // been temporarily banned, and if so we should just return.
+                        lease = (SensorLease) mLeaseProxy.getLease(listener);
+                        if (lease != null) {
+                            mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
+                            if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
+                                lease.mLeaseValue = listener;
+                                lease.mActivityName = activityName;
+                                lease.mDelayUs = delayUs;
+                                lease.mHandler = handler;
+                                lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
+                                lease.mReservedFlags = reservedFlags;
+                                lease.mSensor = sensor;
+                                unregisterListenerImpl(lease.mLeaseValue, lease.mSensor);
+                                Log.d(TAG, uid + " has been disruptive to lease manager service,"
+                                        + " freezing lease requests for a while..");
+                            }
+                        }
+                    }
+                    /*********************/
+                    // Second, if no lease has been created for this request, try to request a lease
+                    // from the lease manager
+
+                    if (lease == null) {
+                        if (mLeaseProxy.exempt(packageName, uid)) {
+                            Log.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
+                        } else if (!fromProxy) {
+                            lease = (SensorLease) mLeaseProxy.createLease(listener, uid, ResourceType.Sensor);
+                            if (lease != null) {
+                                // hold the internal data structure in case we need it later
+                                lease.mLeaseValue = listener;
+                                lease.mActivityName = activityName;
+                                lease.mSensor = sensor;
+                                // TODO: invoke check and notify ResourceStatManager
+                                mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
+                                /*
+                                if (!activityName.contains(packageName)) {
+                                    mLeaseProxy.noteEvent(lease.mLeaseId,LeaseEvent.BACKGROUDAPP);
+                                }*/
+                            }
+
+                        }
+                    } else {
+                        // update the internal data structure in case we need it later
+                        lease.mLeaseValue = listener;
+                    }
+                }
+
+
+                /*********************/
                 return true;
             } else {
                 return queue.addSensor(sensor, delayUs, maxBatchReportLatencyUs);
@@ -168,13 +261,38 @@ public class SystemSensorManager extends SensorManager {
         }
     }
 
+
     /** @hide */
     @Override
     protected void unregisterListenerImpl(SensorEventListener listener, Sensor sensor) {
         // Trigger Sensors should use the cancelTriggerSensor call.
+        String packageName = mContext.getPackageName();
+        Log.e(TAG, "unregister a sensor for app " + packageName);
         if (sensor != null && sensor.getReportingMode() == Sensor.REPORTING_MODE_ONE_SHOT) {
             return;
         }
+
+        /***LeaseOS changes***/
+        if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+            SensorLease lease = (SensorLease) mLeaseProxy.getLease(listener);
+            if (lease != null) {
+                Log.i(TAG, "Release called on the lease " + lease.mLeaseId);
+                // TODO: notify ResourceStatManager about the release event
+                if (!fromProxy) {
+                    // if the release is not called from within the lease proxy
+                    // we let the lease manager service know this event
+                    // otherwise, we don't note the event because the callback to
+                    // the proxy is from lease manager service who should be expecting
+                    // this event
+                    Log.d(TAG, "Note the release event");
+                    lease.mLeaseValue = null;
+                    lease.mSensor = null;
+                    lease.mActivityName = null;
+                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_RELEASE);
+                }
+            }
+        }
+        /*********************/
 
         synchronized (mSensorListeners) {
             SensorEventQueue queue = mSensorListeners.get(listener);
@@ -192,6 +310,123 @@ public class SystemSensorManager extends SensorManager {
             }
         }
     }
+
+    /****** LeaseOS change ******/
+    public ActivityManager.RunningTaskInfo getActivity() {
+        ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager.RunningTaskInfo info;
+        if (manager != null) {
+            if (manager.getRunningTasks(1).size() == 0) {
+                return null;
+            } else {
+                info = manager.getRunningTasks(1).get(0);
+                return info;
+            }
+
+        } else {
+            Log.d(TAG,"Can not get the service");
+            return null;
+        }
+    }
+
+    private class SensorLease extends LeaseDescriptor<SensorEventListener> implements IBinder.DeathRecipient {
+        public SensorEventListener mLeaseValue;
+        public String mActivityName;
+        public Sensor mSensor;
+        public int mDelayUs;
+        public Handler mHandler;
+        public int mMaxBatchReportLatencyUs;
+        public int mReservedFlags;
+
+        public SensorLease(SensorEventListener key, long lid, LeaseStatus status) {
+            super(key, lid, status);
+        }
+
+        @Override
+        public void binderDied() {
+            // Wake lock requester is dead. We need to clean up.
+            // The reason that we didn't use the WakeLock's death recipient method is that upon the
+            // release, power manager service will call unlinkToDeath, which will deregister the
+            // recipient. But the lease table lives longer than the release period.
+            mLeaseProxy.removeLease(this);
+            Log.i(TAG, "Death of wakelock. Removed lease " + mLeaseId);
+        }
+    }
+
+
+    private class SensorLeaseProxy extends LeaseProxy<SensorEventListener> {
+
+        public SensorLeaseProxy(Context context) {
+            super(LeaseManager.SENSOR_LEASE_PROXY, "PMS_PROXY", context);
+        }
+
+        @Override
+        public LeaseDescriptor<SensorEventListener> newLease(SensorEventListener key, long leaseId, LeaseStatus status) {
+            SensorLease lease = new SensorLease(key, leaseId, status);
+            return lease;
+        }
+
+        @Override
+        public void onExpire(long leaseId) throws RemoteException {
+            Log.d(TAG, "LeaseManagerService instruct me to expire lease " + leaseId);
+            SensorLease lease = (SensorLease) mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                SensorEventListener receiver;
+                synchronized (mLock) {
+                    receiver = lease.mLeaseValue;
+                    if (receiver != null) {
+                        Log.e(TAG, "Release wakelock object for lease " + leaseId);
+                        fromProxy = true;
+                        unregisterListenerImpl(receiver, lease.mSensor);
+                        fromProxy = false;
+                    }
+                    lease.mLeaseStatus = LeaseStatus.EXPIRED;
+                }
+
+            }
+        }
+
+        @Override
+        public void onRenew(long leaseId) throws RemoteException {
+            Log.d(TAG, "LeaseManagerService instruct me to renew lease " + leaseId);
+            SensorLease lease = (SensorLease)mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                SensorEventListener receiver = lease.mLeaseValue;
+                synchronized (mLock) {
+                    if (receiver == null) {
+                        Log.e(TAG, "Cannot renew because no receiver object is found for lease "
+                                + leaseId);
+                    } else {
+                        if (lease.mLeaseStatus != LeaseStatus.EXPIRED) {
+                            Log.e(TAG, "Skip renewing because lease " + leaseId + " has not been expire before");
+                        } else {
+                            // re-acquire the lock
+                            fromProxy = true;
+                            registerListenerImpl(lease.mLeaseValue,lease.mSensor,lease.mDelayUs,lease.mHandler, lease.mMaxBatchReportLatencyUs,lease.mReservedFlags);
+                            fromProxy = false;
+                        }
+                        // assume that after this point the lease is active
+                        lease.mLeaseStatus = LeaseStatus.ACTIVE;
+                    }
+                }
+            }
+        }
+
+        @Override
+        public void onReject(int uid) throws RemoteException {
+
+        }
+
+        @Override
+        public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
+
+        }
+
+
+    }
+
+    /*********************/
+
 
     /** @hide */
     @Override

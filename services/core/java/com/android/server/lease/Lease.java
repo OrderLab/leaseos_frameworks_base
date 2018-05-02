@@ -257,16 +257,16 @@ public class Lease {
      */
     public boolean expire() {
         if (mStatus != LeaseStatus.ACTIVE) {
-            //Slog.e(TAG, "Skip expiring an inactive lease " + mLeaseId);
+            Slog.e(TAG, "Skip expiring an inactive lease " + mLeaseId);
             return false;
         }
         mStatus = LeaseStatus.EXPIRED;
         if (mProxy != null) {
             try {
-              // Slog.d(TAG, "Calling onExpire for lease " + mLeaseId);
+                Slog.d(TAG, "Calling onExpire for lease " + mLeaseId);
                 mProxy.onExpire(mLeaseId);
             } catch (RemoteException e) {
-               // Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
+                Slog.e(TAG, "Failed to invoke onExpire for lease " + mLeaseId);
                 return false;
             }
             return true;
@@ -307,13 +307,9 @@ public class Lease {
         mEndTime = SystemClock.elapsedRealtime();
 
         // update the stats for this lease term
-        long baseTime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "Begin to update lease stats at " + baseTime);
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
-        long currtime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "The time to update lease is " + (currtime - baseTime)/1000);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
-           // Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
+           Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
             renew(true);
             return;
         }
@@ -397,7 +393,7 @@ public class Lease {
      * @return true if the lease is renewed
      */
     public boolean renew(boolean auto) {
-       // Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
+        Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
         isDelay = false;
         if (!auto && mStatus != LeaseStatus.EXPIRED) {
             // if a renewal is not at the end of a lease term, we must check for status first
@@ -421,7 +417,8 @@ public class Lease {
                 success = mRStatManager.addResourceStat(mLeaseId, lStat);
                 break;
             case Sensor:
-                SensorStat sStat = new SensorStat(mBeginTime);
+                SensorStat sStat = new SensorStat(mBeginTime, mOwnerId, mContext, mLeaseManagerService, mHandler);
+                mStatus = LeaseStatus.ACTIVE;
                 success = mRStatManager.addResourceStat(mLeaseId, sStat);
                 break;
         }
