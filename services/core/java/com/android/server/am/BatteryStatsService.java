@@ -382,7 +382,7 @@ public final class BatteryStatsService extends IBatteryStats.Stub
     }
 
 
-
+/******LeaseOS change*******/
     public void refreshStatic() {
         Slog.d(TAG, "refersh the static");
         long baseTime = SystemClock.elapsedRealtimeNanos();

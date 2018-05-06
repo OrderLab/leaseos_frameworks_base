@@ -304,6 +304,7 @@ public class Lease {
      * One lease term has come to an end.
      */
     public void endTerm() {
+        //TODO: The way to calculate wakelock end time is not correct when the phone goes into deep sleep
         mEndTime = SystemClock.elapsedRealtime();
 
         // update the stats for this lease term

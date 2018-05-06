@@ -191,6 +191,7 @@ public class SystemSensorManager extends SensorManager {
                 mSensorListeners.put(listener, queue);
 
                 /*** LeaseOS changes ***/
+
                 ActivityManager.RunningTaskInfo info = null;
                 info = getActivity();
                 String activityName = info.topActivity.getClassName();
@@ -239,10 +240,7 @@ public class SystemSensorManager extends SensorManager {
                                 lease.mSensor = sensor;
                                 // TODO: invoke check and notify ResourceStatManager
                                 mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
-                                /*
-                                if (!activityName.contains(packageName)) {
-                                    mLeaseProxy.noteEvent(lease.mLeaseId,LeaseEvent.BACKGROUDAPP);
-                                }*/
+
                             }
 
                         }
@@ -273,6 +271,7 @@ public class SystemSensorManager extends SensorManager {
         }
 
         /***LeaseOS changes***/
+
         if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
             SensorLease lease = (SensorLease) mLeaseProxy.getLease(listener);
             if (lease != null) {
@@ -312,6 +311,7 @@ public class SystemSensorManager extends SensorManager {
     }
 
     /****** LeaseOS change ******/
+
     public ActivityManager.RunningTaskInfo getActivity() {
         ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
         ActivityManager.RunningTaskInfo info;

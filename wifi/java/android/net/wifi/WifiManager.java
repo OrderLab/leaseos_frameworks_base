@@ -712,6 +712,7 @@ public class WifiManager {
     private Looper mLooper;
 
     /*** LeaseOS changes ***/
+/*
     private WakelockLeaseProxy mLeaseProxy;
     /************************/
 
@@ -732,7 +733,7 @@ public class WifiManager {
         mTargetSdkVersion = context.getApplicationInfo().targetSdkVersion;
 
         /*** LeaseOS changes ***/
-
+/*
         mLeaseProxy = new WakelockLeaseProxy(mContext);
         if (!mLeaseProxy.start()) {
             Slog.e(TAG, "Failed to start WakelockLeaseProxy");
@@ -2217,6 +2218,7 @@ public class WifiManager {
     }
 
     /*** LeaseOS changes ***/
+/*
     private class WakelockLease extends LeaseDescriptor<IBinder> implements IBinder.DeathRecipient {
         public WifiLock mLeaseValue;
         public String mPackageName;
@@ -2264,9 +2266,9 @@ public class WifiManager {
                 }
                 if (lock != null) {
                     Slog.e(TAG, "Release wakelock object for lease " + leaseId);
-                    lease.mLeaseValue.fromProxy = true;
+                   // lease.mLeaseValue.fromProxy = true;
                     lease.mLeaseValue.release();
-                    lease.mLeaseValue.fromProxy = false;
+                   // lease.mLeaseValue.fromProxy = false;
                 }
                 lease.mLeaseStatus = LeaseStatus.EXPIRED;
             }
@@ -2286,9 +2288,9 @@ public class WifiManager {
                         Slog.e(TAG, "Skip renewing because lease " + leaseId + " has not been expire before");
                     } else {
                         // re-acquire the lock
-                        lease.mLeaseValue.fromProxy = true;
+                       // lease.mLeaseValue.fromProxy = true;
                         lease.mLeaseValue.acquire();
-                        lease.mLeaseValue.fromProxy = false;
+                       // lease.mLeaseValue.fromProxy = false;
                     }
                     // assume that after this point the lease is active
                     lease.mLeaseStatus = LeaseStatus.ACTIVE;
@@ -2336,7 +2338,7 @@ public class WifiManager {
         private boolean mRefCounted;
         private boolean mHeld;
         private WorkSource mWorkSource;
-        public boolean fromProxy;
+        //public boolean fromProxy;
 
         private WifiLock(int lockType, String tag) {
             mTag = tag;
@@ -2345,7 +2347,7 @@ public class WifiManager {
             mRefCount = 0;
             mRefCounted = true;
             mHeld = false;
-            fromProxy = false;
+           // fromProxy = false;
         }
 
         /**
@@ -2370,7 +2372,8 @@ public class WifiManager {
                         mService.acquireWifiLock(mBinder, mLockType, mTag, mWorkSource);
 
 
-
+                        /*****LeaseOS change*****/
+/*
                         Slog.d(TAG, "Acquire the wifi lock =" + Objects.hashCode(mBinder) + ", uid=" + uid + ", package = " + packageName);
                         if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
                             // First, check if any lease has been created for this request or should the request
@@ -2395,7 +2398,7 @@ public class WifiManager {
                             /*********************/
                             // Second, if no lease has been created for this request, try to request a lease
                             // from the lease manager
-
+/*
                             if (lease == null) {
                                 if (mLeaseProxy.exempt(packageName, uid)) {
                                     Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
@@ -2448,6 +2451,7 @@ public class WifiManager {
                 if (mRefCounted ? (--mRefCount == 0) : (mHeld)) {
                     try {
                         /***LeaseOS changes***/
+                        /*
                         Slog.d(TAG, "release the wifi lock =" + Objects.hashCode(mBinder));
                         if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
                             WakelockLease lease = (WakelockLease)mLeaseProxy.getLease(mBinder);
