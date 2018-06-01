@@ -41,8 +41,8 @@ public class Lease {
     public static int USER_DEFINE_DELAY_TIME = 30 * 1000; // the delay time, default 30 seconds
     public static final int MAX_DELAY_NUMBER = 200;
 
-    private static final int DEFAULT_FREQUENCYASK_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
-    private static final int DEFAULT_FREQUENCYASK_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_FREQUENCYASK_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_FREQUENCYASK_DELAY_MS = 20 * TimeUtils.MILLIS_PER_SECOND;
 
     private static final int DEFAULT_LONGHOLD_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
     private static final int DEFAULT_LONGHOLD_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
@@ -271,7 +271,7 @@ public class Lease {
             }
             return true;
         } else {
-            //Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
+            Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
             return false;
         }
     }

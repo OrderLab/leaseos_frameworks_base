@@ -50,7 +50,7 @@ interface ILeaseManager {
     void noteEvent(long leaseId, in LeaseEvent event);
 
     /* register a lease proxy with the lease manager service */
-    boolean registerProxy(int type, String name, ILeaseProxy proxy);
+    boolean registerProxy(int type, String name, ILeaseProxy proxy, int uid);
 
     /* unregister a lease proxy with the lease manager service */
     boolean unregisterProxy(ILeaseProxy proxy);

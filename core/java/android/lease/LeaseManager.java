@@ -181,9 +181,9 @@ public final class LeaseManager {
      * @param proxy
      * @return
      */
-    public boolean registerProxy(int type, String name, ILeaseProxy proxy) {
+    public boolean registerProxy(int type, String name, ILeaseProxy proxy, int uid) {
         try {
-            return mService.registerProxy(type, name, proxy);
+            return mService.registerProxy(type, name, proxy, uid);
         } catch (RemoteException e) {
             Log.wtf(TAG, "Fail to register lease proxy");
             return false;

@@ -1886,7 +1886,7 @@ public class LocationManagerService extends ILocationManager.Stub {
             // release, power manager service will call unlinkToDeath, which will deregister the
             // recipient. But the lease table lives longer than the release period.
             mLeaseProxy.removeLease(this);
-            Slog.i(TAG, "Death of wakelock. Removed lease " + mLeaseId);
+            Slog.i(TAG, "Death of location listener. Removed lease " + mLeaseId);
         }
     }
 

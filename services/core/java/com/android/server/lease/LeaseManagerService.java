@@ -81,8 +81,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     // All registered lease proxies
     private final HashMap<IBinder, LeaseProxy> mProxies = new HashMap<>();
-    private final SparseArray<LeaseProxy> mTypedProxies = new SparseArray<>();
-
+    private final SparseArray<ArrayList> mTypedProxies = new SparseArray<>();
 
     // Each type of lease will get assigned with a different worker thread to
     // handle work related to these leases
@@ -156,6 +155,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
            // Slog.d(TAG, "Create a StatHistory for the " + mLastLeaseId);
 
             LeaseProxy proxy = null;
+            ArrayList<LeaseProxy> wrapperList;
             LeaseWorkerHandler handler = null;
             long now = SystemClock.elapsedRealtime();
             switch (rtype) {
@@ -164,21 +164,36 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                     handler = mWorkers.get(LeaseManager.WAKELOCK_LEASE_PROXY);
                     WakelockStat wStat = new WakelockStat(now, uid, mContext, this, handler);
                     statHistory.addItem(wStat);
-                    proxy = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
+                    wrapperList = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
+                    proxy = wrapperList.get(0);
                     break;
                 case Location:
                     statHistory = new StatHistory(ResourceType.Location, this);
                     handler = mWorkers.get(LeaseManager.LOCATION_LEASE_PROXY);
                     LocationStat lStat = new LocationStat(now, uid, mContext, this, handler);
                     statHistory.addItem(lStat);
-                    proxy = mTypedProxies.get(LeaseManager.LOCATION_LEASE_PROXY);
+                    wrapperList = mTypedProxies.get(LeaseManager.LOCATION_LEASE_PROXY);
+                    proxy = wrapperList.get(0);
                     break;
                 case Sensor:
                     statHistory = new StatHistory(ResourceType.Sensor, this);
                     handler = mWorkers.get(LeaseManager.SENSOR_LEASE_PROXY);
                     SensorStat sStat = new SensorStat(now, uid, mContext, this, handler);
                     statHistory.addItem(sStat);
-                    proxy = mTypedProxies.get(LeaseManager.SENSOR_LEASE_PROXY);
+                    wrapperList = mTypedProxies.get(LeaseManager.SENSOR_LEASE_PROXY);
+                    boolean flag = false;
+                    Slog.d(TAG, "The lease uid is " + uid);
+                    for (LeaseProxy leaseProxy:wrapperList) {
+                        Slog.d(TAG, "The leaseProxy uid is " + leaseProxy.mUid);
+                        if (uid == leaseProxy.mUid) {
+                            proxy = leaseProxy;
+                            flag = true;
+                            break;
+                        }
+                    }
+                    if (flag == false) {
+                        proxy = null;
+                    }
                     break;
                 default:
                     statHistory = new StatHistory(ResourceType.Wakelock, this);
@@ -429,7 +444,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     public void systemRunning() {
-        //Slog.d(TAG, "Ready to start lease");
+        Slog.d(TAG, "Ready to start lease");
         synchronized (mLock) {
             // We should ALWAYS register for settings changes!
             // Otherwise we won't get notified when users change
@@ -446,7 +461,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     private void registerSettingsListeners() {
-        //Slog.d(TAG, "Registering content observer");
+        Slog.d(TAG, "Registering content observer");
         mSettingsObserver = new SettingsObserver(mHandler);
         // Register for settings changes.
         final ContentResolver resolver = mContext.getContentResolver();
@@ -472,7 +487,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     }
 
     private void runBatteryTracing(LeaseSettings newSettings) {
-      //  Slog.d(TAG, "The default tracing interval is " + newSettings.batteryTracingInterval);
+        Slog.d(TAG, "The default tracing interval is " + newSettings.batteryTracingInterval);
         mBatteryTracingInterval = newSettings.batteryTracingInterval;
         BatteryMonitor.getInstance(mContext).getStat();
         scheduleBatteryTracing();
@@ -494,7 +509,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private void updateSettingsLocked(LeaseSettings newSettings) {
         // If it's service enabling/disabling change, we need to start
         // or stop the leases
-       // Slog.d(TAG, "Updating setting");
+        Slog.d(TAG, "Updating setting");
         if (mSettings.batteryTracingEnabled != newSettings.batteryTracingEnabled) {
             if (newSettings.batteryTracingEnabled) {
                 mSettings = newSettings;
@@ -581,28 +596,13 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
         for (LeaseProxy leaseProxy:mProxies.values()) {
             if (disableLeases.contains(leaseProxy.mType)) {
-                try {
-                    Slog.d(TAG, "Stopping " + leaseProxy.mType + " lease due to settings change");
-                    if (leaseProxy.mType == LeaseManager.WAKELOCK_LEASE_PROXY) {
-                        stopLeaseProxyLocked(LeaseManager.WAKELOCK_LEASE_PROXY);
-                        stopLeaseLocked(ResourceType.Wakelock);
-                    } else if (leaseProxy.mType == LeaseManager.LOCATION_LEASE_PROXY) {
-                        stopLeaseProxyLocked(LeaseManager.LOCATION_LEASE_PROXY);
-                        stopLeaseLocked(ResourceType.Location);
-                    } else if (leaseProxy.mType == LeaseManager.SENSOR_LEASE_PROXY) {
-                        stopLeaseProxyLocked(LeaseManager.SENSOR_LEASE_PROXY);
-                        stopLeaseLocked(ResourceType.Sensor);
-                    } else {
-                        Slog.d(TAG, "Unknow type of lease proxy");
-                    }
-                    leaseProxy.mProxy.stopLease();
-                } catch (RemoteException e) {
-                    e.printStackTrace();
-                }
+                Slog.d(TAG, "Stopping " + leaseProxy.mType + " lease due to settings change");
+                stopLeaseProxyLocked(leaseProxy);
+                stopLeaseLocked(leaseProxy);
             }
             if (enableLeases.contains(leaseProxy.mType)) {
                 try {
-                    Slog.d(TAG, "Starting guardian " + leaseProxy + " due to settings change");
+                    Slog.d(TAG, "Starting lease " + leaseProxy + " due to settings change");
                     leaseProxy.mProxy.startLease(newSettings);
                 } catch (RemoteException e) {
                     e.printStackTrace();
@@ -628,16 +628,12 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
-    private void stopLeaseProxyLocked(int type) {
-        Slog.d(TAG, "Stopping all " + type + " lease proxy...");
-        for (LeaseProxy proxy : mProxies.values()) {
-            try {
-                if (proxy.mType == type) {
-                    proxy.mProxy.stopLease();
-                }
-            } catch (RemoteException e) {
-                Slog.e(TAG, "Fail to stop defense " + proxy);
-            }
+    private void stopLeaseProxyLocked(LeaseProxy proxy) {
+        Slog.d(TAG, "Stopping lease proxy" + proxy + "...");
+        try {
+            proxy.mProxy.stopLease();
+        } catch (RemoteException e) {
+            Slog.e(TAG, "Fail to stop defense " + proxy);
         }
     }
 
@@ -662,13 +658,30 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         mRStatManager.clearAll();
     }
 
-    private void  stopLeaseLocked(ResourceType type) {
-        Slog.d(TAG, "Stopping all " + type + " lease...");
+    private void stopLeaseLocked(LeaseProxy proxy) {
+        Slog.d(TAG, "Stopping " + proxy.mType + " lease of proxy" + proxy.mKey + "...");
+        ArrayList<Long> removeTable = new ArrayList<>();
+        ResourceType type;
+        if (proxy.mType == LeaseManager.WAKELOCK_LEASE_PROXY) {
+            type = ResourceType.Wakelock;
+        } else if (proxy.mType == LeaseManager.LOCATION_LEASE_PROXY) {
+            type = ResourceType.Location;
+        } else if (proxy.mType == LeaseManager.SENSOR_LEASE_PROXY) {
+            type = ResourceType.Sensor;
+        } else {
+            type = null;
+        }
         for (int i = 0; i < mLeases.size(); i++) {
             Lease lease = mLeases.valueAt(i);
-            if (lease.mType == type) {
-                remove(lease.mLeaseId);
+            if (lease.mType == type && lease.mOwnerId == proxy.mUid ) {
+                Long key = mLeases.keyAt(i);
+                Slog.d(TAG,"leaseid = " + key);
+                removeTable.add(key);
             }
+        }
+
+        for (Long leaseId : removeTable) {
+            remove(leaseId);
         }
     }
 
@@ -705,11 +718,23 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @param name
      * @return
      */
-    private LeaseProxy newProxyLocked(ILeaseProxy proxy, int type, String name) {
+    private LeaseProxy newProxyLocked(ILeaseProxy proxy, int type, String name, int uid) {
         IBinder binder = proxy.asBinder();
-        LeaseProxy wrapper = new LeaseProxy(proxy, type, name);
+        LeaseProxy wrapper = new LeaseProxy(proxy, type, name, uid);
+        ArrayList <LeaseProxy> wrapperList;
         mProxies.put(binder, wrapper);
-        mTypedProxies.put(type, wrapper); // we only allow one proxy to be registered for one type
+
+        wrapperList = mTypedProxies.get(type);
+        if (wrapperList == null) {
+            wrapperList = new ArrayList<>();
+            mTypedProxies.put(type, wrapperList); // we  allow multiple proxies to be registered for one type
+        } else {
+            wrapperList.add(wrapper);
+            mTypedProxies.put(type, wrapperList); // we  allow multiple proxies to be registered for one type
+        }
+
+        Slog.d(TAG, "The type is " + type + " The size is " + wrapperList.size() + " the uid is " + uid);
+
         try {
             binder.linkToDeath(wrapper, 0);
         } catch (RemoteException e) {
@@ -740,7 +765,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      * @throws RemoteException
      */
     @Override
-    public boolean registerProxy(int type, String name, ILeaseProxy proxy) throws RemoteException {
+    public boolean registerProxy(int type, String name, ILeaseProxy proxy, int uid) throws RemoteException {
         Slog.d(TAG, "Registering lease proxy " + name);
         long identity = Binder.clearCallingIdentity();
         try {
@@ -751,7 +776,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                     Slog.d(TAG, "proxy " + name + " is already registered");
                     return false;
                 }
-                wrapper = newProxyLocked(proxy, type, name);
+                wrapper = newProxyLocked(proxy, type, name, uid);
                 return wrapper != null;
             }
         }
@@ -777,7 +802,13 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 LeaseProxy wrapper = mProxies.get(proxy.asBinder());
                 if (wrapper != null) {
                     mProxies.remove(wrapper.mKey);
-                    mTypedProxies.remove(wrapper.mType);
+                    ArrayList<LeaseProxy> wrapperList = mTypedProxies.get(wrapper.mType);
+                    wrapperList.remove(wrapper);
+                    if (wrapperList == null) {
+                        mTypedProxies.remove(wrapper.mType);
+                    } else {
+                        mTypedProxies.put(wrapper.mType, wrapperList);
+                    }
                     Slog.d(TAG, "Lease proxy " + wrapper + " unregistered");
                 } else {
                     Slog.e(TAG, "No internal lease proxy object found");
@@ -797,8 +828,16 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private void handleProxyDeath(LeaseProxy proxy) {
         synchronized (mLock) {
             Slog.d(TAG, "Lease proxy " + proxy + " died ...>.<...");
+            stopLeaseProxyLocked(proxy);
+            stopLeaseLocked(proxy);
             mProxies.remove(proxy.mKey);
-            mTypedProxies.remove(proxy.mType);
+            ArrayList<LeaseProxy> wrapperList = mTypedProxies.get(proxy.mType);
+            wrapperList.remove(proxy);
+            if (wrapperList == null) {
+                mTypedProxies.remove(proxy.mType);
+            } else {
+                mTypedProxies.put(proxy.mType, wrapperList);
+            }
         }
     }
 
@@ -810,12 +849,14 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         public final int mType;
         public final String mName;
         public final IBinder mKey;
+        public final int mUid;
 
-        public LeaseProxy(ILeaseProxy proxy, int type, String name) {
+        public LeaseProxy(ILeaseProxy proxy, int type, String name, int uid) {
             mProxy = proxy;
             mType = type;
             mName = name;
             mKey = proxy.asBinder();
+            mUid = uid;
         }
 
         @Override

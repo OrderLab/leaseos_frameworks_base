@@ -156,8 +156,8 @@ public class SystemSensorManager extends SensorManager {
     @Override
     protected boolean registerListenerImpl(SensorEventListener listener, Sensor sensor,
             int delayUs, Handler handler, int maxBatchReportLatencyUs, int reservedFlags) {
-        String packageName = mContext.getPackageName();
-        Log.e(TAG, "register a sensor for app " + packageName);
+        //String packageName = mContext.getPackageName();
+        //Log.e(TAG, "register a sensor for app " + packageName);
         if (listener == null || sensor == null) {
             Log.e(TAG, "sensor or listener is null");
             return false;
@@ -194,10 +194,12 @@ public class SystemSensorManager extends SensorManager {
 
                 ActivityManager.RunningTaskInfo info = null;
                 info = getActivity();
+                String packageName = info.topActivity.getPackageName();
                 String activityName = info.topActivity.getClassName();
-                int uid = Libcore.os.getuid();
-                Log.d(TAG, "The activity is " + activityName);
 
+                int uid = Libcore.os.getuid();
+                Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]" + "requires sensor " + sensor + ", fromproxy " + fromProxy);
+                Log.d(TAG, "The listener is " + listener);
                 if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
                     // First, check if any lease has been created for this request or should the request
                     // be denied for a while.
@@ -207,6 +209,7 @@ public class SystemSensorManager extends SensorManager {
                         // deny any lease creation request for a given UID instead of deny a
                         // specific lease ID, in this case, we should check if the package/uid has
                         // been temporarily banned, and if so we should just return.
+                        Log.d(TAG, "Yigong Hu");
                         lease = (SensorLease) mLeaseProxy.getLease(listener);
                         if (lease != null) {
                             mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
@@ -240,7 +243,6 @@ public class SystemSensorManager extends SensorManager {
                                 lease.mSensor = sensor;
                                 // TODO: invoke check and notify ResourceStatManager
                                 mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
-
                             }
 
                         }
@@ -249,8 +251,6 @@ public class SystemSensorManager extends SensorManager {
                         lease.mLeaseValue = listener;
                     }
                 }
-
-
                 /*********************/
                 return true;
             } else {
@@ -264,8 +264,14 @@ public class SystemSensorManager extends SensorManager {
     @Override
     protected void unregisterListenerImpl(SensorEventListener listener, Sensor sensor) {
         // Trigger Sensors should use the cancelTriggerSensor call.
-        String packageName = mContext.getPackageName();
-        Log.e(TAG, "unregister a sensor for app " + packageName);
+        ActivityManager.RunningTaskInfo info = null;
+        info = getActivity();
+
+        String packageName = info.topActivity.getPackageName();
+        String activityName = info.topActivity.getClassName();
+
+        int uid = Libcore.os.getuid();
+        Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]" + "unregister sensor " + sensor);
         if (sensor != null && sensor.getReportingMode() == Sensor.REPORTING_MODE_ONE_SHOT) {
             return;
         }
@@ -345,11 +351,11 @@ public class SystemSensorManager extends SensorManager {
         @Override
         public void binderDied() {
             // Wake lock requester is dead. We need to clean up.
-            // The reason that we didn't use the WakeLock's death recipient method is that upon the
+            // The reason that we didn't use the Listener's death recipient method is that upon the
             // release, power manager service will call unlinkToDeath, which will deregister the
             // recipient. But the lease table lives longer than the release period.
             mLeaseProxy.removeLease(this);
-            Log.i(TAG, "Death of wakelock. Removed lease " + mLeaseId);
+            Log.i(TAG, "Death of sensor listener. Removed lease " + mLeaseId);
         }
     }
 
@@ -375,7 +381,7 @@ public class SystemSensorManager extends SensorManager {
                 synchronized (mLock) {
                     receiver = lease.mLeaseValue;
                     if (receiver != null) {
-                        Log.e(TAG, "Release wakelock object for lease " + leaseId);
+                        Log.e(TAG, "Release sensor listener object for lease " + leaseId);
                         fromProxy = true;
                         unregisterListenerImpl(receiver, lease.mSensor);
                         fromProxy = false;
@@ -424,6 +430,9 @@ public class SystemSensorManager extends SensorManager {
 
 
     }
+
+    /*********************/
+
 
     /*********************/
 
