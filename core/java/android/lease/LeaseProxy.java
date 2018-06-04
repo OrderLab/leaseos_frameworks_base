@@ -147,11 +147,6 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
      */
     public LeaseDescriptor<S> getLease(S key) {
         Enumeration e = mLeaseTable.keys();
-        while( e. hasMoreElements() ){
-
-            Slog.d(TAG, "The key is " + e.nextElement());
-
-        }
         return mLeaseTable.get(key);
     }
 

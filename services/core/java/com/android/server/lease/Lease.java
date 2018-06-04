@@ -45,7 +45,7 @@ public class Lease {
     private static final int DEFAULT_FREQUENCYASK_DELAY_MS = 20 * TimeUtils.MILLIS_PER_SECOND;
 
     private static final int DEFAULT_LONGHOLD_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
-    private static final int DEFAULT_LONGHOLD_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_LONGHOLD_DELAY_MS = 50 * TimeUtils.MILLIS_PER_SECOND;
 
     private static final int DEFAULT_LOWUTILITY_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
     private static final int DEFAULT_LOWUTILITY_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;

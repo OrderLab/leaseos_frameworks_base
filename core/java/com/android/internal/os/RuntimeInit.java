@@ -177,7 +177,7 @@ public class RuntimeInit {
             if (!isExempt(uid)) {
                 String processName = ActivityThread.currentProcessName();
                 Slog.d(TAG,
-                        "The process is " + processName + " for " + uid + ", for exception " + e);
+                        "uid is " + uid +",for exception " + e);
             }
         }
     }

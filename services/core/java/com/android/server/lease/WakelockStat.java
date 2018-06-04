@@ -92,8 +92,8 @@ public class WakelockStat extends ResourceStat {
                 + ", the CPU usage time is " + mUsageTime + ", the utility is " + mUtility);
         judge();
         // TODO: uncomment inserting db to make it work
-       // LeaseStatsRecord record = createRecord(mUid);
-       // LeaseStatsDBHelper.getInstance(context).insert(record);
+        LeaseStatsRecord record = createRecord(mUid);
+        LeaseStatsDBHelper.getInstance(context).insert(record);
     }
 
     public LeaseStatsRecord createRecord(int uid) {

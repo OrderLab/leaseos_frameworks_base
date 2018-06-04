@@ -165,6 +165,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                     WakelockStat wStat = new WakelockStat(now, uid, mContext, this, handler);
                     statHistory.addItem(wStat);
                     wrapperList = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
+                    Slog.d(TAG, "The size is " + wrapperList.size());
                     proxy = wrapperList.get(0);
                     break;
                 case Location:
@@ -727,11 +728,10 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         wrapperList = mTypedProxies.get(type);
         if (wrapperList == null) {
             wrapperList = new ArrayList<>();
-            mTypedProxies.put(type, wrapperList); // we  allow multiple proxies to be registered for one type
-        } else {
-            wrapperList.add(wrapper);
-            mTypedProxies.put(type, wrapperList); // we  allow multiple proxies to be registered for one type
         }
+        wrapperList.add(wrapper);
+        mTypedProxies.put(type, wrapperList); // we  allow multiple proxies to be registered for one type
+
 
         Slog.d(TAG, "The type is " + type + " The size is " + wrapperList.size() + " the uid is " + uid);
 

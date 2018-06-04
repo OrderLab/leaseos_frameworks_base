@@ -198,7 +198,7 @@ public class SystemSensorManager extends SensorManager {
                 String activityName = info.topActivity.getClassName();
 
                 int uid = Libcore.os.getuid();
-                Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]" + "requires sensor " + sensor + ", fromproxy " + fromProxy);
+                Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]requires sensor " + sensor + ", fromproxy " + fromProxy);
                 Log.d(TAG, "The listener is " + listener);
                 if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
                     // First, check if any lease has been created for this request or should the request

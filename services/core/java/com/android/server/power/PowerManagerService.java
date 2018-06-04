@@ -596,6 +596,7 @@ public final class PowerManagerService extends SystemService
 
     public void systemReady(IAppOpsService appOps) {
         synchronized (mLock) {
+            Slog.d(TAG,"The system is ready");
             mSystemReady = true;
             mAppOps = appOps;
             mDreamManager = getLocalService(DreamManagerInternal.class);
@@ -1633,6 +1634,7 @@ public final class PowerManagerService extends SystemService
      */
     private void updatePowerStateLocked() {
         if (!mSystemReady || mDirty == 0) {
+            Slog.d(TAG, "System is not ready");
             return;
         }
         if (!Thread.holdsLock(mLock)) {
