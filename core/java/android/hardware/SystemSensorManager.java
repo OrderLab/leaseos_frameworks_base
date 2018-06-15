@@ -209,7 +209,6 @@ public class SystemSensorManager extends SensorManager {
                         // deny any lease creation request for a given UID instead of deny a
                         // specific lease ID, in this case, we should check if the package/uid has
                         // been temporarily banned, and if so we should just return.
-                        Log.d(TAG, "Yigong Hu");
                         lease = (SensorLease) mLeaseProxy.getLease(listener);
                         if (lease != null) {
                             mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);

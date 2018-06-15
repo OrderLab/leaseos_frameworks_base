@@ -18,9 +18,12 @@ package android.hardware;
 
 import android.os.RemoteException;
 import android.os.ServiceManager;
+import android.util.Log;
 import android.view.IRotationWatcher;
 import android.view.IWindowManager;
 import android.view.Surface;
+
+import libcore.io.Libcore;
 
 import java.util.HashMap;
 import java.util.List;
@@ -131,6 +134,7 @@ final class LegacySensorManager {
                     // register this legacy sensor with this legacy listener
                     if (legacyListener.registerSensor(legacyType)) {
                         // and finally, register the legacy listener with the new apis
+                        Log.d("LegacySensorManager", "The uid is " + Libcore.os.getuid() + ", the rate is " + rate);
                         result = mSensorManager.registerListener(legacyListener, sensor, rate);
                     } else {
                         result = true; // sensor already enabled
