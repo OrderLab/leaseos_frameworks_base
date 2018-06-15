@@ -23,12 +23,14 @@ import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
 import android.util.Log;
 
+import libcore.io.Libcore;
+
 /**
  * Helper class for receiving notifications from the SensorManager when
  * the orientation of the device has changed.
  */
 public abstract class OrientationEventListener {
-    private static final String TAG = "OrientationEventListener";
+    private static final String TAG = "OrientationEventList";
     private static final boolean DEBUG = false;
     private static final boolean localLOGV = false;
     private int mOrientation = ORIENTATION_UNKNOWN;
@@ -90,6 +92,7 @@ public abstract class OrientationEventListener {
         }
         if (mEnabled == false) {
             if (localLOGV) Log.d(TAG, "OrientationEventListener enabled");
+            Log.d(TAG, "The uid is " + Libcore.os.getuid() + ", the rate is " + mRate);
             mSensorManager.registerListener(mSensorEventListener, mSensor, mRate);
             mEnabled = true;
         }

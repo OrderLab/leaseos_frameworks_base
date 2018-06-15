@@ -22,6 +22,8 @@ import android.os.Handler;
 import android.util.Log;
 import android.util.SparseArray;
 
+import libcore.io.Libcore;
+
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.List;
@@ -1823,6 +1825,7 @@ public abstract class SensorManager {
                 delay = 200000;
                 break;
             default:
+                Log.d(TAG, "The uid is " + Libcore.os.getuid() + ", the rate is " + rate);
                 delay = rate;
                 break;
         }
