@@ -27,7 +27,18 @@ import android.lease.ResourceType;
 import android.lease.TimeUtils;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.text.TextUtils;
 import android.util.Slog;
+
+import libcore.io.Libcore;
+
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.FileOutputStream;
+import java.io.FileReader;
+import java.io.FileWriter;
+import java.io.IOException;
 
 /**
  * The struct of lease.
@@ -45,7 +56,7 @@ public class Lease {
     private static final int DEFAULT_FREQUENCYASK_DELAY_MS = 20 * TimeUtils.MILLIS_PER_SECOND;
 
     private static final int DEFAULT_LONGHOLD_TERM_MS = 10 * TimeUtils.MILLIS_PER_SECOND;
-    private static final int DEFAULT_LONGHOLD_DELAY_MS = 50 * TimeUtils.MILLIS_PER_SECOND;
+    private static final int DEFAULT_LONGHOLD_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
 
     private static final int DEFAULT_LOWUTILITY_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
     private static final int DEFAULT_LOWUTILITY_DELAY_MS = 30 * TimeUtils.MILLIS_PER_SECOND;
@@ -303,7 +314,32 @@ public class Lease {
     /**
      * One lease term has come to an end.
      */
+    private static final String sProcFile = "/proc/uid_cputime/show_uid_stat";
+
     public void endTerm() {
+        /*
+        long userTimeUs = 0;
+        long systemTimeUs = 0;
+        long basesysTime = 0;
+        long currentsysTime = 0;
+        try (BufferedReader reader = new BufferedReader(new FileReader(sProcFile))) {
+            TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(' ');
+            String line;
+            while ((line = reader.readLine()) != null) {
+                splitter.setString(line);
+                String uidStr = splitter.next();
+                int uid = Integer.parseInt(uidStr.substring(0, uidStr.length() - 1), 10);
+                if (uid == 1000) {
+                    userTimeUs = Long.parseLong(splitter.next(), 10);
+                    systemTimeUs = Long.parseLong(splitter.next(), 10);
+                    basesysTime = userTimeUs + systemTimeUs;
+                    break;
+                }
+            }
+        } catch (Exception e) {
+        }
+        long baseTime = SystemClock.elapsedRealtime();
+        */
         //TODO: The way to calculate wakelock end time is not correct when the phone goes into deep sleep
         mEndTime = SystemClock.elapsedRealtime();
 
@@ -315,6 +351,48 @@ public class Lease {
             return;
         }
         RenewDescison(false);
+
+        /*
+        long currtime = SystemClock.elapsedRealtime();
+        Slog.d(TAG, "The uid is " + Libcore.os.getuid());
+        String fileName = "/data/system/leaseupdate.txt";
+        try {
+            File file = new File(fileName);
+            FileWriter writer = new FileWriter(file, true);
+            file.setReadable(true, false);
+            writer.write("The update latency is " + (currtime-baseTime) + "ms\n");
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(sProcFile))) {
+            TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(' ');
+            String line;
+            while ((line = reader.readLine()) != null) {
+                splitter.setString(line);
+                String uidStr = splitter.next();
+                int uid = Integer.parseInt(uidStr.substring(0, uidStr.length() - 1), 10);
+                if (uid == 1000) {
+                    userTimeUs = Long.parseLong(splitter.next(), 10);
+                    systemTimeUs = Long.parseLong(splitter.next(), 10);
+                    currentsysTime = userTimeUs + systemTimeUs;
+                    break;
+                }
+            }
+        } catch (Exception e) {
+        }
+
+        try {
+            File file = new File(fileName);
+            FileWriter writer = new FileWriter(file, true);
+            file.setReadable(true, false);
+            writer.write("The cpu usage is " + (currentsysTime-basesysTime)/10 + "ms\n");
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        */
     }
 
     public boolean RenewDescison(boolean isProxy) {

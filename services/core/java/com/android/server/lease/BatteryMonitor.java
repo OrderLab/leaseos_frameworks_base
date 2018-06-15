@@ -71,7 +71,8 @@ public class BatteryMonitor {
         String workerName = "battery-monitor";
         HandlerThread hthread = new HandlerThread(workerName);
         hthread.start();
-        LeaseWorkerHandler handler = new LeaseWorkerHandler(workerName, hthread.getLooper(), mContext);
+        LeaseWorkerHandler handler = new LeaseWorkerHandler(workerName, hthread.getLooper(),
+                mContext);
         mHandler = handler;
         mHandler.postDelayed(mGetCPURunnable, 2000);
     }
@@ -126,7 +127,7 @@ public class BatteryMonitor {
         if (mcpuTable.get(uid) == null) {
             ReadCPUTime();
         }
-        return mcpuTable.get(uid)/1000;
+        return mcpuTable.get(uid) / 1000;
     }
 
     private void ReadCPUTime() {
@@ -168,6 +169,7 @@ public class BatteryMonitor {
                         systemTimeUs = Long.parseLong(splitter.next(), 10);
                         mcpuTable.put(uid, userTimeUs + systemTimeUs);
                     }
+
                 }
             } catch (Exception e) {
             }
