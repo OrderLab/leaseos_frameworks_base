@@ -154,7 +154,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         if (mLeaseManager != null) {
             long leaseId = mLeaseManager.create(resourceType, uid);
             if (leaseId < LeaseManager.LEASE_ID_START) {
-              //  Slog.i(TAG,"Skip invalid lease");
+                Slog.i(TAG,"Skip invalid lease");
                 return null;
             }
             LeaseDescriptor<S> lease = newLease(key, leaseId, LeaseStatus.ACTIVE); // a new lease

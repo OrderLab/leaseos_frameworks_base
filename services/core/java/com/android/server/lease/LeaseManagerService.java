@@ -99,6 +99,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     private long mBatteryTracingInterval;
 
+    private boolean mSensorProxyEnable;
+
     private static final String[] OBSERVE_SETTINGS = new String[] {
             /*** Global settings ***/
             Settings.Secure.LEASE_SERVICE_ENABLED,
@@ -118,6 +120,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     public LeaseManagerService(Context context) {
         super();
+        mSensorProxyEnable = true;
         mContext = context;
         mRStatManager = ResourceStatManager.getInstance(mContext);
         mHandlerThread = new HandlerThread(TAG);
@@ -145,6 +148,12 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             if (uid < Process.FIRST_APPLICATION_UID || uid > Process.LAST_APPLICATION_UID) {
                 return LeaseManager.INVALID_LEASE;
             }
+
+            if (!mSensorProxyEnable && rtype == ResourceType.Sensor) {
+                Slog.i(TAG, "Reject to create sensor lease, lease proxy are stopped");
+                return 0;
+            }
+
             Slog.i(TAG, "Begin to create a lease " + mLastLeaseId + " for process: " + uid);
             Lease lease = new Lease(mLastLeaseId, uid, rtype, mRStatManager, null,
                     null,this, mContext);
@@ -482,6 +491,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private void stopLeaseLocked() {
         if (mLeaseRunning) {
             mLeaseRunning = false;
+            mSensorProxyEnable = false;
             stopAllLeaseProxyLocked();
             stopAllLeaseLocked();
         }
@@ -584,10 +594,15 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 disableLeases.add(LeaseManager.LOCATION_LEASE_PROXY);
         }
         if (mSettings.sensorLeaseEnabled != newSettings.sensorLeaseEnabled) {
-            if (newSettings.sensorLeaseEnabled)
+            if (newSettings.sensorLeaseEnabled) {
+                mSensorProxyEnable = true;
                 enableLeases.add(LeaseManager.SENSOR_LEASE_PROXY);
-            else
+            }
+            else {
+                mSensorProxyEnable = false;
                 disableLeases.add(LeaseManager.SENSOR_LEASE_PROXY);
+            }
+
         }
         if (disableLeases.isEmpty() && enableLeases.isEmpty()) {
             // Nothing changed
@@ -692,6 +707,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
      */
     private void startAllLeaseProxyLocked() {
         Slog.d(TAG, "Starting all lease proxy...");
+        mSensorProxyEnable = true;
         for (LeaseProxy proxy:mProxies.values()) {
             try {
                 Slog.d(TAG, "[" + proxy.mName + "]: START");
@@ -767,6 +783,11 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     @Override
     public boolean registerProxy(int type, String name, ILeaseProxy proxy, int uid) throws RemoteException {
         Slog.d(TAG, "Registering lease proxy " + name);
+
+        if (!mSensorProxyEnable) {
+            return false;
+        }
+
         long identity = Binder.clearCallingIdentity();
         try {
             synchronized (mLock) {
@@ -783,7 +804,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         finally {
             Binder.restoreCallingIdentity(identity);
         }
-
     }
 
     /**
