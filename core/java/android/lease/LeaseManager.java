@@ -161,11 +161,12 @@ public final class LeaseManager {
         return;
     }
 
-    public void noteLocationEvent(long leaseId, LeaseEvent event, String activityName) {
+
+    public void noteEvent(long leaseId, LeaseEvent event, String activityName) {
         if (leaseId < LEASE_ID_START)
             return;
         try {
-            mService.noteLocationEvent(leaseId, event, activityName);
+            mService.noteEvent(leaseId, event, activityName);
         }catch (RemoteException e){
             Log.wtf(TAG, "Fail to note the location event");
         }

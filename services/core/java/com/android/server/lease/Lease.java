@@ -21,6 +21,7 @@
 package com.android.server.lease;
 
 import android.content.Context;
+import android.lease.BehaviorType;
 import android.lease.ILeaseProxy;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
@@ -285,11 +286,38 @@ public class Lease {
     }
 
     /**
-     * Freeze the request of wakelock for this uid
+     * Early Expire the lease, which just delay the update frequency of resource
      *
      * @return true if the lease is successfully expired
      */
-    /*
+    public boolean earlyexpire() {
+        if (mStatus != LeaseStatus.ACTIVE) {
+            Slog.e(TAG, "Skip expiring an inactive lease " + mLeaseId);
+            return false;
+        }
+        mStatus = LeaseStatus.EXPIRED;
+        if (mProxy != null) {
+            try {
+                Slog.d(TAG, "Calling Earlyexpire for lease " + mLeaseId);
+                mProxy.earlyExpire(mLeaseId);
+            } catch (RemoteException e) {
+                Slog.e(TAG, "Failed to invoke Earlyexpire for lease " + mLeaseId);
+                return false;
+            }
+            return true;
+        } else {
+            Slog.e(TAG, "No lease proxy for lease " + mLeaseId);
+            return false;
+        }
+    }
+
+
+    /**
+     * Freeze the request for this uid: Lower the frequency and accuracy of sensor or Location listener
+     *
+     * @return true if the lease is successfully expired
+     */
+/*
     public boolean freeze() {
         if (mProxy != null) {
             try {
@@ -306,14 +334,12 @@ public class Lease {
             return false;
         }
     }
-*/
+
 
     /**
      * One lease term has come to an end.
      */
     public void endTerm() {
-        mEndTime = SystemClock.elapsedRealtime();
-
         // update the stats for this lease term
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
@@ -321,6 +347,12 @@ public class Lease {
             renew(true);
             return;
         }
+        StatHistory statHistory = getStatHistory();
+        BehaviorType behavior = statHistory.judgeHistory();
+        if (behavior == BehaviorType.Normal) {
+            lastNormal = SystemClock.elapsedRealtime();
+        }
+
         RenewDescison(false);
     }
 
@@ -341,7 +373,11 @@ public class Lease {
                 return true;
             case DELAY:
                 Slog.e(TAG, "Start delay action for decision " + decision.mBehaviorType);
-                expire();
+                if (SystemClock.elapsedRealtime() - lastNormal < 5 * TimeUtils.MILLIS_PER_MINUTE) {
+                    earlyexpire();
+                } else {
+                    expire();
+                }
                 sechduleNextLeaseTerm(decision);
                 return false;
         }

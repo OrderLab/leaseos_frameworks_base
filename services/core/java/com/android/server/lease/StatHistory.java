@@ -219,9 +219,9 @@ public class StatHistory {
 
     //TODO:need to implement the judge behavior part
     public BehaviorType judgeHistory() {
-        Hashtable<BehaviorType, Integer> behaviorFrequency = new Hashtable<>();
+        //Hashtable<BehaviorType, Integer> behaviorFrequency = new Hashtable<>();
         //BehaviorType leaseBehaviorType = BehaviorType.Normal;
-        int maxCount = 0;
+       // int maxCount = 0;
         /*
         for (ResourceStat resourceStat : mStats) {
             if (behaviorFrequency.get(resourceStat.mBehaviorType) == null) {

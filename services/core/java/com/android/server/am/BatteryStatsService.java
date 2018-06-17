@@ -385,8 +385,8 @@ public final class BatteryStatsService extends IBatteryStats.Stub
 /******LeaseOS change*******/
     public void refreshStatic() {
         Slog.d(TAG, "refersh the static");
-        long baseTime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "Begin to refersh the static" + baseTime);
+       // long baseTime = SystemClock.elapsedRealtimeNanos();
+       // Slog.d(TAG, "Begin to refersh the static" + baseTime);
         if (mHelper == null) {
             mHelper = new BatteryStatsHelper(mContext, false, false);
             mHelper.create(mStats);
@@ -397,12 +397,13 @@ public final class BatteryStatsService extends IBatteryStats.Stub
             for (int i = 0; i < sippers.size(); i++) {
                 final BatterySipper bs = sippers.get(i);
                 int uid = bs.getUid();
+                Slog.d(TAG, "Get the static of uid " + uid);
                 AppStatsRecord record = createRecord(bs);
                 AppStatsDBHelper.getInstance(mContext).insert(record);
             }
         }
-        long currtime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "The time to get UID is " + (currtime - baseTime)/1000 );
+       // long currtime = SystemClock.elapsedRealtimeNanos();
+       // Slog.d(TAG, "The time to get UID is " + (currtime - baseTime)/1000 );
     }
 
     public AppStatsRecord createRecord(BatterySipper bs) {
@@ -430,7 +431,7 @@ public final class BatteryStatsService extends IBatteryStats.Stub
         record.bluetoothPowerMah = BatteryStatsHelper.makemAh(bs.bluetoothPowerMah);
         return record;
     }
-
+/******************************/
 
     public boolean isCharging() {
         synchronized (mStats) {

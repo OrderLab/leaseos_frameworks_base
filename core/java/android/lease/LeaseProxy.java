@@ -204,12 +204,11 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         }
     }
 
-    public void noteLocationEvent(long leaseId, LeaseEvent event, String activityName) {
+    public void noteEvent(long leaseId, LeaseEvent event, String activityName) {
         if (mLeaseManager != null) {
-            mLeaseManager.noteLocationEvent(leaseId, event, activityName);
+            mLeaseManager.noteEvent(leaseId, event, activityName);
         }
     }
-
 
     /**
      * Should a given package name or UID be exempted. The package name can be empty

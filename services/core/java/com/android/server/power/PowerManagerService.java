@@ -949,19 +949,13 @@ public final class PowerManagerService extends SystemService
                     lease = (WakelockLease) mLeaseProxy.getLease(lock);
                     if (lease != null) {
                         mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
-                        long basetime = SystemClock.elapsedRealtimeNanos();
-                        Slog.d(TAG, "Begin to check a wakelock lease at " + basetime);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
-                            long currtime = SystemClock.elapsedRealtimeNanos();
-                            Slog.d(TAG, "The time to reject a wakelock request is " + (currtime - basetime)/1000);
                             lease.mLeaseValue = wakeLock;
                             releaseWakeLockInternal(lock, flags, false);
                             Slog.d(TAG, uid + " has been disruptive to lease manager service,"
                                     + " freezing lease requests for a while..");
                             return;
                         }
-                        long currtime = SystemClock.elapsedRealtimeNanos();
-                        Slog.d(TAG, "The time to accept a wakelock request is " + (currtime - basetime)/1000);
                     }
                 }
                 /*********************/
@@ -1168,6 +1162,11 @@ public final class PowerManagerService extends SystemService
         }
 
         @Override
+        public void earlyExpire(long leaseId) throws RemoteException {
+            onExpire(leaseId);
+        }
+
+        @Override
         public void onReject(int uid) throws RemoteException {
             freezeUid(uid, -1, 1);
         }
@@ -1176,6 +1175,8 @@ public final class PowerManagerService extends SystemService
         public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
             freezeUid(uid, freezeDuration, freeCount);
         }
+
+
     }
     /*********************/
 

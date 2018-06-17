@@ -347,8 +347,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
-
-    public void noteLocationEvent (long leaseId, LeaseEvent event, String activityName) {
+    public void noteEvent (long leaseId, LeaseEvent event, String activityName) {
         StatHistory statHistory;
         synchronized (mLock) {
             Lease lease = mLeases.get(leaseId);
@@ -372,7 +371,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 statHistory.noteAcquire(activityName);
                 break;
             default:
-               // Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
+                Slog.e(TAG, "Unhandled event " + event + " reported for lease " + leaseId);
         }
     }
 

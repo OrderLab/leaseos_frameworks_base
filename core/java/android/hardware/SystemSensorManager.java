@@ -211,7 +211,7 @@ public class SystemSensorManager extends SensorManager {
                         // been temporarily banned, and if so we should just return.
                         lease = (SensorLease) mLeaseProxy.getLease(listener);
                         if (lease != null) {
-                            mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
+                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
                             if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
                                 lease.mLeaseValue = listener;
                                 lease.mActivityName = activityName;
@@ -241,7 +241,7 @@ public class SystemSensorManager extends SensorManager {
                                 lease.mActivityName = activityName;
                                 lease.mSensor = sensor;
                                 // TODO: invoke check and notify ResourceStatManager
-                                mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
+                                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
                             }
 
                         }
@@ -253,6 +253,22 @@ public class SystemSensorManager extends SensorManager {
                 /*********************/
                 return true;
             } else {
+                if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                    SensorLease lease = null;
+                    //Update the information of listener
+                    if (!fromProxy) {
+                        lease = (SensorLease) mLeaseProxy.getLease(listener);
+                        if (lease != null) {
+                            Log.d(TAG,  "Update the listener information");
+                            lease.mLeaseValue = listener;
+                            lease.mDelayUs = delayUs;
+                            lease.mHandler = handler;
+                            lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
+                            lease.mReservedFlags = reservedFlags;
+                            lease.mSensor = sensor;
+                        }
+                    }
+                }
                 return queue.addSensor(sensor, delayUs, maxBatchReportLatencyUs);
             }
         }
@@ -387,7 +403,6 @@ public class SystemSensorManager extends SensorManager {
                     }
                     lease.mLeaseStatus = LeaseStatus.EXPIRED;
                 }
-
             }
         }
 
@@ -416,6 +431,38 @@ public class SystemSensorManager extends SensorManager {
                 }
             }
         }
+
+        /**
+         * Delay the sensor update frequency, if the original frequency is setting faster than Normal(0.2 seconds), we change it to Normal speed. If the orginal frequency is
+         * setting to faster than 1s seconds, we change it to update every 1 second. Otherwise, we unregister the listener.
+         * @param leaseId
+         * @throws RemoteException
+         */
+        @Override
+        public void earlyExpire(long leaseId) throws RemoteException {
+            Log.d(TAG, "LeaseManagerService instruct me to delay resource frequency for lease " + leaseId);
+            SensorLease lease = (SensorLease) mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                SensorEventListener receiver;
+                synchronized (mLock) {
+                    receiver = lease.mLeaseValue;
+                    if (receiver != null) {
+                        Log.e(TAG, "Release sensor listener object for lease " + leaseId);
+                        fromProxy = true;
+                        if (lease.mDelayUs < getDelay(SENSOR_DELAY_NORMAL) && lease.mMaxBatchReportLatencyUs < 200000) {
+                            registerListenerImpl(lease.mLeaseValue,lease.mSensor,getDelay(SENSOR_DELAY_NORMAL),lease.mHandler, 200000,lease.mReservedFlags);
+                        } else if (lease.mDelayUs < 1000000 || lease.mMaxBatchReportLatencyUs < 1000000){
+                            registerListenerImpl(lease.mLeaseValue,lease.mSensor,1000000,lease.mHandler, 1000000,lease.mReservedFlags);
+                        } else {
+                            unregisterListenerImpl(receiver, lease.mSensor);
+                        }
+                        fromProxy = false;
+                    }
+                    lease.mLeaseStatus = LeaseStatus.EXPIRED;
+                }
+            }
+        }
+
 
         @Override
         public void onReject(int uid) throws RemoteException {

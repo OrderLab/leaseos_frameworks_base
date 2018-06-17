@@ -1732,7 +1732,7 @@ public class LocationManagerService extends ILocationManager.Stub {
                     // been temporarily banned, and if so we should just return.
                     lease = (LocationLease) mLeaseProxy.getLease(receiver);
                     if (lease != null) {
-                        mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
                             lease.mLeaseValue = receiver;
                             lease.mRequest = request;
@@ -1760,7 +1760,7 @@ public class LocationManagerService extends ILocationManager.Stub {
                             lease.mRequest = request;
                             lease.mActivityName = activityName;
                             // TODO: invoke check and notify ResourceStatManager
-                            mLeaseProxy.noteLocationEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
+                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
                             if (!activityName.contains(packageName)) {
                                 mLeaseProxy.noteEvent(lease.mLeaseId,LeaseEvent.BACKGROUDAPP);
                             }
@@ -1952,6 +1952,17 @@ public class LocationManagerService extends ILocationManager.Stub {
             }
         }
 
+        /**
+         * Delay the sensor update frequency, if the original frequency is setting faster than Normal(0.2 seconds), we change it to Normal speed. If the orginal frequency is
+         * setting to faster than 1s seconds, we change it to update every 1 second. Otherwise, we unregister the listener.
+         * @param leaseId
+         * @throws RemoteException
+         */
+        @Override
+        public void earlyExpire(long leaseId) throws RemoteException {
+
+        }
+
         @Override
         public void onReject(int uid) throws RemoteException {
 
@@ -1961,8 +1972,6 @@ public class LocationManagerService extends ILocationManager.Stub {
         public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
 
         }
-
-
     }
 
     /*********************/

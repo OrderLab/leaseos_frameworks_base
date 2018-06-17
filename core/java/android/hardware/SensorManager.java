@@ -1809,7 +1809,7 @@ public abstract class SensorManager {
         }
     }
 
-    private static int getDelay(int rate) {
+    protected static int getDelay(int rate) {
         int delay = -1;
         switch (rate) {
             case SENSOR_DELAY_FASTEST:
