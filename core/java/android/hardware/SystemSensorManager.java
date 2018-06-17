@@ -447,13 +447,16 @@ public class SystemSensorManager extends SensorManager {
                 synchronized (mLock) {
                     receiver = lease.mLeaseValue;
                     if (receiver != null) {
-                        Log.e(TAG, "Release sensor listener object for lease " + leaseId);
+
                         fromProxy = true;
                         if (lease.mDelayUs < getDelay(SENSOR_DELAY_NORMAL) && lease.mMaxBatchReportLatencyUs < 200000) {
+                            Log.e(TAG, "delay sensor listener object for lease " + leaseId + " the new sample rate is " + getDelay(SENSOR_DELAY_NORMAL));
                             registerListenerImpl(lease.mLeaseValue,lease.mSensor,getDelay(SENSOR_DELAY_NORMAL),lease.mHandler, 200000,lease.mReservedFlags);
                         } else if (lease.mDelayUs < 1000000 || lease.mMaxBatchReportLatencyUs < 1000000){
+                            Log.e(TAG, "delay sensor listener object for lease " + leaseId + " the new sample rate is " + 1000000);
                             registerListenerImpl(lease.mLeaseValue,lease.mSensor,1000000,lease.mHandler, 1000000,lease.mReservedFlags);
                         } else {
+                            Log.e(TAG, "unregister sensor listener object for lease " + leaseId);
                             unregisterListenerImpl(receiver, lease.mSensor);
                         }
                         fromProxy = false;

@@ -122,7 +122,7 @@ public class Lease {
         mContext = context;
         mBatteryMonitor = BatteryMonitor.getInstance(context);
         mLeaseManagerService = leaseManagerService;
-        lastNormal = 0;
+        lastNormal = SystemClock.elapsedRealtime();
     }
 
     /**
@@ -365,6 +365,8 @@ public class Lease {
             case RENEW:
                 Slog.d(TAG, "Start renew action for decision " + decision.mBehaviorType);
                 if (isProxy) {
+                    //Renew as probing, refresh the lastNormal
+                    lastNormal = SystemClock.elapsedRealtime();
                     mLength = DEFAULT_PROBING_TERM_MS;
                 } else {
                     mLength = DEFAULT_NORMAL_TERM_MS;

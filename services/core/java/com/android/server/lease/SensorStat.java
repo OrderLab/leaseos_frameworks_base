@@ -131,7 +131,9 @@ public class SensorStat extends ResourceStat {
 
     @Override
     public void judge() {
-
+        mBehaviorType = BehaviorType.LongHolding;
+        return;
+/*
         if (isLeak) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
             mBehaviorType = BehaviorType.LongHolding;
@@ -151,6 +153,6 @@ public class SensorStat extends ResourceStat {
         }
 
         Slog.d(TAG, "For process " + mUid + ", this lease term has a Normal behavior");
-        mBehaviorType = BehaviorType.Normal;
+        mBehaviorType = BehaviorType.Normal;*/
     }
 }
