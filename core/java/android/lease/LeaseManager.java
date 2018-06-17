@@ -166,7 +166,7 @@ public final class LeaseManager {
         if (leaseId < LEASE_ID_START)
             return;
         try {
-            mService.noteEvent(leaseId, event, activityName);
+            mService.noteSensorEvent(leaseId, event, activityName);
         }catch (RemoteException e){
             Log.wtf(TAG, "Fail to note the location event");
         }

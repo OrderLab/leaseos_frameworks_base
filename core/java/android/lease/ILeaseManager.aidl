@@ -48,7 +48,7 @@ interface ILeaseManager {
 
     /* report an event about lease with id leaseId */
     void noteEvent(long leaseId, in LeaseEvent event);
-    void noteEvent(long leaseId, in LeaseEvent event, String activityName);
+    void noteSensorEvent(long leaseId, in LeaseEvent event, String activityName);
 
     /* register a lease proxy with the lease manager service */
     boolean registerProxy(int type, String name, ILeaseProxy proxy, int uid);

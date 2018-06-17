@@ -347,7 +347,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
-    public void noteEvent (long leaseId, LeaseEvent event, String activityName) {
+    public void noteSensorEvent (long leaseId, LeaseEvent event, String activityName) {
         StatHistory statHistory;
         synchronized (mLock) {
             Lease lease = mLeases.get(leaseId);
