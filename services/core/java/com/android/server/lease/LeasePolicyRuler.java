@@ -21,6 +21,7 @@
 package com.android.server.lease;
 
 import android.lease.BehaviorType;
+import android.lease.ResourceType;
 
 /**
  * Decide important policy about lease such as whether to renew a lease.
@@ -46,12 +47,22 @@ public class LeasePolicyRuler {
         Decision decision = new Decision();
         decision.mBehaviorType = behavior;
 
-        if (isProxy || statHistory.hasActivateEvent()) {
+        if (isProxy) {
+            decision.mDecision = Decision.Decisions.RENEW;
+            return decision;
+        }
+
+        if (statHistory.hasActivateEvent()) {
             switch (behavior) {
                 case Normal:
                     decision.mDecision = Decision.Decisions.RENEW;
                     return decision;
                 default:
+                    if (lease.mType == ResourceType.Sensor ) {
+                            decision.mDecision = Decision.Decisions.DELAY;
+                            return decision;
+                        }
+                    }
                     decision.mDecision = Decision.Decisions.DELAY;
                     return decision;
             }

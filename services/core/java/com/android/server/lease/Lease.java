@@ -86,8 +86,8 @@ public class Lease {
     protected int mDelayCounter; // the counter of delaying times
     BatteryMonitor mBatteryMonitor; // the instance of Battery Monitor
     protected boolean isCharging; // true if the phone is charged during this lease term
-    protected boolean isDelay;
     protected boolean isProbing;
+    protected long lastNormal;
 
     private LeaseWorkerHandler mHandler;
     private boolean mScheduled;
@@ -120,8 +120,8 @@ public class Lease {
         mHandler = handler;
         mContext = context;
         mBatteryMonitor = BatteryMonitor.getInstance(context);
-        isProbing = false;
         mLeaseManagerService = leaseManagerService;
+        lastNormal = 0;
     }
 
     /**
@@ -135,7 +135,6 @@ public class Lease {
         mDelayCounter = 0;
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
-        isDelay = false;
         mLeaseManagerService.getAndCleanException(mOwnerId);
         scheduleExpire(mLength);
     }
@@ -163,10 +162,8 @@ public class Lease {
         isCharging = mBatteryMonitor.isCharging();
         if (mStatus == LeaseStatus.ACTIVE || isCharging) {
             return true;
-        } else if (mStatus == LeaseStatus.EXPIRED && !isDelay) {
+        } else if (mStatus == LeaseStatus.EXPIRED) {
             return RenewDescison(true);
-        } else if (mStatus == LeaseStatus.EXPIRED && isDelay) {
-            return false;
         }
         return false;
     }
@@ -314,33 +311,7 @@ public class Lease {
     /**
      * One lease term has come to an end.
      */
-    private static final String sProcFile = "/proc/uid_cputime/show_uid_stat";
-
     public void endTerm() {
-        /*
-        long userTimeUs = 0;
-        long systemTimeUs = 0;
-        long basesysTime = 0;
-        long currentsysTime = 0;
-        try (BufferedReader reader = new BufferedReader(new FileReader(sProcFile))) {
-            TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(' ');
-            String line;
-            while ((line = reader.readLine()) != null) {
-                splitter.setString(line);
-                String uidStr = splitter.next();
-                int uid = Integer.parseInt(uidStr.substring(0, uidStr.length() - 1), 10);
-                if (uid == 1000) {
-                    userTimeUs = Long.parseLong(splitter.next(), 10);
-                    systemTimeUs = Long.parseLong(splitter.next(), 10);
-                    basesysTime = userTimeUs + systemTimeUs;
-                    break;
-                }
-            }
-        } catch (Exception e) {
-        }
-        long baseTime = SystemClock.elapsedRealtime();
-        */
-        //TODO: The way to calculate wakelock end time is not correct when the phone goes into deep sleep
         mEndTime = SystemClock.elapsedRealtime();
 
         // update the stats for this lease term
@@ -351,62 +322,18 @@ public class Lease {
             return;
         }
         RenewDescison(false);
-
-        /*
-        long currtime = SystemClock.elapsedRealtime();
-        Slog.d(TAG, "The uid is " + Libcore.os.getuid());
-        String fileName = "/data/system/leaseupdate.txt";
-        try {
-            File file = new File(fileName);
-            FileWriter writer = new FileWriter(file, true);
-            file.setReadable(true, false);
-            writer.write("The update latency is " + (currtime-baseTime) + "ms\n");
-            writer.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-
-        try (BufferedReader reader = new BufferedReader(new FileReader(sProcFile))) {
-            TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(' ');
-            String line;
-            while ((line = reader.readLine()) != null) {
-                splitter.setString(line);
-                String uidStr = splitter.next();
-                int uid = Integer.parseInt(uidStr.substring(0, uidStr.length() - 1), 10);
-                if (uid == 1000) {
-                    userTimeUs = Long.parseLong(splitter.next(), 10);
-                    systemTimeUs = Long.parseLong(splitter.next(), 10);
-                    currentsysTime = userTimeUs + systemTimeUs;
-                    break;
-                }
-            }
-        } catch (Exception e) {
-        }
-
-        try {
-            File file = new File(fileName);
-            FileWriter writer = new FileWriter(file, true);
-            file.setReadable(true, false);
-            writer.write("The cpu usage is " + (currentsysTime-basesysTime)/10 + "ms\n");
-            writer.close();
-        } catch (Exception e) {
-            e.printStackTrace();
-        }
-        */
     }
 
     public boolean RenewDescison(boolean isProxy) {
         Decision decision = LeasePolicyRuler.behaviorJudge(this, isProxy);
         switch (decision.mDecision) {
             case EXPIRE:
-                isDelay = false;
                 expire();
                 return true;
             case RENEW:
                 Slog.d(TAG, "Start renew action for decision " + decision.mBehaviorType);
                 if (isProxy) {
                     mLength = DEFAULT_PROBING_TERM_MS;
-                    isProbing = true;
                 } else {
                     mLength = DEFAULT_NORMAL_TERM_MS;
                 }
@@ -422,40 +349,26 @@ public class Lease {
     }
 
     public void sechduleNextLeaseTerm(Decision decision) {
-        isDelay = true;
         mDelayCounter++;
-        boolean flag = false;
         switch (decision.mBehaviorType) {
             case FrequencyAsking:
                 mDelayInterval = DEFAULT_FREQUENCYASK_DELAY_MS;
                 mLength = DEFAULT_FREQUENCYASK_TERM_MS;
-                if (isProbing) {
-                    renew(true);
-                }
                 scheduleDelay(mDelayInterval);
                 break;
             case LongHolding:
                 mDelayInterval = DEFAULT_LONGHOLD_DELAY_MS;
                 mLength = DEFAULT_LONGHOLD_TERM_MS;
-                if (isProbing) {
-                    renew(true);
-                }
                 scheduleDelay(mDelayInterval);
                 break;
             case LowUtility:
                 mDelayInterval = DEFAULT_LOWUTILITY_TERM_MS;
                 mLength = DEFAULT_LOWUTILITY_DELAY_MS;
-                if (isProbing) {
-                    renew(true);
-                }
                 scheduleDelay(mDelayInterval);
                 break;
             case HighDamage:
                 mDelayInterval = DEFAULT_HIGHDAMAGE_TERM_MS;
                 mLength = DEFAULT_HIGHDAMAGE_DELAY_MS;
-                if (isProbing) {
-                    renew(true);
-                }
                 scheduleDelay(mDelayInterval);
                 break;
         }
@@ -473,7 +386,6 @@ public class Lease {
      */
     public boolean renew(boolean auto) {
         Slog.d(TAG, "Starting renew lease " + mLeaseId + " for " + mLength / 1000 + " second");
-        isDelay = false;
         if (!auto && mStatus != LeaseStatus.EXPIRED) {
             // if a renewal is not at the end of a lease term, we must check for status first
             return false;
