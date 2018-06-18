@@ -1176,7 +1176,9 @@ public final class PowerManagerService extends SystemService
             freezeUid(uid, freezeDuration, freeCount);
         }
 
-
+        public boolean isInteractive() {
+            return isInteractiveInternal();
+        }
     }
     /*********************/
 

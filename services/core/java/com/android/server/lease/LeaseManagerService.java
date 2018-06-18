@@ -38,6 +38,7 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
+import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteException;
 import android.os.ServiceManager;
@@ -89,6 +90,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private final SparseArray<Integer> mExceptionTable = new SparseArray<>();
     private final SparseArray<Integer> mTouchEventTable = new SparseArray<>();
     private final Hashtable<String,Integer> mActivityTable = new Hashtable<>();
+    private final SparseArray<UtilityStat> mAppUtilityStat = new SparseArray<>();
+    private final Hashtable<Long, SensorListener> mSensorListeners = new Hashtable<>();
 
     private final Context mContext;
 
@@ -100,6 +103,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private long mBatteryTracingInterval;
 
     private boolean mSensorProxyEnable;
+
+
 
     private static final String[] OBSERVE_SETTINGS = new String[] {
             /*** Global settings ***/
@@ -128,6 +133,8 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         mHandler = new LeaseHandler(mHandlerThread.getLooper());
         mSettings = LeaseSettings.getDefaultSettings();
         mHandler.sendEmptyMessage(LeaseHandler.MSG_SYNC_SETTINGS);
+        UtilityStat defaultUtilityStat = new UtilityStat(false,false,200000, 200000);
+        mAppUtilityStat.put(-1, defaultUtilityStat);
         Slog.i(TAG, "LeaseManagerService initialized");
     }
 
@@ -448,9 +455,37 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         return mActivityTable.get(activityName);
     }
 
-    public void setLocationChanged(long leaseId) {
+    public void updateSensorUtility(boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS, int uid) {
+        UtilityStat utilityStat = new UtilityStat(canScreenOn , canBackground, minFrequencyUS, batchReportLatencyUS);
+        Slog.d(TAG, "Add the new utility stat for " + uid);
+        mAppUtilityStat.put(uid,utilityStat);
 
     }
+
+    public void updateSensorListener(int delayUs, int maxBatchReportLatencyUs, long leaseId) {
+        SensorListener sensorListener = new SensorListener(delayUs, maxBatchReportLatencyUs);
+        Slog.d(TAG, "Add the new listener infromaiton  for lease " + leaseId);
+        mSensorListeners.put(leaseId,sensorListener);
+    }
+
+    public UtilityStat getUtilityStat(int uid) {
+        if (mAppUtilityStat.get(uid) == null) {
+            return mAppUtilityStat.get(-1);
+        }
+        return mAppUtilityStat.get(uid);
+    }
+
+    public SensorListener getsensorListener(int leaseId) {
+        return mSensorListeners.get(leaseId);
+    }
+
+    public LeaseProxy getWakelockLeaseProxy() {
+        ArrayList<LeaseProxy> wrapperList;
+        wrapperList = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
+        return wrapperList.get(0);
+    }
+
+
 
     public void systemRunning() {
         Slog.d(TAG, "Ready to start lease");
@@ -466,8 +501,11 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             // we also do NOT start defense if the service is disabled
             if (mSettings.serviceEnabled)
                 runLeaseLocked();
+
+
         }
     }
+
 
     private void registerSettingsListeners() {
         Slog.d(TAG, "Registering content observer");
@@ -863,7 +901,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     /**
      * Wrapper class around an ILeaseProxy object to make call back to lease proxy
      */
-    private class LeaseProxy implements IBinder.DeathRecipient {
+    public class LeaseProxy implements IBinder.DeathRecipient {
         public final ILeaseProxy mProxy;
         public final int mType;
         public final String mName;
@@ -932,5 +970,31 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 updateSettingsLocked(settings);
             }
         }
+    }
+
+    public class UtilityStat {
+        public boolean mCanScreenOn;
+        public boolean mCanBackground;
+        public int mMinFrequencyUS;
+        public int mBatchReportLatencyUS;
+        public int mLifetimeMintes;
+
+        public UtilityStat(boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS) {
+            mCanScreenOn = canScreenOn;
+            mCanBackground = canBackground;
+            mMinFrequencyUS = minFrequencyUS;
+            mBatchReportLatencyUS = batchReportLatencyUS;
+        }
+    }
+
+    public class SensorListener {
+        public int mDelayUs;
+        public int mMaxBatchReportLatencyUs;
+
+        public SensorListener(int delayUs, int maxBatchReportLatencyUs) {
+            mDelayUs = delayUs;
+            mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
+        }
+
     }
 }

@@ -1972,6 +1972,11 @@ public class LocationManagerService extends ILocationManager.Stub {
         public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
 
         }
+
+        @Override
+        public boolean isInteractive() {
+            return true;
+        }
     }
 
     /*********************/

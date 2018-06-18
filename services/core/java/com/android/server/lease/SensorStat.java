@@ -20,14 +20,20 @@
  */
 package com.android.server.lease;
 
+import android.app.ActivityManager;
+import android.app.ActivityManagerNative;
 import android.content.Context;
 import android.lease.BehaviorType;
-import android.lease.LeaseStatus;
+import android.lease.LeaseProxy;
+import android.os.RemoteException;
 import android.os.SystemClock;
 import android.util.Slog;
 
 import com.android.server.lease.db.LeaseStatsDBHelper;
 import com.android.server.lease.db.LeaseStatsRecord;
+import com.android.server.power.PowerManagerService;
+
+import java.util.List;
 
 /**
  * Sensor related usage stat
@@ -48,7 +54,8 @@ public class SensorStat extends ResourceStat {
     protected LeaseWorkerHandler mHandler;
 
 
-    public SensorStat(long beginTime, int uid, Context context, LeaseManagerService leaseManagerService, LeaseWorkerHandler handler) {
+    public SensorStat(long beginTime, int uid, Context context,
+            LeaseManagerService leaseManagerService, LeaseWorkerHandler handler) {
         super(beginTime);
         mContext = context;
         mUid = uid;
@@ -60,7 +67,7 @@ public class SensorStat extends ResourceStat {
         mBaseCPUTime = BatteryMonitor.getInstance(mContext).getCPUTime(mUid);
         mLeaseManagerService = leaseManagerService;
         long currtime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "The time to update lease is " + (currtime - baseTime)/1000);
+        Slog.d(TAG, "The time to update lease is " + (currtime - baseTime) / 1000);
         isLeak = false;
         isWeak = false;
         //Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
@@ -84,8 +91,8 @@ public class SensorStat extends ResourceStat {
                 + ", the CPU usage time is " + mUsageTime + ", the utility is " + mUtility);*/
         judge();
         // TODO: uncomment inserting db to make it work
-         LeaseStatsRecord record = createRecord(mUid);
-         LeaseStatsDBHelper.getInstance(context).insert(record);
+        LeaseStatsRecord record = createRecord(mUid);
+        LeaseStatsDBHelper.getInstance(context).insert(record);
     }
 
     public LeaseStatsRecord createRecord(int uid) {
@@ -131,28 +138,71 @@ public class SensorStat extends ResourceStat {
 
     @Override
     public void judge() {
-        mBehaviorType = BehaviorType.LongHolding;
-        return;
-/*
+        boolean isScreenOn;
+        boolean isBackground;
+
         if (isLeak) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
             mBehaviorType = BehaviorType.LongHolding;
             return;
         }
 
-        if(mUsageTime <= 10) {
+        LeaseManagerService.UtilityStat utilityStat = mLeaseManagerService.getUtilityStat(mUid);
+        LeaseManagerService.LeaseProxy leaseProxy = mLeaseManagerService.getWakelockLeaseProxy();
+
+        try {
+            isScreenOn = leaseProxy.mProxy.isInteractive();
+        } catch (RemoteException e) {
+            Slog.e(TAG, "Failed to invoke isInteractive");
+            mBehaviorType = BehaviorType.Normal;
+            return;
+        }
+
+        List<ActivityManager.RunningAppProcessInfo> runningAppProcessInfoList;
+        try {
+            runningAppProcessInfoList = ActivityManagerNative.getDefault().getRunningAppProcesses();
+        } catch (RemoteException e) {
+            Slog.e(TAG, "Failed to get app process");
+            mBehaviorType = BehaviorType.Normal;
+            return;
+        }
+
+        if (runningAppProcessInfoList == null) {
+            isBackground = true;
+        } else {
+            isBackground = true;
+            for (ActivityManager.RunningAppProcessInfo processInfo : runningAppProcessInfoList) {
+                if (mUid == processInfo.uid) {
+                    isBackground = false;
+                    break;
+                }
+            }
+        }
+
+        LeaseManagerService.SensorListener sensorListeners = mLeaseManagerService.getsensorListener(
+                mUid);
+
+        if (sensorListeners == null) {
+            Slog.e(TAG, "Failed to get sensor information");
+            mBehaviorType = BehaviorType.Normal;
+            return;
+        }
+
+        if ((isScreenOn || utilityStat.mCanScreenOn) && (isBackground || utilityStat.mCanBackground)
+                && (sensorListeners.mDelayUs < utilityStat.mMinFrequencyUS) && (
+                sensorListeners.mMaxBatchReportLatencyUs < utilityStat.mBatchReportLatencyUS)) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
             mBehaviorType = BehaviorType.LowUtility;
             return;
         }
 
-        if(mFrequency > 2) {
+        if (mFrequency > 2) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");
             mBehaviorType = BehaviorType.HighDamage;
             return;
         }
 
         Slog.d(TAG, "For process " + mUid + ", this lease term has a Normal behavior");
-        mBehaviorType = BehaviorType.Normal;*/
+        mBehaviorType = BehaviorType.Normal;
     }
 }

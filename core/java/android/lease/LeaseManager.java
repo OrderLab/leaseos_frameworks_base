@@ -250,6 +250,22 @@ public final class LeaseManager {
         }
     }
 
+    public void noteSensorUtility (boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS) {
+        int uid = mContext.getApplicationInfo().uid;
+        try {
+            mService.updateSensorUtility( canScreenOn , canBackground, minFrequencyUS, batchReportLatencyUS, uid);
+        }catch (RemoteException e) {
+            Log.e(TAG, "Fail to refreshStatic");
+            return ;
+        }
+    }
 
-
+    public void updateSensorListener(int delayUs, int maxBatchReportLatencyUs, long leaseId) {
+        try {
+            mService.updateSensorListener(delayUs, maxBatchReportLatencyUs, leaseId);
+        }catch (RemoteException e) {
+            Log.e(TAG, "Fail to refreshStatic");
+            return ;
+        }
+    }
 }

@@ -28,7 +28,7 @@ import android.lease.LeaseSettings;
  *
  *
  */
- oneway interface ILeaseProxy {
+  interface ILeaseProxy {
     /* perform the actual expiration for a specific type of lease */
     void onExpire(long leaseId);
     void earlyExpire(long leaseId);
@@ -47,5 +47,7 @@ import android.lease.LeaseSettings;
     void stopLease();
 
     void settingsChanged(in LeaseSettings settings);
+
+    boolean isInteractive();
 
 }

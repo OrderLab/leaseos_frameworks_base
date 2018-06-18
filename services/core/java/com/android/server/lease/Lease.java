@@ -246,6 +246,7 @@ public class Lease {
         mProxy = proxy;
     }
 
+
     /**
      * Set the associated worker thread for this lease.
      */

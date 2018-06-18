@@ -212,14 +212,15 @@ public class SystemSensorManager extends SensorManager {
                         lease = (SensorLease) mLeaseProxy.getLease(listener);
                         if (lease != null) {
                             mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
+                            lease.mLeaseValue = listener;
+                            lease.mActivityName = activityName;
+                            lease.mDelayUs = delayUs;
+                            lease.mHandler = handler;
+                            lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
+                            lease.mReservedFlags = reservedFlags;
+                            lease.mSensor = sensor;
+                            mLeaseProxy.updateSensorListener(lease.mDelayUs,lease.mMaxBatchReportLatencyUs, lease.mLeaseId);
                             if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
-                                lease.mLeaseValue = listener;
-                                lease.mActivityName = activityName;
-                                lease.mDelayUs = delayUs;
-                                lease.mHandler = handler;
-                                lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
-                                lease.mReservedFlags = reservedFlags;
-                                lease.mSensor = sensor;
                                 unregisterListenerImpl(lease.mLeaseValue, lease.mSensor);
                                 Log.d(TAG, uid + " has been disruptive to lease manager service,"
                                         + " freezing lease requests for a while..");
@@ -240,10 +241,14 @@ public class SystemSensorManager extends SensorManager {
                                 lease.mLeaseValue = listener;
                                 lease.mActivityName = activityName;
                                 lease.mSensor = sensor;
+                                lease.mDelayUs = delayUs;
+                                lease.mHandler = handler;
+                                lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
+                                lease.mReservedFlags = reservedFlags;
                                 // TODO: invoke check and notify ResourceStatManager
                                 mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
                             }
-
+                            mLeaseProxy.updateSensorListener(delayUs,maxBatchReportLatencyUs, lease.mLeaseId);
                         }
                     } else {
                         // update the internal data structure in case we need it later
@@ -266,8 +271,10 @@ public class SystemSensorManager extends SensorManager {
                             lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
                             lease.mReservedFlags = reservedFlags;
                             lease.mSensor = sensor;
+                            mLeaseProxy.updateSensorListener(lease.mDelayUs,lease.mMaxBatchReportLatencyUs, lease.mLeaseId);
                         }
                     }
+
                 }
                 return queue.addSensor(sensor, delayUs, maxBatchReportLatencyUs);
             }
@@ -477,7 +484,14 @@ public class SystemSensorManager extends SensorManager {
 
         }
 
+        public void updateSensorListener(int delayUs,int maxBatchReportLatencyUs, long leaseId) {
+            mLeaseManager.updateSensorListener(delayUs, maxBatchReportLatencyUs, leaseId);
+        }
 
+        @Override
+        public boolean isInteractive() {
+            return true;
+        }
     }
 
     /*********************/

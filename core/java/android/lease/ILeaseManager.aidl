@@ -63,4 +63,8 @@ interface ILeaseManager {
     void noteStopEvent(String activityName);
 
     void noteStartEvent(String activityName);
+
+    void updateSensorUtility(boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS, int uid);
+
+    void updateSensorListener(int delayUs, int maxBatchReportLatencyUs, long leaseId);
 }
