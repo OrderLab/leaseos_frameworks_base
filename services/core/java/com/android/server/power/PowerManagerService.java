@@ -1162,7 +1162,7 @@ public final class PowerManagerService extends SystemService
         }
 
         @Override
-        public void earlyExpire(long leaseId) throws RemoteException {
+        public void weakExpire(long leaseId) throws RemoteException {
             onExpire(leaseId);
         }
 

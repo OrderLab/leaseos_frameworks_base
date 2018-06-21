@@ -446,7 +446,7 @@ public class SystemSensorManager extends SensorManager {
          * @throws RemoteException
          */
         @Override
-        public void earlyExpire(long leaseId) throws RemoteException {
+        public void weakExpire(long leaseId) throws RemoteException {
             Log.d(TAG, "LeaseManagerService instruct me to delay resource frequency for lease " + leaseId);
             SensorLease lease = (SensorLease) mLeaseDescriptors.get(leaseId);
             if (lease != null) {

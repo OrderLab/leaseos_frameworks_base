@@ -1959,7 +1959,7 @@ public class LocationManagerService extends ILocationManager.Stub {
          * @throws RemoteException
          */
         @Override
-        public void earlyExpire(long leaseId) throws RemoteException {
+        public void weakExpire(long leaseId) throws RemoteException {
 
         }
 

@@ -28,18 +28,7 @@ import android.lease.ResourceType;
 import android.lease.TimeUtils;
 import android.os.RemoteException;
 import android.os.SystemClock;
-import android.text.TextUtils;
 import android.util.Slog;
-
-import libcore.io.Libcore;
-
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.File;
-import java.io.FileOutputStream;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
 
 /**
  * The struct of lease.
@@ -287,11 +276,11 @@ public class Lease {
     }
 
     /**
-     * Early Expire the lease, which just delay the update frequency of resource
+     * Weak Expire the lease, which just delay the update frequency of resource
      *
      * @return true if the lease is successfully expired
      */
-    public boolean earlyexpire() {
+    public boolean weakExpire() {
         if (mStatus != LeaseStatus.ACTIVE) {
             Slog.e(TAG, "Skip expiring an inactive lease " + mLeaseId);
             return false;
@@ -300,7 +289,7 @@ public class Lease {
         if (mProxy != null) {
             try {
                 Slog.d(TAG, "Calling Earlyexpire for lease " + mLeaseId);
-                mProxy.earlyExpire(mLeaseId);
+                mProxy.weakExpire(mLeaseId);
             } catch (RemoteException e) {
                 Slog.e(TAG, "Failed to invoke Earlyexpire for lease " + mLeaseId);
                 return false;
@@ -377,7 +366,7 @@ public class Lease {
             case DELAY:
                 Slog.e(TAG, "Start delay action for decision " + decision.mBehaviorType);
                 if (SystemClock.elapsedRealtime() - lastNormal < 5 * TimeUtils.MILLIS_PER_MINUTE) {
-                    earlyexpire();
+                    weakExpire();
                 } else {
                     expire();
                 }
