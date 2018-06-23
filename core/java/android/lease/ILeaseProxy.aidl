@@ -31,7 +31,7 @@ import android.lease.LeaseSettings;
   interface ILeaseProxy {
     /* perform the actual expiration for a specific type of lease */
     void onExpire(long leaseId);
-    void earlyExpire(long leaseId);
+    void weakExpire(long leaseId);
 
     /* perform the actual renewal for a specific type of lease */
     void onRenew(long leaseId);

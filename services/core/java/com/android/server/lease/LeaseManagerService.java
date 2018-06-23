@@ -464,7 +464,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     public void updateSensorListener(int delayUs, int maxBatchReportLatencyUs, long leaseId) {
         SensorListener sensorListener = new SensorListener(delayUs, maxBatchReportLatencyUs);
-        Slog.d(TAG, "Add the new listener infromaiton  for lease " + leaseId);
+        Slog.d(TAG, "Add the new listener infromaiton for lease " + leaseId);
         mSensorListeners.put(leaseId,sensorListener);
     }
 

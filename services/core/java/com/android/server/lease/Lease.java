@@ -288,7 +288,7 @@ public class Lease {
         mStatus = LeaseStatus.EXPIRED;
         if (mProxy != null) {
             try {
-                Slog.d(TAG, "Calling Earlyexpire for lease " + mLeaseId);
+                Slog.d(TAG, "Calling weakExpire for lease " + mLeaseId);
                 mProxy.weakExpire(mLeaseId);
             } catch (RemoteException e) {
                 Slog.e(TAG, "Failed to invoke Earlyexpire for lease " + mLeaseId);

@@ -115,7 +115,7 @@ import java.util.Set;
 public class LocationManagerService extends ILocationManager.Stub {
     private static final String TAG = "LocationManagerService";
     public static final boolean D = true;
-           // Log.isLoggable(TAG, Log.DEBUG);
+    // Log.isLoggable(TAG, Log.DEBUG);
 
     private static final String WAKELOCK_KEY = TAG;
 
@@ -222,18 +222,19 @@ public class LocationManagerService extends ILocationManager.Stub {
 
     // current active user on the device - other users are denied location data
     private int mCurrentUserId = UserHandle.USER_SYSTEM;
-    private int[] mCurrentUserProfiles = new int[] { UserHandle.USER_SYSTEM };
+    private int[] mCurrentUserProfiles = new int[]{UserHandle.USER_SYSTEM};
 
     private GnssLocationProvider.GnssSystemInfoProvider mGnssSystemInfoProvider;
 
     /*** LeaseOS changes ***/
     private LocationLeaseProxy mLeaseProxy;
+
     /************************/
 
     public LocationManagerService(Context context) {
         super();
         mContext = context;
-        mAppOps = (AppOpsManager)context.getSystemService(Context.APP_OPS_SERVICE);
+        mAppOps = (AppOpsManager) context.getSystemService(Context.APP_OPS_SERVICE);
 
         // Let the package manager query which are the default location
         // providers as they get certain permissions granted by default.
@@ -345,7 +346,7 @@ public class LocationManagerService extends ILocationManager.Stub {
                     updateUserProfiles(mCurrentUserId);
                 } else if (Intent.ACTION_SHUTDOWN.equals(action)) {
                     // shutdown only if UserId indicates whole system, not just one user
-                    if(D) Log.d(TAG, "Shutdown received with UserId: " + getSendingUserId());
+                    if (D) Log.d(TAG, "Shutdown received with UserId: " + getSendingUserId());
                     if (getSendingUserId() == UserHandle.USER_ALL) {
                         shutdownComponents();
                     }
@@ -363,7 +364,7 @@ public class LocationManagerService extends ILocationManager.Stub {
      * support for components that do not wish to handle such event.
      */
     private void shutdownComponents() {
-        if(D) Log.d(TAG, "Shutting down components...");
+        if (D) Log.d(TAG, "Shutting down components...");
 
         LocationProviderInterface gpsProvider = mProvidersByName.get(LocationManager.GPS_PROVIDER);
         if (gpsProvider != null && gpsProvider.isEnabled()) {
@@ -449,8 +450,10 @@ public class LocationManagerService extends ILocationManager.Stub {
                 // as a proxy for coreApp="true"
                 if (pm.checkSignatures(systemPackageName, packageName)
                         != PackageManager.SIGNATURE_MATCH) {
-                    if (D) Log.d(TAG, "Fallback candidate not signed the same as system: "
-                            + packageName);
+                    if (D) {
+                        Log.d(TAG, "Fallback candidate not signed the same as system: "
+                                + packageName);
+                    }
                     continue;
                 }
 
@@ -506,8 +509,10 @@ public class LocationManagerService extends ILocationManager.Stub {
         ArrayList<String> providerPackageNames = new ArrayList<String>();
         String[] pkgs = resources.getStringArray(
                 com.android.internal.R.array.config_locationProviderPackageNames);
-        if (D) Log.d(TAG, "certificates for location providers pulled from: " +
-                Arrays.toString(pkgs));
+        if (D) {
+            Log.d(TAG, "certificates for location providers pulled from: " +
+                    Arrays.toString(pkgs));
+        }
         if (pkgs != null) providerPackageNames.addAll(Arrays.asList(pkgs));
 
         ensureFallbackFusedProviderPresentLocked(providerPackageNames);
@@ -526,7 +531,7 @@ public class LocationManagerService extends ILocationManager.Stub {
             mProxyProviders.add(networkProvider);
             addProviderLocked(networkProvider);
         } else {
-            Slog.w(TAG,  "no network location provider found");
+            Slog.w(TAG, "no network location provider found");
         }
 
         // bind to fused provider
@@ -555,7 +560,7 @@ public class LocationManagerService extends ILocationManager.Stub {
                 com.android.internal.R.array.config_locationProviderPackageNames,
                 mLocationHandler);
         if (mGeocodeProvider == null) {
-            Slog.e(TAG,  "no geocoder provider found");
+            Slog.e(TAG, "no geocoder provider found");
         }
 
         // bind to fused hardware provider if supported
@@ -581,14 +586,14 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         // bind to geofence provider
         GeofenceProxy provider = GeofenceProxy.createAndBind(
-                mContext,com.android.internal.R.bool.config_enableGeofenceOverlay,
+                mContext, com.android.internal.R.bool.config_enableGeofenceOverlay,
                 com.android.internal.R.string.config_geofenceProviderPackageName,
                 com.android.internal.R.array.config_locationProviderPackageNames,
                 mLocationHandler,
                 mGpsGeofenceProxy,
                 flpHardwareProvider != null ? flpHardwareProvider.getGeofenceHardware() : null);
         if (provider == null) {
-            Slog.d(TAG,  "Unable to bind FLP Geofence proxy.");
+            Slog.d(TAG, "Unable to bind FLP Geofence proxy.");
         }
 
         // bind to hardware activity recognition
@@ -635,6 +640,7 @@ public class LocationManagerService extends ILocationManager.Stub {
 
     /**
      * Called when the device's active user changes.
+     *
      * @param userId the new active user's UserId
      */
     private void switchUser(int userId) {
@@ -671,7 +677,7 @@ public class LocationManagerService extends ILocationManager.Stub {
         final boolean mHideFromAppOps; // True if AppOps should not monitor this receiver.
         final Object mKey;
 
-        final HashMap<String,UpdateRecord> mUpdateRecords = new HashMap<String,UpdateRecord>();
+        final HashMap<String, UpdateRecord> mUpdateRecords = new HashMap<String, UpdateRecord>();
 
         // True if app ops has started monitoring this receiver for locations.
         boolean mOpMonitoring;
@@ -712,7 +718,7 @@ public class LocationManagerService extends ILocationManager.Stub {
         @Override
         public boolean equals(Object otherObj) {
             if (otherObj instanceof Receiver) {
-                return mKey.equals(((Receiver)otherObj).mKey);
+                return mKey.equals(((Receiver) otherObj).mKey);
             }
             return false;
         }
@@ -793,9 +799,9 @@ public class LocationManagerService extends ILocationManager.Stub {
         /**
          * Update AppOps monitoring for a single location request and op type.
          *
-         * @param allowMonitoring True if monitoring is allowed for this request/op.
+         * @param allowMonitoring     True if monitoring is allowed for this request/op.
          * @param currentlyMonitoring True if AppOps is currently monitoring this request/op.
-         * @param op AppOps code for the op to update.
+         * @param op                  AppOps code for the op to update.
          * @return True if monitoring is on for this request/op after updating.
          */
         private boolean updateMonitoring(boolean allowMonitoring, boolean currentlyMonitoring,
@@ -882,7 +888,8 @@ public class LocationManagerService extends ILocationManager.Stub {
                 }
             } else {
                 Intent locationChanged = new Intent();
-                locationChanged.putExtra(LocationManager.KEY_LOCATION_CHANGED, new Location(location));
+                locationChanged.putExtra(LocationManager.KEY_LOCATION_CHANGED,
+                        new Location(location));
                 try {
                     synchronized (this) {
                         // synchronize to ensure incrementPendingBroadcastsLocked()
@@ -1037,7 +1044,6 @@ public class LocationManagerService extends ILocationManager.Stub {
      * processes belonging to background users.
      *
      * @param provider the name of the location provider
-     * @return
      */
     private boolean isAllowedByCurrentUserSettingsLocked(String provider) {
         if (mEnabledProviders.contains(provider)) {
@@ -1058,8 +1064,7 @@ public class LocationManagerService extends ILocationManager.Stub {
      * processes belonging to background users.
      *
      * @param provider the name of the location provider
-     * @param uid the requestor's UID
-     * @return
+     * @param uid      the requestor's UID
      */
     private boolean isAllowedByUserSettingsLocked(String provider, int uid) {
         if (!isCurrentProfile(UserHandle.getUserId(uid)) && !isUidALocationProvider(uid)) {
@@ -1163,7 +1168,7 @@ public class LocationManagerService extends ILocationManager.Stub {
      * location provider.
      *
      * @param allowedResolutionLevel resolution level allowed to caller
-     * @param providerName the name of the location provider
+     * @param providerName           the name of the location provider
      */
     private void checkResolutionLevelIsSufficientForProviderUse(int allowedResolutionLevel,
             String providerName) {
@@ -1271,7 +1276,8 @@ public class LocationManagerService extends ILocationManager.Stub {
     public List<String> getProviders(Criteria criteria, boolean enabledOnly) {
         int allowedResolutionLevel = getCallerAllowedResolutionLevel();
         ArrayList<String> out;
-        int uid = Binder.getCallingUid();;
+        int uid = Binder.getCallingUid();
+        ;
         long identity = Binder.clearCallingIdentity();
         try {
             synchronized (mLock) {
@@ -1657,7 +1663,7 @@ public class LocationManagerService extends ILocationManager.Stub {
     @Override
     public void requestLocationUpdates(LocationRequest request, ILocationListener listener,
             PendingIntent intent, String packageName, String className) {
-         Slog.d(TAG, "The activity is " + className);
+        Slog.d(TAG, "The activity is " + className);
         if (request == null) request = DEFAULT_LOCATION_REQUEST;
         checkPackageName(packageName);
         int allowedResolutionLevel = getCallerAllowedResolutionLevel();
@@ -1685,7 +1691,8 @@ public class LocationManagerService extends ILocationManager.Stub {
             synchronized (mLock) {
                 Receiver receiver = checkListenerOrIntentLocked(listener, intent, pid, uid,
                         packageName, workSource, hideFromAppOps);
-                requestLocationUpdatesLocked(sanitizedRequest, receiver, pid, uid, packageName, false, className);
+                requestLocationUpdatesLocked(sanitizedRequest, receiver, pid, uid, packageName,
+                        false, className);
             }
         } finally {
             Binder.restoreCallingIdentity(identity);
@@ -1702,8 +1709,10 @@ public class LocationManagerService extends ILocationManager.Stub {
             throw new IllegalArgumentException("provider name must not be null");
         }
 
-        if (D) Log.d(TAG, "request " + Integer.toHexString(System.identityHashCode(receiver))
-                + " " + name + " " + request + " from " + packageName + "(" + uid + ")");
+        if (D) {
+            Log.d(TAG, "request " + Integer.toHexString(System.identityHashCode(receiver))
+                    + " " + name + " " + request + " from " + packageName + "(" + uid + ")");
+        }
         LocationProviderInterface provider = mProvidersByName.get(name);
         if (provider == null) {
             throw new IllegalArgumentException("provider doesn't exist: " + name);
@@ -1717,7 +1726,7 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         boolean isProviderEnabled = isAllowedByUserSettingsLocked(name, uid);
 
-       // Slog.d(TAG,"The provide is " + isProviderEnabled);
+        // Slog.d(TAG,"The provide is " + isProviderEnabled);
         if (isProviderEnabled) {
             applyRequirementsLocked(name);
             /*** LeaseOS changes ***/
@@ -1732,7 +1741,8 @@ public class LocationManagerService extends ILocationManager.Stub {
                     // been temporarily banned, and if so we should just return.
                     lease = (LocationLease) mLeaseProxy.getLease(receiver);
                     if (lease != null) {
-                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
+                                activityName);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
                             lease.mLeaseValue = receiver;
                             lease.mRequest = request;
@@ -1749,24 +1759,28 @@ public class LocationManagerService extends ILocationManager.Stub {
                 // from the lease manager
                 if (lease == null) {
                     if (mLeaseProxy.exempt(packageName, uid)) {
-                        Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
+                        Slog.d(TAG,
+                                "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                     } else if (!fromProxy) {
                         long basetime = SystemClock.elapsedRealtimeNanos();
                         Slog.d(TAG, "Begin to create a location lease at " + basetime);
-                        lease = (LocationLease) mLeaseProxy.createLease(receiver, uid, ResourceType.Location);
+                        lease = (LocationLease) mLeaseProxy.createLease(receiver, uid,
+                                ResourceType.Location);
                         if (lease != null) {
                             // hold the internal data structure in case we need it later
                             lease.mLeaseValue = receiver;
                             lease.mRequest = request;
                             lease.mActivityName = activityName;
                             // TODO: invoke check and notify ResourceStatManager
-                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE, activityName);
+                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
+                                    activityName);
                             if (!activityName.contains(packageName)) {
-                                mLeaseProxy.noteEvent(lease.mLeaseId,LeaseEvent.BACKGROUDAPP);
+                                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.BACKGROUDAPP);
                             }
                         }
                         long currtime = SystemClock.elapsedRealtimeNanos();
-                        Slog.d(TAG, "The time to create a location lease is " + (currtime - basetime) /1000);
+                        Slog.d(TAG, "The time to create a location lease is "
+                                + (currtime - basetime) / 1000);
                     }
                 } else {
                     // update the internal data structure in case we need it later
@@ -1870,7 +1884,8 @@ public class LocationManagerService extends ILocationManager.Stub {
     }
 
     /*** LeaseOS changes ***/
-    private class LocationLease extends LeaseDescriptor<Receiver> implements IBinder.DeathRecipient {
+    private class LocationLease extends LeaseDescriptor<Receiver> implements
+            IBinder.DeathRecipient {
         public Receiver mLeaseValue;
         public LocationRequest mRequest;
         public String mActivityName;
@@ -1910,20 +1925,20 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         @Override
         public void onExpire(long leaseId) throws RemoteException {
-            Slog.d(TAG, "LeaseManagerService instruct me to expire lease " + leaseId);
+            Slog.d(TAG, "LeaseManagerService instruct me to expire location lease " + leaseId);
             LocationLease lease = (LocationLease) mLeaseDescriptors.get(leaseId);
             if (lease != null) {
                 Receiver receiver;
                 synchronized (mLock) {
                     receiver = lease.mLeaseValue;
                     if (receiver == null) {
-                            receiver = mReceivers.get(lease.mLeaseKey.mKey);
-                            lease.mLeaseValue = receiver;
-                            Slog.e(TAG, "Found location receiver object for lease " + leaseId);
+                        receiver = mReceivers.get(lease.mLeaseKey.mKey);
+                        lease.mLeaseValue = receiver;
+                        Slog.e(TAG, "Found location receiver object for lease " + leaseId);
                     }
                 }
                 if (receiver != null) {
-                    Slog.e(TAG, "Release wakelock object for lease " + leaseId);
+                    Slog.e(TAG, "Release location listener for lease " + leaseId);
                     removeUpdatesLocked(receiver, true);
                 }
                 lease.mLeaseStatus = LeaseStatus.EXPIRED;
@@ -1933,7 +1948,7 @@ public class LocationManagerService extends ILocationManager.Stub {
         @Override
         public void onRenew(long leaseId) throws RemoteException {
             Slog.d(TAG, "LeaseManagerService instruct me to renew lease " + leaseId);
-            LocationLease lease = (LocationLease)mLeaseDescriptors.get(leaseId);
+            LocationLease lease = (LocationLease) mLeaseDescriptors.get(leaseId);
             if (lease != null) {
                 Receiver receiver = lease.mLeaseValue;
                 if (receiver == null) {
@@ -1941,10 +1956,12 @@ public class LocationManagerService extends ILocationManager.Stub {
                             + leaseId);
                 } else {
                     if (lease.mLeaseStatus != LeaseStatus.EXPIRED) {
-                        Slog.e(TAG, "Skip renewing because lease " + leaseId + " has not been expire before");
+                        Slog.e(TAG, "Skip renewing because lease " + leaseId
+                                + " has not been expire before");
                     } else {
                         // re-acquire the lock
-                        requestLocationUpdatesLocked(lease.mRequest,receiver, receiver.mPid,receiver.mUid,receiver.mPackageName,true, lease.mActivityName);
+                        requestLocationUpdatesLocked(lease.mRequest, receiver, receiver.mPid,
+                                receiver.mUid, receiver.mPackageName, true, lease.mActivityName);
                     }
                     // assume that after this point the lease is active
                     lease.mLeaseStatus = LeaseStatus.ACTIVE;
@@ -1953,15 +1970,48 @@ public class LocationManagerService extends ILocationManager.Stub {
         }
 
         /**
-         * Delay the sensor update frequency, if the original frequency is setting faster than Normal(0.2 seconds), we change it to Normal speed. If the orginal frequency is
-         * setting to faster than 1s seconds, we change it to update every 1 second. Otherwise, we unregister the listener.
-         * @param leaseId
-         * @throws RemoteException
+         * Delay the location update frequency
          */
         @Override
         public void weakExpire(long leaseId) throws RemoteException {
-
+            Log.d(TAG, "LeaseManagerService instruct me to delay location listener frequency for lease "
+                    + leaseId);
+            LocationLease lease = (LocationLease) mLeaseDescriptors.get(leaseId);
+            if (lease != null) {
+                Receiver receiver;
+                synchronized (mLock) {
+                    receiver = lease.mLeaseValue;
+                    Log.d(TAG,"The receiver is" + receiver + ", the Lease value is " + lease.mLeaseValue);
+                    if (receiver == null) {
+                        receiver = mReceivers.get(lease.mLeaseKey.mKey);
+                        lease.mLeaseValue = receiver;
+                        Slog.e(TAG, "Found location receiver object for lease " + leaseId);
+                    }
+                    if (receiver != null) {
+                        LocationRequest request = lease.mRequest;
+                        if (request.getInterval() < 60000 || request.getQuality() == LocationRequest.POWER_HIGH || request.getQuality() == LocationRequest.ACCURACY_FINE) {
+                            request.setInterval(60000);
+                            Slog.e(TAG, "No passive location listener for lease " + leaseId);
+                            if (request.getQuality() == LocationRequest.POWER_HIGH) {
+                               request.setQuality(LocationRequest.POWER_LOW);
+                            } else if (request.getQuality() == LocationRequest.ACCURACY_FINE) {
+                               request.setQuality(LocationRequest.ACCURACY_BLOCK);
+                            }
+                            requestLocationUpdatesLocked(request, receiver, receiver.mPid,
+                                    receiver.mUid, receiver.mPackageName, true, lease.mActivityName);
+                        } else {
+                            Slog.e(TAG, "Passive location listener for lease " + leaseId);
+                            request.setProvider(LocationManager.PASSIVE_PROVIDER);
+                            request.setQuality(LocationRequest.POWER_NONE);
+                            requestLocationUpdatesLocked(request, receiver, receiver.mPid,
+                                    receiver.mUid, receiver.mPackageName, true, lease.mActivityName);
+                        }
+                    }
+                    lease.mLeaseStatus = LeaseStatus.EXPIRED;
+                }
+            }
         }
+
 
         @Override
         public void onReject(int uid) throws RemoteException {
@@ -2007,14 +2057,18 @@ public class LocationManagerService extends ILocationManager.Stub {
         final long identity = Binder.clearCallingIdentity();
         try {
             if (mBlacklist.isBlacklisted(packageName)) {
-                if (D) Log.d(TAG, "not returning last loc for blacklisted app: " +
-                        packageName);
+                if (D) {
+                    Log.d(TAG, "not returning last loc for blacklisted app: " +
+                            packageName);
+                }
                 return null;
             }
 
             if (!reportLocationAccessNoThrow(pid, uid, packageName, allowedResolutionLevel)) {
-                if (D) Log.d(TAG, "not returning last loc for no op app: " +
-                        packageName);
+                if (D) {
+                    Log.d(TAG, "not returning last loc for no op app: " +
+                            packageName);
+                }
                 return null;
             }
 
@@ -2040,7 +2094,8 @@ public class LocationManagerService extends ILocationManager.Stub {
                     return null;
                 }
                 if (allowedResolutionLevel < RESOLUTION_LEVEL_FINE) {
-                    Location noGPSLocation = location.getExtraLocation(Location.EXTRA_NO_GPS_LOCATION);
+                    Location noGPSLocation = location.getExtraLocation(
+                            Location.EXTRA_NO_GPS_LOCATION);
                     if (noGPSLocation != null) {
                         return new Location(mLocationFudger.getOrCreate(noGPSLocation));
                     }
@@ -2247,7 +2302,7 @@ public class LocationManagerService extends ILocationManager.Stub {
     /**
      * @return null if the provider does not exist
      * @throws SecurityException if the provider is not allowed to be
-     * accessed by the caller
+     *                           accessed by the caller
      */
     @Override
     public ProviderProperties getProviderProperties(String provider) {
@@ -2270,7 +2325,7 @@ public class LocationManagerService extends ILocationManager.Stub {
     /**
      * @return null if the provider does not exist
      * @throws SecurityException if the provider is not allowed to be
-     * accessed by the caller
+     *                           accessed by the caller
      */
     @Override
     public String getNetworkProviderPackage() {
@@ -2498,15 +2553,19 @@ public class LocationManagerService extends ILocationManager.Stub {
             }
 
             if (mBlacklist.isBlacklisted(receiver.mPackageName)) {
-                if (D) Log.d(TAG, "skipping loc update for blacklisted app: " +
-                        receiver.mPackageName);
+                if (D) {
+                    Log.d(TAG, "skipping loc update for blacklisted app: " +
+                            receiver.mPackageName);
+                }
                 continue;
             }
 
             if (!reportLocationAccessNoThrow(receiver.mPid, receiver.mUid, receiver.mPackageName,
                     receiver.mAllowedResolutionLevel)) {
-                if (D) Log.d(TAG, "skipping loc update for no op app: " +
-                        receiver.mPackageName);
+                if (D) {
+                    Log.d(TAG, "skipping loc update for no op app: " +
+                            receiver.mPackageName);
+                }
                 continue;
             }
 
@@ -2520,7 +2579,7 @@ public class LocationManagerService extends ILocationManager.Stub {
                 Location lastLoc = r.mLastFixBroadcast;
                 LocationLease lease = (LocationLease) mLeaseProxy.getLease(receiver);
                 if (lease != null) {
-                    mLeaseProxy.noteEvent(lease.mLeaseId,LeaseEvent.LOCATION_CHANGE);
+                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_CHANGE);
                 }
                 if ((lastLoc == null) || shouldBroadcastSafe(notifyLocation, lastLoc, r, now)) {
                     if (lastLoc == null) {
@@ -2958,12 +3017,12 @@ public class LocationManagerService extends ILocationManager.Stub {
             }
 
             pw.append("  fudger: ");
-            mLocationFudger.dump(fd, pw,  args);
+            mLocationFudger.dump(fd, pw, args);
 
             if (args.length > 0 && "short".equals(args[0])) {
                 return;
             }
-            for (LocationProviderInterface provider: mProviders) {
+            for (LocationProviderInterface provider : mProviders) {
                 pw.print(provider.getName() + " Internal State");
                 if (provider instanceof LocationProviderProxy) {
                     LocationProviderProxy proxy = (LocationProviderProxy) provider;
