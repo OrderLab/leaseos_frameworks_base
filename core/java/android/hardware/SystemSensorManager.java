@@ -488,10 +488,6 @@ public class SystemSensorManager extends SensorManager {
             mLeaseManager.updateSensorListener(delayUs, maxBatchReportLatencyUs, leaseId);
         }
 
-        @Override
-        public boolean isInteractive() {
-            return true;
-        }
     }
 
     /*********************/

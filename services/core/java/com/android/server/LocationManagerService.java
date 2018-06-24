@@ -1741,54 +1741,58 @@ public class LocationManagerService extends ILocationManager.Stub {
                     // been temporarily banned, and if so we should just return.
                     lease = (LocationLease) mLeaseProxy.getLease(receiver);
                     if (lease != null) {
+                        if (lease.mRequest.getInterval() != request.getInterval()
+                                || lease.mRequest.getQuality() != request.getQuality()
+                                || lease.mRequest.getSmallestDisplacement()
+                                != request.getSmallestDisplacement()) {
+                            mLeaseProxy.updateLocationListener(request.getInterval(),
+                                    request.getSmallestDisplacement(), request.getQuality(),
+                                    lease.mLeaseId);
+                        }
+                        lease.mLeaseValue = receiver;
+                        lease.mRequest = request;
+                        lease.mActivityName = activityName;
                         mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
                                 activityName);
                         if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
-                            lease.mLeaseValue = receiver;
-                            lease.mRequest = request;
-                            lease.mActivityName = activityName;
+
                             removeUpdatesLocked(lease.mLeaseValue, true);
                             Slog.d(TAG, uid + " has been disruptive to lease manager service,"
                                     + " freezing lease requests for a while..");
                             return;
                         }
                     }
-                }
-                /*********************/
-                // Second, if no lease has been created for this request, try to request a lease
-                // from the lease manager
-                if (lease == null) {
-                    if (mLeaseProxy.exempt(packageName, uid)) {
-                        Slog.d(TAG,
-                                "Exempt UID " + uid + " " + packageName + " from lease mechanism");
-                    } else if (!fromProxy) {
-                        long basetime = SystemClock.elapsedRealtimeNanos();
-                        Slog.d(TAG, "Begin to create a location lease at " + basetime);
-                        lease = (LocationLease) mLeaseProxy.createLease(receiver, uid,
-                                ResourceType.Location);
-                        if (lease != null) {
-                            // hold the internal data structure in case we need it later
-                            lease.mLeaseValue = receiver;
-                            lease.mRequest = request;
-                            lease.mActivityName = activityName;
-                            // TODO: invoke check and notify ResourceStatManager
-                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
-                                    activityName);
-                            if (!activityName.contains(packageName)) {
-                                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.BACKGROUDAPP);
+                    /*********************/
+                    // Second, if no lease has been created for this request, try to request a lease
+                    // from the lease manager
+                    if (lease == null) {
+                        if (mLeaseProxy.exempt(packageName, uid)) {
+                            Slog.d(TAG,
+                                    "Exempt UID " + uid + " " + packageName
+                                            + " from lease mechanism");
+                        } else if (!fromProxy) {
+                            lease = (LocationLease) mLeaseProxy.createLease(receiver, uid,
+                                    ResourceType.Location);
+                            if (lease != null) {
+                                // hold the internal data structure in case we need it later
+                                lease.mLeaseValue = receiver;
+                                lease.mRequest = request;
+                                lease.mActivityName = activityName;
+                                // TODO: invoke check and notify ResourceStatManager
+                                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
+                                        activityName);
+                                mLeaseProxy.updateLocationListener(lease.mRequest.getInterval(),
+                                        lease.mRequest.getSmallestDisplacement(),
+                                        lease.mRequest.getQuality(), lease.mLeaseId);
+                                if (!activityName.contains(packageName)) {
+                                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.BACKGROUDAPP);
+                                }
                             }
+
                         }
-                        long currtime = SystemClock.elapsedRealtimeNanos();
-                        Slog.d(TAG, "The time to create a location lease is "
-                                + (currtime - basetime) / 1000);
                     }
-                } else {
-                    // update the internal data structure in case we need it later
-                    lease.mLeaseValue = receiver;
                 }
             }
-
-
             /*********************/
         } else {
             // Notify the listener that updates are currently disabled
@@ -1974,14 +1978,15 @@ public class LocationManagerService extends ILocationManager.Stub {
          */
         @Override
         public void weakExpire(long leaseId) throws RemoteException {
-            Log.d(TAG, "LeaseManagerService instruct me to delay location listener frequency for lease "
-                    + leaseId);
+            Log.d(TAG,
+                    "LeaseManagerService instruct me to delay location listener frequency for "
+                            + "lease "
+                            + leaseId);
             LocationLease lease = (LocationLease) mLeaseDescriptors.get(leaseId);
             if (lease != null) {
                 Receiver receiver;
                 synchronized (mLock) {
                     receiver = lease.mLeaseValue;
-                    Log.d(TAG,"The receiver is" + receiver + ", the Lease value is " + lease.mLeaseValue);
                     if (receiver == null) {
                         receiver = mReceivers.get(lease.mLeaseKey.mKey);
                         lease.mLeaseValue = receiver;
@@ -1989,22 +1994,26 @@ public class LocationManagerService extends ILocationManager.Stub {
                     }
                     if (receiver != null) {
                         LocationRequest request = lease.mRequest;
-                        if (request.getInterval() < 60000 || request.getQuality() == LocationRequest.POWER_HIGH || request.getQuality() == LocationRequest.ACCURACY_FINE) {
+                        if (request.getInterval() < 60000
+                                || request.getQuality() == LocationRequest.POWER_HIGH
+                                || request.getQuality() == LocationRequest.ACCURACY_FINE) {
                             request.setInterval(60000);
                             Slog.e(TAG, "No passive location listener for lease " + leaseId);
                             if (request.getQuality() == LocationRequest.POWER_HIGH) {
-                               request.setQuality(LocationRequest.POWER_LOW);
+                                request.setQuality(LocationRequest.POWER_LOW);
                             } else if (request.getQuality() == LocationRequest.ACCURACY_FINE) {
-                               request.setQuality(LocationRequest.ACCURACY_BLOCK);
+                                request.setQuality(LocationRequest.ACCURACY_BLOCK);
                             }
                             requestLocationUpdatesLocked(request, receiver, receiver.mPid,
-                                    receiver.mUid, receiver.mPackageName, true, lease.mActivityName);
+                                    receiver.mUid, receiver.mPackageName, true,
+                                    lease.mActivityName);
                         } else {
                             Slog.e(TAG, "Passive location listener for lease " + leaseId);
                             request.setProvider(LocationManager.PASSIVE_PROVIDER);
                             request.setQuality(LocationRequest.POWER_NONE);
                             requestLocationUpdatesLocked(request, receiver, receiver.mPid,
-                                    receiver.mUid, receiver.mPackageName, true, lease.mActivityName);
+                                    receiver.mUid, receiver.mPackageName, true,
+                                    lease.mActivityName);
                         }
                     }
                     lease.mLeaseStatus = LeaseStatus.EXPIRED;
@@ -2023,9 +2032,9 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         }
 
-        @Override
-        public boolean isInteractive() {
-            return true;
+        public void updateLocationListener(long minFrequencyMS, float minDistance, int accuracy,
+                long leaseId) {
+            mLeaseManager.updateLocationListener(minFrequencyMS, minDistance, accuracy, leaseId);
         }
     }
 

@@ -47,7 +47,4 @@ import android.lease.LeaseSettings;
     void stopLease();
 
     void settingsChanged(in LeaseSettings settings);
-
-    boolean isInteractive();
-
 }

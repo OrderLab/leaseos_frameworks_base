@@ -250,13 +250,13 @@ public final class LeaseManager {
         }
     }
 
-    public void noteSensorUtility (boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS) {
+    public void noteSensorUtility(boolean canScreenOn, boolean canBackground, int minFrequencyUS, int batchReportLatencyUS) {
         int uid = mContext.getApplicationInfo().uid;
         try {
-            mService.updateSensorUtility( canScreenOn , canBackground, minFrequencyUS, batchReportLatencyUS, uid);
+            mService.updateSensorUtility(canScreenOn, canBackground, minFrequencyUS, batchReportLatencyUS, uid);
         }catch (RemoteException e) {
-            Log.e(TAG, "Fail to refreshStatic");
-            return ;
+            Log.e(TAG, "Fail to note SensorUtility to lease manager service");
+            return;
         }
     }
 
@@ -264,8 +264,45 @@ public final class LeaseManager {
         try {
             mService.updateSensorListener(delayUs, maxBatchReportLatencyUs, leaseId);
         }catch (RemoteException e) {
-            Log.e(TAG, "Fail to refreshStatic");
-            return ;
+            Log.e(TAG, "Fail to update sensor listener information");
+            return;
+        }
+    }
+
+    public void noteLocationUtility(boolean canScreenOn, boolean canBackground, long minFrequencyMS, float minDistance, int accuracy) {
+        int uid = mContext.getApplicationInfo().uid;
+        try {
+            mService.updateLocationUtility(canScreenOn, canBackground, minFrequencyMS, minDistance, accuracy, uid);
+        }catch (RemoteException e) {
+            Log.e(TAG, "Fail to note location utility to lease manager service");
+            return;
+        }
+    }
+
+    public void updateLocationListener(long minFrequencyMS,float minDistance,int accuracy, long leaseId) {
+        try {
+            mService.updateLocationListener(minFrequencyMS, minDistance, accuracy, leaseId);
+        }catch (RemoteException e) {
+            Log.e(TAG, "Fail to update location listener information");
+            return;
+        }
+    }
+
+    public void noteScreenOff(){
+        try{
+            mService.noteScreenOff();
+        }catch (Exception e) {
+            Log.e(TAG, "Fail to note screen off");
+            return;
+        }
+    }
+
+    public void noteScreenOn(){
+        try{
+            mService.noteScreenOn();
+        }catch (Exception e) {
+            Log.e(TAG, "Fail to note screen on");
+            return;
         }
     }
 }

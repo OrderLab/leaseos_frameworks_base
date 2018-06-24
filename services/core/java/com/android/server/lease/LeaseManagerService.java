@@ -20,7 +20,6 @@
  */
 package com.android.server.lease;
 
-import android.app.IActivityManager;
 import android.content.ContentResolver;
 import android.content.Context;
 import android.database.ContentObserver;
@@ -30,7 +29,9 @@ import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.LeaseSettings;
 import android.lease.LeaseSettingsUtils;
+import android.lease.LeaseStatus;
 import android.lease.ResourceType;
+import android.location.LocationRequest;
 import android.net.Uri;
 import android.os.Binder;
 import android.os.Handler;
@@ -38,21 +39,15 @@ import android.os.HandlerThread;
 import android.os.IBinder;
 import android.os.Looper;
 import android.os.Message;
-import android.os.PowerManager;
 import android.os.Process;
 import android.os.RemoteException;
-import android.os.ServiceManager;
 import android.os.SystemClock;
 import android.os.UserHandle;
 import android.provider.Settings;
-import android.util.Log;
 import android.util.LongSparseArray;
-import android.util.Singleton;
 import android.util.Slog;
 import android.util.SparseArray;
 
-import java.io.IOException;
-import java.lang.reflect.Array;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -90,12 +85,15 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     private final SparseArray<Integer> mExceptionTable = new SparseArray<>();
     private final SparseArray<Integer> mTouchEventTable = new SparseArray<>();
     private final Hashtable<String,Integer> mActivityTable = new Hashtable<>();
-    private final SparseArray<UtilityStat> mAppUtilityStat = new SparseArray<>();
+    private final SparseArray<UtilityStat> mSensorUtilityStat = new SparseArray<>();
+    private final SparseArray<UtilityStat> mLocationUtilityStat = new SparseArray<>();
     private final Hashtable<Long, SensorListener> mSensorListeners = new Hashtable<>();
+    private final Hashtable<Long, LocationListener> mLocationListeners = new Hashtable<>();
 
     private final Context mContext;
 
     private boolean mLeaseRunning = false;
+    public boolean isScreenOff = true;
 
     private LeaseSettings mSettings;
     private SettingsObserver mSettingsObserver;
@@ -133,8 +131,11 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         mHandler = new LeaseHandler(mHandlerThread.getLooper());
         mSettings = LeaseSettings.getDefaultSettings();
         mHandler.sendEmptyMessage(LeaseHandler.MSG_SYNC_SETTINGS);
-        UtilityStat defaultUtilityStat = new UtilityStat(false,false,200000, 200000);
-        mAppUtilityStat.put(-1, defaultUtilityStat);
+        UtilityStat defaultSensorUtilityStat = new UtilityStat(true,true,200000, 200000);
+        mSensorUtilityStat.put(-1, defaultSensorUtilityStat);
+        UtilityStat defaultLocationUtilityStat = new UtilityStat(true, true, 120000, 0,
+                LocationRequest.ACCURACY_FINE);
+        mLocationUtilityStat.put(-1 ,defaultLocationUtilityStat);
         Slog.i(TAG, "LeaseManagerService initialized");
     }
 
@@ -226,10 +227,9 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             } else {
                 Slog.e(TAG, "No worker thread found for lease " + mLastLeaseId);
             }
-            lease.create(now); // at last when proxy and worker thread is ready, create this lease
             mRStatManager.setStatsHistory(lease.mLeaseId, statHistory);
             mLastLeaseId++;
-
+            lease.create(now); // at last when proxy and worker thread is ready, create this lease
             return lease.mLeaseId;
         }
 
@@ -354,7 +354,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
-    public void noteSensorEvent (long leaseId, LeaseEvent event, String activityName) {
+    public void noteSensorEvent(long leaseId, LeaseEvent event, String activityName) {
         StatHistory statHistory;
         synchronized (mLock) {
             Lease lease = mLeases.get(leaseId);
@@ -430,7 +430,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         return toucnEvent;
     }
 
-    public void noteStartEvent(String activityName) {
+    public void noteActivityStartEvent(String activityName) {
         synchronized (this) {
             int index = activityName.indexOf('@');
             activityName = activityName.substring(0,index);
@@ -439,7 +439,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
-    public void noteStopEvent(String activityName) {
+    public void noteActivityStopEvent(String activityName) {
         synchronized (this) {
             int index = activityName.indexOf('@');
             activityName = activityName.substring(0,index);
@@ -455,28 +455,85 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         return mActivityTable.get(activityName);
     }
 
-    public void updateSensorUtility(boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS, int uid) {
+    public void updateSensorUtility(boolean canScreenOn, boolean canBackground, int minFrequencyUS, int batchReportLatencyUS, int uid) {
         UtilityStat utilityStat = new UtilityStat(canScreenOn , canBackground, minFrequencyUS, batchReportLatencyUS);
-        Slog.d(TAG, "Add the new utility stat for " + uid);
-        mAppUtilityStat.put(uid,utilityStat);
+        Slog.d(TAG, "Add new sensor utility stat for " + uid);
+        mSensorUtilityStat.put(uid,utilityStat);
 
+    }
+
+    public void updateLocationUtility(boolean canScreenOn, boolean canBackground, long minFrequencyMS, float minDistance, int accuracy, int uid) {
+        UtilityStat utilityStat = new UtilityStat(canScreenOn , canBackground, minFrequencyMS, minDistance, accuracy);
+        Slog.d(TAG, "Add new location utility stat for " + uid);
+        mLocationUtilityStat.put(uid, utilityStat);
+    }
+
+    public void updateLocationListener(long minFrequencyMS,float minDistance,int accuracy, long leaseId) {
+        LocationListener locationListener = new LocationListener(minFrequencyMS, minDistance, accuracy);
+        Slog.d(TAG, "Add the new location listener infromaiton for lease " + leaseId);
+        mLocationListeners.put(leaseId,locationListener);
     }
 
     public void updateSensorListener(int delayUs, int maxBatchReportLatencyUs, long leaseId) {
         SensorListener sensorListener = new SensorListener(delayUs, maxBatchReportLatencyUs);
-        Slog.d(TAG, "Add the new listener infromaiton for lease " + leaseId);
+        Slog.d(TAG, "Add the new sensor listener infromaiton for lease " + leaseId);
         mSensorListeners.put(leaseId,sensorListener);
     }
 
-    public UtilityStat getUtilityStat(int uid) {
-        if (mAppUtilityStat.get(uid) == null) {
-            return mAppUtilityStat.get(-1);
-        }
-        return mAppUtilityStat.get(uid);
+    public LocationListener getLocationListener (long leaseId) {
+        return mLocationListeners.get(leaseId);
     }
 
-    public SensorListener getsensorListener(int leaseId) {
+    public SensorListener getsensorListener(long leaseId) {
         return mSensorListeners.get(leaseId);
+    }
+
+
+    public void noteScreenOff() {
+        isScreenOff = true;
+        for (int i=0; i < mLeases.size(); i++) {
+            Lease lease = mLeases.valueAt(i);
+            if (lease.getStatus() == LeaseStatus.ACTIVE) {
+                if (lease.getType() == ResourceType.Location) {
+                    UtilityStat utilityStat = mLocationUtilityStat.get(lease.mOwnerId);
+                    if (utilityStat == null) {
+                        utilityStat = mLocationUtilityStat.get(-1);
+                        if (!utilityStat.mCanScreenOn) {
+                            lease.getStatHistory().getCurrentStat().setMatch(false);
+                        }
+                    }
+                }
+            }
+        }
+    }
+
+    public void noteScreenOn() {
+        isScreenOff = false;
+    }
+
+    public UtilityStat getUtilityStat(int uid, ResourceType resourceType) {
+        UtilityStat utilityStat;
+        switch (resourceType) {
+            case Wakelock:
+                utilityStat = null;
+                break;
+            case Location:
+                utilityStat = mLocationUtilityStat.get(uid);
+                if (utilityStat == null) {
+                    utilityStat = mLocationUtilityStat.get(-1);
+                }
+                break;
+            case Sensor:
+                utilityStat = mSensorUtilityStat.get(uid);
+                if (utilityStat == null) {
+                    utilityStat = mSensorUtilityStat.get(-1);
+                }
+                break;
+            default:
+                Slog.d(TAG, "Unknow type of resource");
+                utilityStat = null;
+        }
+        return utilityStat;
     }
 
     public LeaseProxy getWakelockLeaseProxy() {
@@ -484,8 +541,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         wrapperList = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
         return wrapperList.get(0);
     }
-
-
 
     public void systemRunning() {
         Slog.d(TAG, "Ready to start lease");
@@ -975,15 +1030,29 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public class UtilityStat {
         public boolean mCanScreenOn;
         public boolean mCanBackground;
-        public int mMinFrequencyUS;
+        public int mSensorMinFrequencyUS;
+        public long mLocationMinFrequencyMS;
         public int mBatchReportLatencyUS;
         public int mLifetimeMintes;
+        public ResourceType resourceType;
+        public float mMinDistance;
+        public int mAccuracy;
 
-        public UtilityStat(boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS) {
+        public UtilityStat(boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS ) {
             mCanScreenOn = canScreenOn;
             mCanBackground = canBackground;
-            mMinFrequencyUS = minFrequencyUS;
+            mSensorMinFrequencyUS = minFrequencyUS;
             mBatchReportLatencyUS = batchReportLatencyUS;
+            resourceType = ResourceType.Sensor;
+        }
+
+        public UtilityStat(boolean canScreenOn, boolean canBackground, long minFrequencyMS, float minDistance, int accuracy) {
+            mCanScreenOn = canScreenOn;
+            mCanBackground = canBackground;
+            mLocationMinFrequencyMS = minFrequencyMS;
+            mMinDistance = minDistance;
+            mAccuracy = accuracy;
+            resourceType = ResourceType.Location;
         }
     }
 
@@ -995,6 +1064,17 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             mDelayUs = delayUs;
             mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
         }
+    }
 
+    public class LocationListener {
+        public long mFrequencyMS;
+        public float mMinDistance;
+        public int mAccuary;
+
+        public LocationListener(long frequencyMS, float minDistance, int accuary ) {
+            mFrequencyMS = frequencyMS;
+            mMinDistance = minDistance;
+            mAccuary = accuary;
+        }
     }
 }

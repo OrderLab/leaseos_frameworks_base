@@ -22,7 +22,6 @@ package com.android.server.lease;
 
 import android.content.Context;
 import android.lease.BehaviorType;
-import android.os.SystemClock;
 import android.util.Slog;
 
 import com.android.server.lease.db.LeaseStatsDBHelper;

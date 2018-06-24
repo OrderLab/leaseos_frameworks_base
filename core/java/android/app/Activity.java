@@ -1200,7 +1200,7 @@ public class Activity extends ContextThemeWrapper
                 String activityName = this.toString();
                 IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
                 ILeaseManager service = ILeaseManager.Stub.asInterface(b);
-                service.noteStartEvent(activityName);
+                service.noteActivityStartEvent(activityName);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }
@@ -1833,7 +1833,7 @@ public class Activity extends ContextThemeWrapper
                 String activityName = this.toString();
                 IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
                 ILeaseManager service = ILeaseManager.Stub.asInterface(b);
-                service.noteStopEvent(activityName);
+                service.noteActivityStopEvent(activityName);
             } catch (RemoteException e) {
                 e.printStackTrace();
             }

@@ -24,14 +24,12 @@ import android.app.ActivityManager;
 import android.app.ActivityManagerNative;
 import android.content.Context;
 import android.lease.BehaviorType;
-import android.lease.LeaseProxy;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.util.Slog;
 
 import com.android.server.lease.db.LeaseStatsDBHelper;
 import com.android.server.lease.db.LeaseStatsRecord;
-import com.android.server.power.PowerManagerService;
 
 import java.util.List;
 
@@ -62,15 +60,12 @@ public class SensorStat extends ResourceStat {
         mFrequency = 0;
         mHoldingTime = 0;
         mHandler = handler;
-        long baseTime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "Begin to get CPU time " + baseTime);
         mBaseCPUTime = BatteryMonitor.getInstance(mContext).getCPUTime(mUid);
         mLeaseManagerService = leaseManagerService;
-        long currtime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "The time to update lease is " + (currtime - baseTime) / 1000);
+        mIsMatch = true;
         isLeak = false;
         isWeak = false;
-        //Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
+        Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
 
     @Override
@@ -110,7 +105,6 @@ public class SensorStat extends ResourceStat {
         isLeak = true;
     }
 
-
     @Override
     public long getConsumption() {
         return 0;
@@ -138,59 +132,13 @@ public class SensorStat extends ResourceStat {
 
     @Override
     public void judge() {
-        boolean isScreenOn;
-        boolean isBackground;
-
         if (isLeak) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
             mBehaviorType = BehaviorType.LongHolding;
             return;
         }
 
-        LeaseManagerService.UtilityStat utilityStat = mLeaseManagerService.getUtilityStat(mUid);
-        LeaseManagerService.LeaseProxy leaseProxy = mLeaseManagerService.getWakelockLeaseProxy();
-
-        try {
-            isScreenOn = leaseProxy.mProxy.isInteractive();
-        } catch (RemoteException e) {
-            Slog.e(TAG, "Failed to invoke isInteractive");
-            mBehaviorType = BehaviorType.Normal;
-            return;
-        }
-
-        List<ActivityManager.RunningAppProcessInfo> runningAppProcessInfoList;
-        try {
-            runningAppProcessInfoList = ActivityManagerNative.getDefault().getRunningAppProcesses();
-        } catch (RemoteException e) {
-            Slog.e(TAG, "Failed to get app process");
-            mBehaviorType = BehaviorType.Normal;
-            return;
-        }
-
-        if (runningAppProcessInfoList == null) {
-            isBackground = true;
-        } else {
-            isBackground = true;
-            for (ActivityManager.RunningAppProcessInfo processInfo : runningAppProcessInfoList) {
-                if (mUid == processInfo.uid) {
-                    isBackground = false;
-                    break;
-                }
-            }
-        }
-
-        LeaseManagerService.SensorListener sensorListeners = mLeaseManagerService.getsensorListener(
-                mUid);
-
-        if (sensorListeners == null) {
-            Slog.e(TAG, "Failed to get sensor information");
-            mBehaviorType = BehaviorType.Normal;
-            return;
-        }
-
-        if ((isScreenOn || utilityStat.mCanScreenOn) && (isBackground || utilityStat.mCanBackground)
-                && (sensorListeners.mDelayUs < utilityStat.mMinFrequencyUS) && (
-                sensorListeners.mMaxBatchReportLatencyUs < utilityStat.mBatchReportLatencyUS)) {
+        if (!mIsMatch) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
             mBehaviorType = BehaviorType.LowUtility;
             return;

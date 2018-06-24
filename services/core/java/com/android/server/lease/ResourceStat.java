@@ -38,6 +38,7 @@ public abstract class ResourceStat {
     protected long mSysDamage; //The number of system damage caused by this lease term
     protected BehaviorType mBehaviorType; // the behavior type of this lease term
     protected LeaseManagerService mLeaseManagerService;
+    protected boolean mIsMatch;
 
     public abstract void update(long holdingTime, int frequency, Context context, double lastUtility);
 
@@ -68,6 +69,12 @@ public abstract class ResourceStat {
     public abstract long getDamage();
 
     public abstract void judge();
+
+    public void setMatch(boolean isMatch) {
+        if (isMatch) {
+            mIsMatch = false;
+        }
+    }
 
     public long getEfficiency() {
         return getWork() / getConsumption();

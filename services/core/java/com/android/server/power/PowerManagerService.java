@@ -965,11 +965,7 @@ public final class PowerManagerService extends SystemService
                     if (mLeaseProxy.exempt(packageName, uid)) {
                         Slog.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                     } else if (!fromProxy) {
-                        long basetime = SystemClock.elapsedRealtimeNanos();
-                        Slog.d(TAG, "Begin to create a wakelock lease at " + basetime);
                         lease = (WakelockLease) mLeaseProxy.createLease(lock, uid, ResourceType.Wakelock);
-                        long currtime = SystemClock.elapsedRealtimeNanos();
-                        Slog.d(TAG, "The time to create a wakelock lease is " + (currtime - basetime)/1000);
                         if (lease != null) {
                             // hold the internal data structure in case we need it later
                             lease.mLeaseValue = wakeLock;
@@ -1174,10 +1170,6 @@ public final class PowerManagerService extends SystemService
         @Override
         public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
             freezeUid(uid, freezeDuration, freeCount);
-        }
-
-        public boolean isInteractive() {
-            return isInteractiveInternal();
         }
     }
     /*********************/
@@ -3725,6 +3717,11 @@ public final class PowerManagerService extends SystemService
             if (eventTime > SystemClock.uptimeMillis()) {
                 throw new IllegalArgumentException("event time must not be in the future");
             }
+            try {
+                mLeaseProxy.mLeaseManager.noteScreenOn();
+            } catch (Exception e) {
+                Slog.d(TAG, "Failed to note the screen off event");
+            }
 
             mContext.enforceCallingOrSelfPermission(
                     android.Manifest.permission.DEVICE_POWER, null);
@@ -3742,6 +3739,12 @@ public final class PowerManagerService extends SystemService
         public void goToSleep(long eventTime, int reason, int flags) {
             if (eventTime > SystemClock.uptimeMillis()) {
                 throw new IllegalArgumentException("event time must not be in the future");
+            }
+            Slog.d(TAG, "The screen is off");
+            try {
+                mLeaseProxy.mLeaseManager.noteScreenOff();
+            } catch (Exception e) {
+                Slog.d(TAG, "Failed to note the screen off event");
             }
 
             mContext.enforceCallingOrSelfPermission(

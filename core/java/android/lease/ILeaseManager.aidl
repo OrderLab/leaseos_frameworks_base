@@ -2,7 +2,7 @@
  *  @author Ryan Huang <huang@cs.jhu.edu>
  *
  *  The LeaseOS Project
- *
+ *A
  *  Copyright (c) 2018, Johns Hopkins University - Order Lab.
  *      All rights reserved.
  *
@@ -60,11 +60,19 @@ interface ILeaseManager {
 
     void noteTouchEvent(int uid);
 
-    void noteStopEvent(String activityName);
+    void noteActivityStopEvent(String activityName);
 
-    void noteStartEvent(String activityName);
+    void noteActivityStartEvent(String activityName);
 
     void updateSensorUtility(boolean canScreenOn , boolean canBackground, int minFrequencyUS, int batchReportLatencyUS, int uid);
 
+    void updateLocationUtility(boolean canScreenOn, boolean canBackground, long minFrequencyMS, float minDistance, int accuracy, int uid);
+
     void updateSensorListener(int delayUs, int maxBatchReportLatencyUs, long leaseId);
+
+    void updateLocationListener(long minFrequencyMS,float minDistance,int accuracy, long leaseId);
+
+    void noteScreenOff();
+
+    void noteScreenOn();
 }

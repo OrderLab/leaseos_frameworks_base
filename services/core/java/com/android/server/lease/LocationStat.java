@@ -20,15 +20,10 @@
  */
 package com.android.server.lease;
 
-import android.app.ActivityManager;
 import android.content.Context;
 import android.lease.BehaviorType;
-import android.lease.LeaseStatus;
-import android.os.SystemClock;
-import android.util.Log;
 import android.util.Slog;
 
-import com.android.server.lease.db.LeaseStatsDBHelper;
 import com.android.server.lease.db.LeaseStatsRecord;
 
 /**
@@ -51,6 +46,7 @@ public class LocationStat extends ResourceStat {
     protected LeaseWorkerHandler mHandler;
 
 
+
     public LocationStat(long beginTime, int uid, Context context, LeaseManagerService leaseManagerService, LeaseWorkerHandler handler) {
         super(beginTime);
         mContext = context;
@@ -58,15 +54,12 @@ public class LocationStat extends ResourceStat {
         mFrequency = 0;
         mHoldingTime = 0;
         mHandler = handler;
-        long baseTime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "Begin to get CPU time " + baseTime);
         mBaseCPUTime = BatteryMonitor.getInstance(mContext).getCPUTime(mUid);
         mLeaseManagerService = leaseManagerService;
-        long currtime = SystemClock.elapsedRealtimeNanos();
-        Slog.d(TAG, "The time to update lease is " + (currtime - baseTime)/1000);
         isLeak = false;
         isWeak = false;
-        //Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
+        mIsMatch = true;
+        Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
 
     @Override
@@ -102,14 +95,15 @@ public class LocationStat extends ResourceStat {
     }
 
     public void setLocationLeak() {
-     //   Slog.d(TAG, "set the location leak");
+        Slog.d(TAG, "set the location leak");
         isLeak = true;
     }
 
     public void setLocationWeak() {
-      //  Slog.d(TAG, "set the location Weak");
+        Slog.d(TAG, "set the location Weak");
         isWeak = true;
     }
+
 
     @Override
     public long getConsumption() {
@@ -151,7 +145,7 @@ public class LocationStat extends ResourceStat {
             return;
         }
 
-        if(mUsageTime <= 10) {
+        if(!mIsMatch) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
             mBehaviorType = BehaviorType.LowUtility;
             return;

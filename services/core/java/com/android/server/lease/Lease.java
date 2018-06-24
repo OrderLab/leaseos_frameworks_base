@@ -20,6 +20,8 @@
  */
 package com.android.server.lease;
 
+import android.app.ActivityManager;
+import android.app.ActivityManagerNative;
 import android.content.Context;
 import android.lease.BehaviorType;
 import android.lease.ILeaseProxy;
@@ -29,6 +31,8 @@ import android.lease.TimeUtils;
 import android.os.RemoteException;
 import android.os.SystemClock;
 import android.util.Slog;
+
+import java.util.List;
 
 /**
  * The struct of lease.
@@ -82,6 +86,8 @@ public class Lease {
     private LeaseWorkerHandler mHandler;
     private boolean mScheduled;
 
+    public boolean isMatch;
+
 
     private Runnable mExpireRunnable = new Runnable() {
         @Override
@@ -126,6 +132,7 @@ public class Lease {
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
         mLeaseManagerService.getAndCleanException(mOwnerId);
+        checkUtilityMatch();
         scheduleExpire(mLength);
     }
 
@@ -201,8 +208,8 @@ public class Lease {
      *
      * @return lease type
      */
-    public String getTypeStr() {
-        return mType.toString();
+    public ResourceType getType() {
+        return mType;
     }
 
     /**
@@ -248,6 +255,68 @@ public class Lease {
         USER_DEFINE_TERM_MS = (int) leaseTerm;
         USER_DEFINE_DELAY_TIME = (int) delayInterval;
     }
+
+    public void checkUtilityMatch() {
+        boolean isBackground;
+
+        Slog.d(TAG, "Checking the utility of lease " + mLeaseId);
+        LeaseManagerService.UtilityStat utilityStat = mLeaseManagerService.getUtilityStat(mOwnerId, mType);
+        if (utilityStat == null) {
+            return;
+        }
+
+        List<ActivityManager.RunningAppProcessInfo> runningAppProcessInfoList;
+        try {
+            runningAppProcessInfoList = ActivityManagerNative.getDefault().getRunningAppProcesses();
+        } catch (RemoteException e) {
+            Slog.e(TAG, "Failed to get app process");
+            runningAppProcessInfoList = null;
+        }
+
+        if (runningAppProcessInfoList == null) {
+            isBackground = true;
+        } else {
+            isBackground = true;
+            for (ActivityManager.RunningAppProcessInfo processInfo : runningAppProcessInfoList) {
+                if (mOwnerId == processInfo.uid) {
+                    isBackground = false;
+                    break;
+                }
+            }
+        }
+
+        if (!(utilityStat.mCanScreenOn || mLeaseManagerService.isScreenOff)) {
+            getStatHistory().getCurrentStat().setMatch(false);
+        }
+
+        if (!(isBackground || utilityStat.mCanBackground)) {
+            getStatHistory().getCurrentStat().setMatch(false);
+        }
+
+        switch (mType) {
+            case Wakelock:
+                break;
+            case Location:
+                LeaseManagerService.LocationListener locationListener = mLeaseManagerService.getLocationListener(mLeaseId);
+                if (locationListener == null) {
+                    Slog.e(TAG, "Failed to get location information");
+                } else if (locationListener.mFrequencyMS > utilityStat.mLocationMinFrequencyMS || locationListener.mMinDistance > utilityStat.mMinDistance) {
+                    getStatHistory().getCurrentStat().setMatch(false);
+                }
+                break;
+            case Sensor:
+                LeaseManagerService.SensorListener sensorListener = mLeaseManagerService.getsensorListener(mLeaseId);
+                if (sensorListener == null) {
+                    Slog.e(TAG, "Failed to get sensor information");
+                } else if (sensorListener.mDelayUs > utilityStat.mSensorMinFrequencyUS || sensorListener.mMaxBatchReportLatencyUs > utilityStat.mBatchReportLatencyUS) {
+                    getStatHistory().getCurrentStat().setMatch(false);
+                }
+                break;
+                default:
+                    Slog.d(TAG, "Unknow type of resource");
+        }
+    }
+
 
     /**
      * Expire the lease
@@ -456,6 +525,7 @@ public class Lease {
                 success = false;
             }
         }
+        checkUtilityMatch();
         scheduleExpire(mLength);
         return success;
     }

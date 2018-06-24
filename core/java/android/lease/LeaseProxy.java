@@ -28,11 +28,8 @@ import android.util.Slog;
 
 import libcore.io.Libcore;
 
-import java.io.File;
-import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.Enumeration;
-import java.util.HashSet;
 import java.util.Hashtable;
 import java.util.List;
 
@@ -61,7 +58,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
     protected final RequestFreezer<Integer> mUidFreezer;
     private int index = 0;
 
-    protected LeaseManager mLeaseManager;
+    public LeaseManager mLeaseManager;
 
     public LeaseProxy(int type, String name, Context context) {
         mType = type;
@@ -321,4 +318,5 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
     public String toString() {
         return "[" + LeaseManager.getProxyTypeString(mType) + "]-" + mName;
     }
+
 }
