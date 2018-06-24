@@ -110,7 +110,7 @@ public class StatHistory {
                         && e.releaseTime <= endTime) {
                     staleEventsIndex.add(index);
                     holdingTime += e.releaseTime - e.acquireTime;
-                    Slog.d(TAG, "The wakelock has been released. For process " + uid + ", the Holding time is " + holdingTime);
+                    Slog.d(TAG, "The resource has been released. For process " + uid + ", the Holding time is " + holdingTime);
                     frequency++;
                     index++;
                     stale++;
@@ -119,7 +119,7 @@ public class StatHistory {
                     staleEventsIndex.add(index);
                     holdingTime += e.releaseTime - startTime;
                     Slog.d(TAG,
-                            "The wakelock has been released but is not acquired in this lease term. "
+                            "The resource has been released but is not acquired in this lease term. "
                                     + "For process "
                                     + uid
                                     + ", the Holding time is " + holdingTime);
@@ -129,7 +129,7 @@ public class StatHistory {
                 } else if (e.acquireTime == e.releaseTime && e.acquireTime >= startTime) {
                     holdingTime += endTime - e.acquireTime;
                     Slog.d(TAG,
-                            "The wakelock has not been released yet but is acquired in this lease "
+                            "The resource has not been released yet but is acquired in this lease "
                                     + "term. For process "
                                     + uid
                                     + ", the Holding time is " + holdingTime);

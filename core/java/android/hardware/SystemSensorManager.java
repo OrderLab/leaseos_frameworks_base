@@ -247,8 +247,8 @@ public class SystemSensorManager extends SensorManager {
                                 lease.mReservedFlags = reservedFlags;
                                 // TODO: invoke check and notify ResourceStatManager
                                 mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
+                                mLeaseProxy.updateSensorListener(delayUs,maxBatchReportLatencyUs, lease.mLeaseId);
                             }
-                            mLeaseProxy.updateSensorListener(delayUs,maxBatchReportLatencyUs, lease.mLeaseId);
                         }
                     } else {
                         // update the internal data structure in case we need it later

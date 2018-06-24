@@ -51,6 +51,7 @@ public final class LeaseManager {
     private Context mContext;
 
     public LeaseManager(Context context, ILeaseManager service) {
+        Log.d(TAG, "Create a lease manager");
         mContext = context;
         mService = service;
     }
@@ -305,4 +306,10 @@ public final class LeaseManager {
             return;
         }
     }
+
+
+    public int getSensorScore() {
+       return 100;
+    }
+
 }
