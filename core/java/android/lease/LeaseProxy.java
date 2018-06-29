@@ -166,7 +166,7 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
         }
     }
 
-    public boolean checkorRenew(long leaseId) {
+    public boolean check(long leaseId) {
         if (mLeaseManager != null) {
             return mLeaseManager.check(leaseId);
         }

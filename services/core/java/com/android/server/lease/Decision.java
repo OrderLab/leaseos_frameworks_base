@@ -27,8 +27,8 @@ import android.lease.BehaviorType;
  */
 public class Decision {
     public enum Decisions {
-        EXPIRE,
-        RENEW,
+        INVALID,
+        REACTIVATE,
         DELAY;
     }
 

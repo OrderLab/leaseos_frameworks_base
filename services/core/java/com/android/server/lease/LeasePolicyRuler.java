@@ -29,7 +29,7 @@ public class LeasePolicyRuler {
 
 
     /**
-     * Classify the app's lease usage behavior type based on the stat history.
+     * Classify the app's lease usage behavior type based on the stat history.INVALID
      */
     public static BehaviorType classify(StatHistory history) {
         return history.judgeHistory();
@@ -38,29 +38,24 @@ public class LeasePolicyRuler {
     /**
      * Judge what to do with a lease when it expires.
      */
-    public static Decision behaviorJudge(Lease lease, boolean isProxy) {
+    public static Decision behaviorJudge(Lease lease) {
         // TODO: judge based on the lease's current resource stat or entire stat history.
         StatHistory statHistory = lease.getStatHistory();
         BehaviorType behavior = classify(lease.getStatHistory());
         Decision decision = new Decision();
         decision.mBehaviorType = behavior;
 
-        if (isProxy) {
-            decision.mDecision = Decision.Decisions.RENEW;
-            return decision;
-        }
-
         if (statHistory.hasActivateEvent()) {
             switch (behavior) {
                 case Normal:
-                    decision.mDecision = Decision.Decisions.RENEW;
+                    decision.mDecision = Decision.Decisions.REACTIVATE;
                     return decision;
                 default:
                     decision.mDecision = Decision.Decisions.DELAY;
                     return decision;
             }
         } else {
-            decision.mDecision = Decision.Decisions.EXPIRE;
+            decision.mDecision = Decision.Decisions.INVALID;
             return decision;
         }
     }

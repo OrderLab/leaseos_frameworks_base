@@ -24,10 +24,10 @@ package android.lease;
  * The status of lease
  */
 public enum LeaseStatus {
-    INVALID("invalid"), //the lease is not activated
-    ACTIVE("active"), // the lease is in its lease term
-    EXPIRED("expired"), // the lease is expired
-    ABORTED("aborted");// the lease is expired and can not be renewed
+    INVALID("invalid"), //the status that the lease will not automatically renew since the lease holder does not hold any resource
+    ACTIVE("active"), // the lease is in a valid lease term
+    EXPIRED("expired"), // the lease is expired, which is a transition state
+    DELAY("delay"); // the lease renew is delayed
 
     final String status;
 

@@ -61,10 +61,14 @@ public class SystemSensorManager extends SensorManager {
     private static boolean DEBUG_DYNAMIC_SENSOR = true;
 
     private static native void nativeClassInit();
+
     private static native long nativeCreate(String opPackageName);
+
     private static native boolean nativeGetSensorAtIndex(long nativeInstance,
             Sensor sensor, int index);
+
     private static native void nativeGetDynamicSensors(long nativeInstance, List<Sensor> list);
+
     private static native boolean nativeIsDataInjectionEnabled(long nativeInstance);
 
     private static final Object sLock = new Object();
@@ -104,7 +108,7 @@ public class SystemSensorManager extends SensorManager {
 
     /** {@hide} */
     public SystemSensorManager(Context context, Looper mainLooper) {
-        synchronized(sLock) {
+        synchronized (sLock) {
             if (!sNativeClassInited) {
                 sNativeClassInited = true;
                 nativeClassInit();
@@ -117,7 +121,7 @@ public class SystemSensorManager extends SensorManager {
         mNativeInstance = nativeCreate(context.getOpPackageName());
 
         // initialize the sensor list
-        for (int index = 0;;++index) {
+        for (int index = 0; ; ++index) {
             Sensor sensor = new Sensor();
             if (!nativeGetSensorAtIndex(mNativeInstance, sensor, index)) break;
             mFullSensorsList.add(sensor);
@@ -181,8 +185,8 @@ public class SystemSensorManager extends SensorManager {
             if (queue == null) {
                 Looper looper = (handler != null) ? handler.getLooper() : mMainLooper;
                 final String fullClassName = listener.getClass().getEnclosingClass() != null ?
-                    listener.getClass().getEnclosingClass().getName() :
-                    listener.getClass().getName();
+                        listener.getClass().getEnclosingClass().getName() :
+                        listener.getClass().getName();
                 queue = new SensorEventQueue(listener, looper, this, fullClassName);
                 if (!queue.addSensor(sensor, delayUs, maxBatchReportLatencyUs)) {
                     queue.dispose();
@@ -191,51 +195,31 @@ public class SystemSensorManager extends SensorManager {
                 mSensorListeners.put(listener, queue);
 
                 /*** LeaseOS changes ***/
-
                 ActivityManager.RunningTaskInfo info = null;
                 info = getActivity();
                 String packageName = info.topActivity.getPackageName();
                 String activityName = info.topActivity.getClassName();
-
                 int uid = Libcore.os.getuid();
-                Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]requires sensor " + sensor + ", fromproxy " + fromProxy);
+                Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid
+                        + "]requires sensor " + sensor + ", fromproxy " + fromProxy);
                 Log.d(TAG, "The listener is " + listener);
                 if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
-                    // First, check if any lease has been created for this request or should the request
-                    // be denied for a while.
-                    SensorLease lease = null;
-                    if (!fromProxy) {
-                        // For frequent asking problem, the lease manager might decides to
-                        // deny any lease creation request for a given UID instead of deny a
-                        // specific lease ID, in this case, we should check if the package/uid has
-                        // been temporarily banned, and if so we should just return.
-                        lease = (SensorLease) mLeaseProxy.getLease(listener);
-                        if (lease != null) {
-                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
-                            lease.mLeaseValue = listener;
-                            lease.mActivityName = activityName;
-                            lease.mDelayUs = delayUs;
-                            lease.mHandler = handler;
-                            lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
-                            lease.mReservedFlags = reservedFlags;
-                            lease.mSensor = sensor;
-                            mLeaseProxy.updateSensorListener(lease.mDelayUs,lease.mMaxBatchReportLatencyUs, lease.mLeaseId);
-                            if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
-                                unregisterListenerImpl(lease.mLeaseValue, lease.mSensor);
-                                Log.d(TAG, uid + " has been disruptive to lease manager service,"
-                                        + " freezing lease requests for a while..");
-                            }
-                        }
+                    SensorLease lease;
+                    if (mLeaseProxy.exempt(packageName, uid)) {
+                        Log.d(TAG,
+                                "Exempt UID " + uid + " " + packageName + " from lease mechanism");
+                        return true;
                     }
-                    /*********************/
-                    // Second, if no lease has been created for this request, try to request a lease
-                    // from the lease manager
 
-                    if (lease == null) {
-                        if (mLeaseProxy.exempt(packageName, uid)) {
-                            Log.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
-                        } else if (!fromProxy) {
-                            lease = (SensorLease) mLeaseProxy.createLease(listener, uid, ResourceType.Sensor);
+                    if (!fromProxy) {
+                        // Check if any lease has been created for this request.
+                        lease = (SensorLease) mLeaseProxy.getLease(listener);
+
+                        // If no lease has been created for this request, try to request a lease
+                        // from the lease manager
+                        if (lease == null) {
+                            lease = (SensorLease) mLeaseProxy.createLease(listener, uid,
+                                    ResourceType.Sensor);
                             if (lease != null) {
                                 // hold the internal data structure in case we need it later
                                 lease.mLeaseValue = listener;
@@ -245,14 +229,33 @@ public class SystemSensorManager extends SensorManager {
                                 lease.mHandler = handler;
                                 lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
                                 lease.mReservedFlags = reservedFlags;
-                                // TODO: invoke check and notify ResourceStatManager
-                                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE, activityName);
-                                mLeaseProxy.updateSensorListener(delayUs,maxBatchReportLatencyUs, lease.mLeaseId);
+                                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE,
+                                        activityName);
+                                mLeaseProxy.updateSensorListener(delayUs, maxBatchReportLatencyUs,
+                                        lease.mLeaseId);
                             }
                         }
-                    } else {
-                        // update the internal data structure in case we need it later
-                        lease.mLeaseValue = listener;
+
+                        // If the request has been bound to a lease, check whether the lease manager
+                        // allow this request.
+                        if (lease != null) {
+                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.SENSOR_ACQUIRE,
+                                    activityName);
+                            lease.mLeaseValue = listener;
+                            lease.mActivityName = activityName;
+                            lease.mDelayUs = delayUs;
+                            lease.mHandler = handler;
+                            lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
+                            lease.mReservedFlags = reservedFlags;
+                            lease.mSensor = sensor;
+                            mLeaseProxy.updateSensorListener(lease.mDelayUs,
+                                    lease.mMaxBatchReportLatencyUs, lease.mLeaseId);
+                            if (!mLeaseProxy.check(lease.mLeaseId)) {
+                                unregisterListenerImpl(lease.mLeaseValue, lease.mSensor);
+                                Log.d(TAG, uid + " has been disruptive to lease manager service,"
+                                        + " freezing lease requests for a while..");
+                            }
+                        }
                     }
                 }
                 /*********************/
@@ -264,14 +267,15 @@ public class SystemSensorManager extends SensorManager {
                     if (!fromProxy) {
                         lease = (SensorLease) mLeaseProxy.getLease(listener);
                         if (lease != null) {
-                            Log.d(TAG,  "Update the listener information");
+                            Log.d(TAG, "Update the listener information");
                             lease.mLeaseValue = listener;
                             lease.mDelayUs = delayUs;
                             lease.mHandler = handler;
                             lease.mMaxBatchReportLatencyUs = maxBatchReportLatencyUs;
                             lease.mReservedFlags = reservedFlags;
                             lease.mSensor = sensor;
-                            mLeaseProxy.updateSensorListener(lease.mDelayUs,lease.mMaxBatchReportLatencyUs, lease.mLeaseId);
+                            mLeaseProxy.updateSensorListener(lease.mDelayUs,
+                                    lease.mMaxBatchReportLatencyUs, lease.mLeaseId);
                         }
                     }
 
@@ -293,13 +297,13 @@ public class SystemSensorManager extends SensorManager {
         String activityName = info.topActivity.getClassName();
 
         int uid = Libcore.os.getuid();
-        Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]" + "unregister sensor " + sensor);
+        Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]"
+                + "unregister sensor " + sensor);
         if (sensor != null && sensor.getReportingMode() == Sensor.REPORTING_MODE_ONE_SHOT) {
             return;
         }
 
         /***LeaseOS changes***/
-
         if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
             SensorLease lease = (SensorLease) mLeaseProxy.getLease(listener);
             if (lease != null) {
@@ -339,9 +343,9 @@ public class SystemSensorManager extends SensorManager {
     }
 
     /****** LeaseOS change ******/
-
     public ActivityManager.RunningTaskInfo getActivity() {
-        ActivityManager manager = (ActivityManager) mContext.getSystemService(Context.ACTIVITY_SERVICE);
+        ActivityManager manager = (ActivityManager) mContext.getSystemService(
+                Context.ACTIVITY_SERVICE);
         ActivityManager.RunningTaskInfo info;
         if (manager != null) {
             if (manager.getRunningTasks(1).size() == 0) {
@@ -352,12 +356,13 @@ public class SystemSensorManager extends SensorManager {
             }
 
         } else {
-            Log.d(TAG,"Can not get the service");
+            Log.d(TAG, "Can not get the service");
             return null;
         }
     }
 
-    private class SensorLease extends LeaseDescriptor<SensorEventListener> implements IBinder.DeathRecipient {
+    private class SensorLease extends LeaseDescriptor<SensorEventListener> implements
+            IBinder.DeathRecipient {
         public SensorEventListener mLeaseValue;
         public String mActivityName;
         public Sensor mSensor;
@@ -381,7 +386,6 @@ public class SystemSensorManager extends SensorManager {
         }
     }
 
-
     private class SensorLeaseProxy extends LeaseProxy<SensorEventListener> {
 
         public SensorLeaseProxy(Context context) {
@@ -389,7 +393,8 @@ public class SystemSensorManager extends SensorManager {
         }
 
         @Override
-        public LeaseDescriptor<SensorEventListener> newLease(SensorEventListener key, long leaseId, LeaseStatus status) {
+        public LeaseDescriptor<SensorEventListener> newLease(SensorEventListener key, long leaseId,
+                LeaseStatus status) {
             SensorLease lease = new SensorLease(key, leaseId, status);
             return lease;
         }
@@ -416,7 +421,7 @@ public class SystemSensorManager extends SensorManager {
         @Override
         public void onRenew(long leaseId) throws RemoteException {
             Log.d(TAG, "LeaseManagerService instruct me to renew lease " + leaseId);
-            SensorLease lease = (SensorLease)mLeaseDescriptors.get(leaseId);
+            SensorLease lease = (SensorLease) mLeaseDescriptors.get(leaseId);
             if (lease != null) {
                 SensorEventListener receiver = lease.mLeaseValue;
                 synchronized (mLock) {
@@ -425,11 +430,14 @@ public class SystemSensorManager extends SensorManager {
                                 + leaseId);
                     } else {
                         if (lease.mLeaseStatus != LeaseStatus.EXPIRED) {
-                            Log.e(TAG, "Skip renewing because lease " + leaseId + " has not been expire before");
+                            Log.e(TAG, "Skip renewing because lease " + leaseId
+                                    + " has not been expire before");
                         } else {
                             // re-acquire the lock
                             fromProxy = true;
-                            registerListenerImpl(lease.mLeaseValue,lease.mSensor,lease.mDelayUs,lease.mHandler, lease.mMaxBatchReportLatencyUs,lease.mReservedFlags);
+                            registerListenerImpl(lease.mLeaseValue, lease.mSensor, lease.mDelayUs,
+                                    lease.mHandler, lease.mMaxBatchReportLatencyUs,
+                                    lease.mReservedFlags);
                             fromProxy = false;
                         }
                         // assume that after this point the lease is active
@@ -440,14 +448,15 @@ public class SystemSensorManager extends SensorManager {
         }
 
         /**
-         * Delay the sensor update frequency, if the original frequency is setting faster than Normal(0.2 seconds), we change it to Normal speed. If the orginal frequency is
-         * setting to faster than 1s seconds, we change it to update every 1 second. Otherwise, we unregister the listener.
-         * @param leaseId
-         * @throws RemoteException
+         * Delay the sensor update frequency, if the original frequency is setting faster than
+         * Normal(0.2 seconds), we change it to Normal speed. If the orginal frequency is
+         * setting to faster than 1s seconds, we change it to update every 1 second. Otherwise,
+         * we unregister the listener.
          */
         @Override
         public void weakExpire(long leaseId) throws RemoteException {
-            Log.d(TAG, "LeaseManagerService instruct me to delay resource frequency for lease " + leaseId);
+            Log.d(TAG, "LeaseManagerService instruct me to delay resource frequency for lease "
+                    + leaseId);
             SensorLease lease = (SensorLease) mLeaseDescriptors.get(leaseId);
             if (lease != null) {
                 SensorEventListener receiver;
@@ -456,12 +465,19 @@ public class SystemSensorManager extends SensorManager {
                     if (receiver != null) {
 
                         fromProxy = true;
-                        if (lease.mDelayUs < getDelay(SENSOR_DELAY_NORMAL) && lease.mMaxBatchReportLatencyUs < 200000) {
-                            Log.e(TAG, "delay sensor listener object for lease " + leaseId + " the new sample rate is " + getDelay(SENSOR_DELAY_NORMAL));
-                            registerListenerImpl(lease.mLeaseValue,lease.mSensor,getDelay(SENSOR_DELAY_NORMAL),lease.mHandler, 200000,lease.mReservedFlags);
-                        } else if (lease.mDelayUs < 1000000 || lease.mMaxBatchReportLatencyUs < 1000000){
-                            Log.e(TAG, "delay sensor listener object for lease " + leaseId + " the new sample rate is " + 1000000);
-                            registerListenerImpl(lease.mLeaseValue,lease.mSensor,1000000,lease.mHandler, 1000000,lease.mReservedFlags);
+                        if (lease.mDelayUs < getDelay(SENSOR_DELAY_NORMAL)
+                                && lease.mMaxBatchReportLatencyUs < 200000) {
+                            Log.e(TAG, "delay sensor listener object for lease " + leaseId
+                                    + " the new sample rate is " + getDelay(SENSOR_DELAY_NORMAL));
+                            registerListenerImpl(lease.mLeaseValue, lease.mSensor,
+                                    getDelay(SENSOR_DELAY_NORMAL), lease.mHandler, 200000,
+                                    lease.mReservedFlags);
+                        } else if (lease.mDelayUs < 1000000
+                                || lease.mMaxBatchReportLatencyUs < 1000000) {
+                            Log.e(TAG, "delay sensor listener object for lease " + leaseId
+                                    + " the new sample rate is " + 1000000);
+                            registerListenerImpl(lease.mLeaseValue, lease.mSensor, 1000000,
+                                    lease.mHandler, 1000000, lease.mReservedFlags);
                         } else {
                             Log.e(TAG, "unregister sensor listener object for lease " + leaseId);
                             unregisterListenerImpl(receiver, lease.mSensor);
@@ -484,7 +500,7 @@ public class SystemSensorManager extends SensorManager {
 
         }
 
-        public void updateSensorListener(int delayUs,int maxBatchReportLatencyUs, long leaseId) {
+        public void updateSensorListener(int delayUs, int maxBatchReportLatencyUs, long leaseId) {
             mLeaseManager.updateSensorListener(delayUs, maxBatchReportLatencyUs, leaseId);
         }
 
@@ -509,8 +525,8 @@ public class SystemSensorManager extends SensorManager {
             TriggerEventQueue queue = mTriggerListeners.get(listener);
             if (queue == null) {
                 final String fullClassName = listener.getClass().getEnclosingClass() != null ?
-                    listener.getClass().getEnclosingClass().getName() :
-                    listener.getClass().getName();
+                        listener.getClass().getEnclosingClass().getName() :
+                        listener.getClass().getName();
                 queue = new TriggerEventQueue(listener, mMainLooper, this, fullClassName);
                 if (!queue.addSensor(sensor, 0, 0)) {
                     queue.dispose();
@@ -596,7 +612,7 @@ public class SystemSensorManager extends SensorManager {
                 return false;
             }
             int ret = sInjectEventQueue.injectSensorData(sensor.getHandle(), values, accuracy,
-                                                         timestamp);
+                    timestamp);
             // If there are any errors in data injection clean up the native resources.
             if (ret != 0) {
                 sInjectEventQueue.dispose();
@@ -610,21 +626,21 @@ public class SystemSensorManager extends SensorManager {
         mHandleToSensor.remove(sensor.getHandle());
 
         if (sensor.getReportingMode() == Sensor.REPORTING_MODE_ONE_SHOT) {
-            synchronized(mTriggerListeners) {
-                for (TriggerEventListener l: mTriggerListeners.keySet()) {
-                    if (DEBUG_DYNAMIC_SENSOR){
+            synchronized (mTriggerListeners) {
+                for (TriggerEventListener l : mTriggerListeners.keySet()) {
+                    if (DEBUG_DYNAMIC_SENSOR) {
                         Log.i(TAG, "removed trigger listener" + l.toString() +
-                                   " due to sensor disconnection");
+                                " due to sensor disconnection");
                     }
                     cancelTriggerSensorImpl(l, sensor, true);
                 }
             }
         } else {
-            synchronized(mSensorListeners) {
-                for (SensorEventListener l: mSensorListeners.keySet()) {
-                    if (DEBUG_DYNAMIC_SENSOR){
+            synchronized (mSensorListeners) {
+                for (SensorEventListener l : mSensorListeners.keySet()) {
+                    if (DEBUG_DYNAMIC_SENSOR) {
                         Log.i(TAG, "removed event listener" + l.toString() +
-                                   " due to sensor disconnection");
+                                " due to sensor disconnection");
                     }
                     unregisterListenerImpl(l, sensor);
                 }
@@ -633,7 +649,7 @@ public class SystemSensorManager extends SensorManager {
     }
 
     private void updateDynamicSensorList() {
-        synchronized(mFullDynamicSensorsList) {
+        synchronized (mFullDynamicSensorsList) {
             if (mDynamicSensorListDirty) {
                 List<Sensor> list = new ArrayList<>();
                 nativeGetDynamicSensors(mNativeInstance, list);
@@ -651,7 +667,7 @@ public class SystemSensorManager extends SensorManager {
                     }
                     mFullDynamicSensorsList = updatedList;
 
-                    for (Sensor s: addedList) {
+                    for (Sensor s : addedList) {
                         mHandleToSensor.put(s.getHandle(), s);
                     }
 
@@ -666,17 +682,17 @@ public class SystemSensorManager extends SensorManager {
                         handler.post(new Runnable() {
                             @Override
                             public void run() {
-                                for (Sensor s: addedList) {
+                                for (Sensor s : addedList) {
                                     callback.onDynamicSensorConnected(s);
                                 }
-                                for (Sensor s: removedList) {
+                                for (Sensor s : removedList) {
                                     callback.onDynamicSensorDisconnected(s);
                                 }
                             }
                         });
                     }
 
-                    for (Sensor s: removedList) {
+                    for (Sensor s : removedList) {
                         cleanupSensorConnection(s);
                     }
                 }
@@ -756,14 +772,14 @@ public class SystemSensorManager extends SensorManager {
 
         int i = 0, j = 0;
         while (true) {
-            if (j < oldList.size() && ( i >= newList.size() ||
-                    newList.get(i).getHandle() > oldList.get(j).getHandle()) ) {
+            if (j < oldList.size() && (i >= newList.size() ||
+                    newList.get(i).getHandle() > oldList.get(j).getHandle())) {
                 changed = true;
                 if (removed != null) {
                     removed.add(oldList.get(j));
                 }
                 ++j;
-            } else if (i < newList.size() && ( j >= oldList.size() ||
+            } else if (i < newList.size() && (j >= oldList.size() ||
                     newList.get(i).getHandle() < oldList.get(j).getHandle())) {
                 changed = true;
                 if (added != null) {
@@ -799,13 +815,18 @@ public class SystemSensorManager extends SensorManager {
         private static native long nativeInitBaseEventQueue(long nativeManager,
                 WeakReference<BaseEventQueue> eventQWeak, MessageQueue msgQ,
                 String packageName, int mode, String opPackageName);
+
         private static native int nativeEnableSensor(long eventQ, int handle, int rateUs,
                 int maxBatchReportLatencyUs);
+
         private static native int nativeDisableSensor(long eventQ, int handle);
+
         private static native void nativeDestroySensorEventQueue(long eventQ);
+
         private static native int nativeFlushSensor(long eventQ);
+
         private static native int nativeInjectSensorData(long eventQ, int handle,
-                float[] values,int accuracy, long timestamp);
+                float[] values, int accuracy, long timestamp);
 
         private long nSensorEventQueue;
         private final SparseBooleanArray mActiveSensors = new SparseBooleanArray();
@@ -841,16 +862,16 @@ public class SystemSensorManager extends SensorManager {
             if (enableSensor(sensor, delayUs, maxBatchReportLatencyUs) != 0) {
                 // Try continuous mode if batching fails.
                 if (maxBatchReportLatencyUs == 0 ||
-                    maxBatchReportLatencyUs > 0 && enableSensor(sensor, delayUs, 0) != 0) {
-                  removeSensor(sensor, false);
-                  return false;
+                        maxBatchReportLatencyUs > 0 && enableSensor(sensor, delayUs, 0) != 0) {
+                    removeSensor(sensor, false);
+                    return false;
                 }
             }
             return true;
         }
 
         public boolean removeAllSensors() {
-            for (int i=0 ; i<mActiveSensors.size(); i++) {
+            for (int i = 0; i < mActiveSensors.size(); i++) {
                 if (mActiveSensors.valueAt(i) == true) {
                     int handle = mActiveSensors.keyAt(i);
                     Sensor sensor = mManager.mHandleToSensor.get(handle);
@@ -918,7 +939,7 @@ public class SystemSensorManager extends SensorManager {
         }
 
         protected int injectSensorDataBase(int handle, float[] values, int accuracy,
-                                           long timestamp) {
+                long timestamp) {
             return nativeInjectSensorData(nSensorEventQueue, handle, values, accuracy, timestamp);
         }
 
@@ -927,8 +948,10 @@ public class SystemSensorManager extends SensorManager {
             if (sensor == null) throw new NullPointerException();
             return nativeDisableSensor(nSensorEventQueue, sensor.getHandle());
         }
+
         protected abstract void dispatchSensorEvent(int handle, float[] values, int accuracy,
                 long timestamp);
+
         protected abstract void dispatchFlushCompleteEvent(int handle);
 
         protected void dispatchAdditionalInfoEvent(
@@ -937,6 +960,7 @@ public class SystemSensorManager extends SensorManager {
         }
 
         protected abstract void addSensorEvent(Sensor sensor);
+
         protected abstract void removeSensorEvent(Sensor sensor);
     }
 
@@ -1012,7 +1036,7 @@ public class SystemSensorManager extends SensorManager {
                     // sensor disconnected
                     return;
                 }
-                ((SensorEventListener2)mListener).onFlushCompleted(sensor);
+                ((SensorEventListener2) mListener).onFlushCompleted(sensor);
             }
             return;
         }
@@ -1030,7 +1054,7 @@ public class SystemSensorManager extends SensorManager {
                 }
                 SensorAdditionalInfo info =
                         new SensorAdditionalInfo(sensor, type, serial, intValues, floatValues);
-                ((SensorEventCallback)mListener).onSensorAdditionalInfo(info);
+                ((SensorEventCallback) mListener).onSensorAdditionalInfo(info);
             }
         }
     }
@@ -1102,8 +1126,8 @@ public class SystemSensorManager extends SensorManager {
             super(looper, manager, OPERATING_MODE_DATA_INJECTION, packageName);
         }
 
-        int injectSensorData(int handle, float[] values,int accuracy, long timestamp) {
-             return injectSensorDataBase(handle, values, accuracy, timestamp);
+        int injectSensorData(int handle, float[] values, int accuracy, long timestamp) {
+            return injectSensorDataBase(handle, values, accuracy, timestamp);
         }
 
         @SuppressWarnings("unused")

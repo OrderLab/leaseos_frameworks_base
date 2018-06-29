@@ -35,7 +35,7 @@ public class LeaseSettings implements Parcelable {
     public static final String WHITE_LIST_DEFAULT = "android,com.android.phone,com.quicin.trepn";
     public static final long LEASE_TERM_DEFAULT = (long)0.5 * MILLIS_PER_MINUTE; // 30 seconds
     public static final long DELAY_INTERVAL_DEFAULT = (long)0.5 * MILLIS_PER_MINUTE; // 10 minutes
-    public static final long BATTERY_TRACING_INTERVAL_DEFAULT = (long) 3 * MILLIS_PER_MINUTE;
+    public static final long BATTERY_TRACING_INTERVAL_DEFAULT = (long) 1 * MILLIS_PER_MINUTE;
     public static final LeaseSettings DEFAULT_SETTINGS = getDefaultSettings();
 
     public static final boolean WAKELOCK_LEASE_ENABLED = true;

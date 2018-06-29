@@ -102,8 +102,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     private boolean mSensorProxyEnable;
 
-
-
     private static final String[] OBSERVE_SETTINGS = new String[] {
             /*** Global settings ***/
             Settings.Secure.LEASE_SERVICE_ENABLED,
@@ -245,7 +243,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
     public boolean check(long leaseId) {
         synchronized (mLock) {
             Lease lease = mLeases.get(leaseId);
-            return lease != null && lease.isActiveOrRenew();
+            return lease != null && lease.check();
         }
     }
 
@@ -542,6 +540,32 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         return wrapperList.get(0);
     }
 
+    /**
+     * Check the current number of lease, tell the caller the optimal ratio of lease term and delay interval
+     * @return the optimal ratio of lease term and delay interval
+     */
+    public int getRatio() {
+        int count = 0;
+
+        // count the number of lease
+        for (int i=0; i < mLeases.size(); i++) {
+            Lease lease = mLeases.valueAt(i);
+            if (lease.getStatus() != LeaseStatus.INVALID) {
+                count++;
+            }
+        }
+
+        // return the ratio based on the current number of lease
+        if (count < 7) {
+            return 3;
+        } else if (count < 10) {
+            return 4;
+        } else if (count < 13) {
+            return 5;
+        }
+        return 6;
+    }
+
     public void systemRunning() {
         Slog.d(TAG, "Ready to start lease");
         synchronized (mLock) {
@@ -560,7 +584,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
         }
     }
-
 
     private void registerSettingsListeners() {
         Slog.d(TAG, "Registering content observer");

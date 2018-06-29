@@ -1726,74 +1726,8 @@ public class LocationManagerService extends ILocationManager.Stub {
 
         boolean isProviderEnabled = isAllowedByUserSettingsLocked(name, uid);
 
-        // Slog.d(TAG,"The provide is " + isProviderEnabled);
         if (isProviderEnabled) {
             applyRequirementsLocked(name);
-            /*** LeaseOS changes ***/
-            if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
-                // First, check if any lease has been created for this request or should the request
-                // be denied for a while.
-                LocationLease lease = null;
-                if (!fromProxy) {
-                    // For frequent asking problem, the lease manager might decides to
-                    // deny any lease creation request for a given UID instead of deny a
-                    // specific lease ID, in this case, we should check if the package/uid has
-                    // been temporarily banned, and if so we should just return.
-                    lease = (LocationLease) mLeaseProxy.getLease(receiver);
-                    if (lease != null) {
-                        if (lease.mRequest.getInterval() != request.getInterval()
-                                || lease.mRequest.getQuality() != request.getQuality()
-                                || lease.mRequest.getSmallestDisplacement()
-                                != request.getSmallestDisplacement()) {
-                            mLeaseProxy.updateLocationListener(request.getInterval(),
-                                    request.getSmallestDisplacement(), request.getQuality(),
-                                    lease.mLeaseId);
-                        }
-                        lease.mLeaseValue = receiver;
-                        lease.mRequest = request;
-                        lease.mActivityName = activityName;
-                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
-                                activityName);
-                        if (!mLeaseProxy.checkorRenew(lease.mLeaseId)) {
-
-                            removeUpdatesLocked(lease.mLeaseValue, true);
-                            Slog.d(TAG, uid + " has been disruptive to lease manager service,"
-                                    + " freezing lease requests for a while..");
-                            return;
-                        }
-                    }
-                    /*********************/
-                    // Second, if no lease has been created for this request, try to request a lease
-                    // from the lease manager
-                    if (lease == null) {
-                        if (mLeaseProxy.exempt(packageName, uid)) {
-                            Slog.d(TAG,
-                                    "Exempt UID " + uid + " " + packageName
-                                            + " from lease mechanism");
-                        } else if (!fromProxy) {
-                            lease = (LocationLease) mLeaseProxy.createLease(receiver, uid,
-                                    ResourceType.Location);
-                            if (lease != null) {
-                                // hold the internal data structure in case we need it later
-                                lease.mLeaseValue = receiver;
-                                lease.mRequest = request;
-                                lease.mActivityName = activityName;
-                                // TODO: invoke check and notify ResourceStatManager
-                                mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
-                                        activityName);
-                                mLeaseProxy.updateLocationListener(lease.mRequest.getInterval(),
-                                        lease.mRequest.getSmallestDisplacement(),
-                                        lease.mRequest.getQuality(), lease.mLeaseId);
-                                if (!activityName.contains(packageName)) {
-                                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.BACKGROUDAPP);
-                                }
-                            }
-
-                        }
-                    }
-                }
-            }
-            /*********************/
         } else {
             // Notify the listener that updates are currently disabled
             receiver.callProviderEnabledLocked(name, false);
@@ -1801,6 +1735,69 @@ public class LocationManagerService extends ILocationManager.Stub {
         // Update the monitoring here just in case multiple location requests were added to the
         // same receiver (this request may be high power and the initial might not have been).
         receiver.updateMonitoring(true);
+
+        /*** LeaseOS changes ***/
+        // Apply lease to this request if and only if the lease proxy is created and the user
+        // setting of lease service is enabled
+        if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+            LocationLease lease;
+            if (mLeaseProxy.exempt(packageName, uid)) {
+                Slog.d(TAG, "Exempt UID " + uid + " " + packageName
+                        + " from lease mechanism");
+                return;
+            }
+
+            if (!fromProxy) {
+                // First, check if any lease has been created for this request.
+                lease = (LocationLease) mLeaseProxy.getLease(receiver);
+
+                // If no lease has been created for this request, try to request a lease
+                // from the lease manager
+                if (lease == null) {
+                    lease = (LocationLease) mLeaseProxy.createLease(receiver, uid,
+                            ResourceType.Location);
+                    if (lease != null) {
+                        // hold the internal data structure in case we need it later
+                        lease.mLeaseValue = receiver;
+                        lease.mRequest = request;
+                        lease.mActivityName = activityName;
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
+                                activityName);
+                        mLeaseProxy.updateLocationListener(lease.mRequest.getInterval(),
+                                lease.mRequest.getSmallestDisplacement(),
+                                lease.mRequest.getQuality(), lease.mLeaseId);
+                        if (!activityName.contains(packageName)) {
+                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.BACKGROUDAPP);
+                        }
+                    }
+                }
+
+                // If the request has been bound to a lease, check whether the lease manager
+                // allow this request.
+                if (lease != null) {
+                    if (lease.mRequest.getInterval() != request.getInterval()
+                            || lease.mRequest.getQuality() != request.getQuality()
+                            || lease.mRequest.getSmallestDisplacement()
+                            != request.getSmallestDisplacement()) {
+                        mLeaseProxy.updateLocationListener(request.getInterval(),
+                                request.getSmallestDisplacement(), request.getQuality(),
+                                lease.mLeaseId);
+                    }
+                    lease.mLeaseValue = receiver;
+                    lease.mRequest = request;
+                    lease.mActivityName = activityName;
+                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
+                            activityName);
+                    if (!mLeaseProxy.check(lease.mLeaseId)) {
+                        removeUpdatesLocked(lease.mLeaseValue, true);
+                        Slog.d(TAG, uid + " has been disruptive to lease manager service,"
+                                + " freezing lease requests for a while..");
+                        return;
+                    }
+                }
+            }
+        }
+        /*********************/
     }
 
     @Override
