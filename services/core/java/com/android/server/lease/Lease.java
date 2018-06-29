@@ -58,7 +58,7 @@ public class Lease {
     protected int mLength; // The length of this lease term in millisecond
     protected long mBeginTime; // The BeginTime of this lease term
     protected long mEndTime; // The EndTime of this lease term
-    protected int mRenewal; // The number of current lease term
+    protected int mNormal; // The number of continue normal behavior
     protected final Context mContext; // The context in which the lease is created
     protected ResourceStatManager mRStatManager;
             // The record of the history lease term for this lease
@@ -116,7 +116,7 @@ public class Lease {
      * Create a new lease and the corresponding resource manager
      */
     public void create(long now) {
-        mRenewal = 0;
+        mNormal = 0;
         mStatus = LeaseStatus.ACTIVE;
         mLength = DEFAULT_LEASE_TERM_MS;
         mRatio = mLeaseManagerService.getRatio();
@@ -457,10 +457,18 @@ public class Lease {
                 return true;
             case REACTIVATE:
                 Slog.d(TAG, "Start renew action for decision " + decision.mBehaviorType);
-                mLength = DEFAULT_LEASE_TERM_MS;
+                mNormal++;
+                if (mNormal > 12 || mNormal < 12 * 10) {
+                    mLength =  12 * DEFAULT_LEASE_TERM_MS; // extend the lease term to 1 min if the lease are normal in the past 12 terms.
+                } else if (mNormal > 12 * 10) {
+                    mLength = 5 * 12 * DEFAULT_LEASE_TERM_MS; // extend the lease term to 5 mins if the lease are normal in the past 120 terms.
+                } else {
+                    mLength = DEFAULT_LEASE_TERM_MS;
+                }
                 renew(true); // skip checking the status as we just transit from end of term
                 return true;
             case DELAY:
+                mNormal = 0;
                 Slog.e(TAG, "Start delay action for decision " + decision.mBehaviorType);
                 if (SystemClock.elapsedRealtime() - lastNormal < 5 * TimeUtils.MILLIS_PER_MINUTE) {
                     weakExpire();
@@ -520,7 +528,6 @@ public class Lease {
             return true;
         }
         isCharging = mBatteryMonitor.isCharging();
-        mRenewal++;
         mBeginTime = SystemClock.elapsedRealtime();
         boolean success = false;
         mStatus = LeaseStatus.ACTIVE;

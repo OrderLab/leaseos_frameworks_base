@@ -977,7 +977,6 @@ public final class PowerManagerService extends SystemService
                     // If the request has been bound to a lease, check whether the lease manager
                     // allow this request.
                     if (lease != null) {
-                        //TODO: check where to note the event
                         mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.WAKELOCK_ACQUIRE);
                         // update the internal data structure in case we need it later
                         lease.mLeaseValue = wakeLock;

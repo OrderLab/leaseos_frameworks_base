@@ -255,16 +255,16 @@ public class StatHistory {
             mEventList.add(e);
             if (mType == ResourceType.Location || mType == ResourceType.Sensor) {
                e.activityName = activityName;
-             //  Slog.d(TAG, "The activity is " + activityName);
+               Slog.d(TAG, "The activity is " + activityName);
             }
-            // Slog.d(TAG, "Add the acquire event at " + e.acquireTime);
+             Slog.d(TAG, "Add the acquire event at " + e.acquireTime);
         }
     }
 
     public void noteRelease() {
         synchronized (mEventList) {
             if (mOpenIndex + 1 >= mEventList.size()) {
-                // Slog.d(TAG, "There is no associated event for this release");
+                Slog.d(TAG, "There is no associated event for this release");
                 return;
             }
             mOpenIndex++;
@@ -279,7 +279,7 @@ public class StatHistory {
                 mHoldTimes.removeFirst();
                 mHoldTimes.addLast(e.releaseTime-e.acquireTime);
             }
-           // Slog.d(TAG, "Add the release event at " + e.releaseTime);
+            Slog.d(TAG, "Add the release event at " + e.releaseTime);
             frequencyCount++;
         }
     }
@@ -287,7 +287,7 @@ public class StatHistory {
     public void notechange() {
         synchronized (mEventList) {
             if (mOpenIndex + 1 >= mEventList.size()) {
-                // Slog.d(TAG, "There is no associated event for this release");
+                 Slog.d(TAG, "There is no associated event for this release");
                 return;
             }
             Event e = mEventList.get(mOpenIndex + 1);
@@ -295,7 +295,7 @@ public class StatHistory {
                 return;
             }
             e.changeTime = SystemClock.elapsedRealtime();
-            // Slog.d(TAG, "Add the change event at " + e.changeTime);
+            Slog.d(TAG, "Add the change event at " + e.changeTime);
         }
     }
 
