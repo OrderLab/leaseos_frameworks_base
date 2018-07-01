@@ -59,6 +59,7 @@ public class LocationStat extends ResourceStat {
         isLeak = false;
         isWeak = false;
         mIsMatch = true;
+        mIsScoreSet = false;
         Slog.d(TAG, "The base time is " + mBaseCPUTime + ", for uid " + mUid);
     }
 
@@ -142,6 +143,12 @@ public class LocationStat extends ResourceStat {
         if (isWeak) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a FrequencyAsking behavior");
             mBehaviorType = BehaviorType.FrequencyAsking;
+            return;
+        }
+
+        if (mIsScoreSet && mScore < 50) {
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
+            mBehaviorType = BehaviorType.LowUtility;
             return;
         }
 

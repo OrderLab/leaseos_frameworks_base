@@ -39,6 +39,8 @@ public abstract class ResourceStat {
     protected BehaviorType mBehaviorType; // the behavior type of this lease term
     protected LeaseManagerService mLeaseManagerService;
     protected boolean mIsMatch;
+    protected boolean mIsScoreSet;
+    protected int mScore;
 
     public abstract void update(long holdingTime, int frequency, Context context, double lastUtility);
 
@@ -74,6 +76,11 @@ public abstract class ResourceStat {
         if (isMatch) {
             mIsMatch = false;
         }
+    }
+
+    public void setScore(int score) {
+        mScore = score;
+        mIsScoreSet = true;
     }
 
     public long getEfficiency() {

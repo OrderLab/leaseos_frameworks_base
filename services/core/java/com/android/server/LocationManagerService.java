@@ -33,6 +33,7 @@ import android.content.pm.Signature;
 import android.content.res.Resources;
 import android.database.ContentObserver;
 import android.hardware.location.ActivityRecognitionHardware;
+import android.lease.IUtilityCounter;
 import android.lease.LeaseDescriptor;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
@@ -52,6 +53,7 @@ import android.location.ILocationListener;
 import android.location.ILocationManager;
 import android.location.INetInitiatedListener;
 import android.location.Location;
+import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.location.LocationRequest;
@@ -1885,6 +1887,20 @@ public class LocationManagerService extends ILocationManager.Stub {
     }
 
     /*** LeaseOS changes ***/
+    @Override
+    public void requestLocationUpdatesUtility(LocationRequest request, ILocationListener listener,
+            PendingIntent intent, String packageName, String className, IUtilityCounter utilityCounter) {
+        requestLocationUpdates(request, listener, intent, packageName, className);
+        IBinder binder = listener.asBinder();
+        Receiver receiver = mReceivers.get(binder);
+        LocationLease lease =(LocationLease) mLeaseProxy.getLease(receiver);
+        if (lease == null) {
+            Slog.d(TAG, "The lease is not created for this request");
+            return;
+        }
+        mLeaseProxy.setUtilitCounter(lease.mLeaseId, utilityCounter);
+    }
+
     private class LocationLease extends LeaseDescriptor<Receiver> implements
             IBinder.DeathRecipient {
         public Receiver mLeaseValue;

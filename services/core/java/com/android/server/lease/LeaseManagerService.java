@@ -25,12 +25,16 @@ import android.content.Context;
 import android.database.ContentObserver;
 import android.lease.ILeaseManager;
 import android.lease.ILeaseProxy;
+import android.lease.IUtilityCounter;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.LeaseSettings;
 import android.lease.LeaseSettingsUtils;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
+import android.lease.UtilityCounter;
+import android.location.ILocationListener;
+import android.location.LocationListener;
 import android.location.LocationRequest;
 import android.net.Uri;
 import android.os.Binder;
@@ -534,12 +538,6 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         return utilityStat;
     }
 
-    public LeaseProxy getWakelockLeaseProxy() {
-        ArrayList<LeaseProxy> wrapperList;
-        wrapperList = mTypedProxies.get(LeaseManager.WAKELOCK_LEASE_PROXY);
-        return wrapperList.get(0);
-    }
-
     /**
      * Check the current number of lease, tell the caller the optimal ratio of lease term and delay interval
      * @return the optimal ratio of lease term and delay interval
@@ -564,6 +562,13 @@ public class LeaseManagerService extends ILeaseManager.Stub {
             return 5;
         }
         return 6;
+    }
+
+    public void registerUtilityCounter(long leaseId, IUtilityCounter counter) {
+        Lease lease = mLeases.get(leaseId);
+        if (lease != null) {
+            lease.setCounter(counter);
+        }
     }
 
     public void systemRunning() {

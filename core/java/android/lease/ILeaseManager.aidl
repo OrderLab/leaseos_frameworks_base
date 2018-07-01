@@ -23,6 +23,8 @@ package android.lease;
 import android.lease.ResourceType;
 import android.lease.LeaseEvent;
 import android.lease.ILeaseProxy;
+import android.location.ILocationListener;
+import android.lease.IUtilityCounter;
 
 /**
  * Lease manager interfaces
@@ -75,4 +77,6 @@ interface ILeaseManager {
     void noteScreenOff();
 
     void noteScreenOn();
+
+    void registerUtilityCounter(long leaseId, in IUtilityCounter counter);
 }

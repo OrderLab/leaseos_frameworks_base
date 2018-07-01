@@ -84,6 +84,11 @@ public class StatHistory {
         ResourceStat resourceStat = getCurrentStat();
         ResourceStat lastResourceStat = getLastStat();
         double lastUtility;
+        if (resourceStat == null) {
+            Slog.e(TAG, "The stat history has no stat");
+            return;
+        }
+
         if (lastResourceStat == null) {
             lastUtility = 0;
         } else {
@@ -199,6 +204,15 @@ public class StatHistory {
 
         resourceStat.update(holdingTime, frequency, context, lastUtility);
 
+    }
+
+    public void setScore(int score) {
+        ResourceStat resourceStat = getCurrentStat();
+        if (resourceStat == null) {
+            Slog.e(TAG, "The stat history has no stat");
+            return;
+        }
+        resourceStat.setScore(score);
     }
 
     public boolean hasActivateEvent() {

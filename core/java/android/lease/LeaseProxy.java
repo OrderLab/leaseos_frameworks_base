@@ -23,6 +23,7 @@ package android.lease;
 import android.content.Context;
 import android.content.pm.ApplicationInfo;
 import android.content.pm.PackageManager;
+import android.location.ILocationListener;
 import android.util.LongSparseArray;
 import android.util.Slog;
 
@@ -317,6 +318,12 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
     @Override
     public String toString() {
         return "[" + LeaseManager.getProxyTypeString(mType) + "]-" + mName;
+    }
+
+    public void setUtilitCounter(long leaseId, IUtilityCounter counter) {
+        if (mLeaseManager != null) {
+            mLeaseManager.setUtilitCounter(leaseId, counter);
+        }
     }
 
 }

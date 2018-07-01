@@ -25,6 +25,7 @@ import android.app.ActivityManagerNative;
 import android.content.Context;
 import android.lease.BehaviorType;
 import android.lease.ILeaseProxy;
+import android.lease.IUtilityCounter;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.lease.TimeUtils;
@@ -65,10 +66,10 @@ public class Lease {
     protected LeaseManagerService mLeaseManagerService;
     protected ILeaseProxy mProxy; // the associated lease proxy
     protected long mDelayInterval; // the time interval between two leases
-    protected int mDelayCounter; // the counter of delaying times
     BatteryMonitor mBatteryMonitor; // the instance of Battery Monitor
     protected boolean isCharging; // true if the phone is charged during this lease term
     protected long lastNormal;
+    protected IUtilityCounter mCounter = null;
 
     private LeaseWorkerHandler mHandler;
     private boolean mScheduled;
@@ -121,7 +122,7 @@ public class Lease {
         mLength = DEFAULT_LEASE_TERM_MS;
         mRatio = mLeaseManagerService.getRatio();
         mDelayInterval = DEFAULT_DELAY_MS;
-        mDelayCounter = 0;
+
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
         mLeaseManagerService.getAndCleanException(mOwnerId);
@@ -244,6 +245,12 @@ public class Lease {
      */
     public void setHandler(LeaseWorkerHandler handler) {
         mHandler = handler;
+    }
+
+    public void setCounter (IUtilityCounter counter) {
+        if (mType == ResourceType.Location || mType == ResourceType.Sensor) {
+            mCounter = counter;
+        }
     }
 
     public static void setDefaultParameter(long leaseTerm, long delayInterval) {
@@ -430,6 +437,15 @@ public class Lease {
      */
     public void endTerm() {
         // update the stats for this lease term
+        if (mCounter != null) {
+            try {
+                int score = mCounter.getScore();
+                mRStatManager.setScore(mLeaseId, score);
+            } catch (RemoteException e) {
+                Slog.wtf(TAG, "Failed to get score");
+            }
+
+        }
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
             Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);

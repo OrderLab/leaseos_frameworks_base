@@ -43,6 +43,7 @@ import android.lease.LeaseManager;
 import android.lease.LeaseProxy;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
+import android.location.ILocationListener;
 import android.net.Uri;
 import android.os.BatteryManager;
 import android.os.BatteryManagerInternal;
@@ -1171,6 +1172,8 @@ public final class PowerManagerService extends SystemService
         public void onFreeze(int uid, long freezeDuration, int freeCount) throws RemoteException {
             freezeUid(uid, freezeDuration, freeCount);
         }
+
+
     }
 
     /*********************/

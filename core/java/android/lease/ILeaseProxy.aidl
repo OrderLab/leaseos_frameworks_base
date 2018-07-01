@@ -21,6 +21,7 @@
 package android.lease;
 
 import android.lease.LeaseSettings;
+import android.location.ILocationListener;
 
 /**
  * Callback interface for lease manager service to notify the proxy to carry out certain action, such
@@ -28,7 +29,7 @@ import android.lease.LeaseSettings;
  *
  *
  */
-  interface ILeaseProxy {
+interface ILeaseProxy {
     /* perform the actual expiration for a specific type of lease */
     void onExpire(long leaseId);
     void weakExpire(long leaseId);

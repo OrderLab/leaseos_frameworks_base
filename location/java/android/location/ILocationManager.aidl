@@ -28,6 +28,7 @@ import android.location.ILocationListener;
 import android.location.Location;
 import android.location.LocationRequest;
 import android.os.Bundle;
+import android.lease.IUtilityCounter;
 
 import com.android.internal.location.ProviderProperties;
 
@@ -40,6 +41,8 @@ interface ILocationManager
 {
     void requestLocationUpdates(in LocationRequest request, in ILocationListener listener,
             in PendingIntent intent, String packageName, String className);
+    void requestLocationUpdatesUtility(in LocationRequest request, in ILocationListener listener,
+            in PendingIntent intent, String packageName, String className, in IUtilityCounter utilityCounter);
     void removeUpdates(in ILocationListener listener, in PendingIntent intent, String packageName);
 
     void requestGeofence(in LocationRequest request, in Geofence geofence,

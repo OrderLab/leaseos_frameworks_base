@@ -26,6 +26,8 @@ import android.app.ActivityManager;
 import android.app.PendingIntent;
 import android.content.Context;
 import android.content.Intent;
+import android.lease.IUtilityCounter;
+import android.lease.UtilityCounter;
 import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
@@ -898,9 +900,103 @@ public class LocationManager {
         }
     }
 
+    /***LeaseOS change **/
+    /**
+     * Register for location updates using the named provider, and a callback on
+     * the specified looper thread, and a utility for lease
+     *
+     */
+    @RequiresPermission(anyOf = {ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION})
+    public void requestLocationUpdates(String provider, long minTime, float minDistance,
+            LocationListener listener, Looper looper, UtilityCounter utilityCounter) {
+        checkProvider(provider);
+        checkListener(listener);
+
+        LocationRequest request = LocationRequest.createFromDeprecatedProvider(
+                provider, minTime, minDistance, false);
+
+        /**LeaseOS change**/
+        String packageName = mContext.getPackageName();
+        ActivityManager.RunningTaskInfo info = null;
+        info = getActivity();
+
+        // wrap the listener class
+        ListenerTransport transport = wrapListener(listener, looper);
+        CounterTransport counterTransport;
+        synchronized (mCounter) {
+            counterTransport = mCounter.get(utilityCounter);
+            if (counterTransport == null) {
+                counterTransport = new CounterTransport(utilityCounter);
+            }
+            mCounter.put(utilityCounter, counterTransport);
+        }
+
+        try {
+            if (info == null) {
+                mService.requestLocationUpdatesUtility(request, transport, null, packageName, null, counterTransport);
+            } else {
+                Log.d(TAG, "The class name is " + info.topActivity.getClassName());
+                mService.requestLocationUpdatesUtility(request, transport, null, packageName, info.topActivity.getClassName(), counterTransport);
+            }
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    public void removeUpdates(LocationListener listener, UtilityCounter counter) {
+        checkListener(listener);
+        String packageName = mContext.getPackageName();
+
+        ListenerTransport transport;
+        synchronized (mListeners) {
+            transport = mListeners.remove(listener);
+        }
+        if (transport == null) return;
+
+        synchronized (mCounter) {
+            mCounter.remove(counter);
+        }
+        try {
+            mService.removeUpdates(transport, null, packageName);
+        } catch (RemoteException e) {
+            throw e.rethrowFromSystemServer();
+        }
+    }
+
+    // Map from UtilityCounter to their associated ListenerTransport objects
+    private HashMap<UtilityCounter,CounterTransport> mCounter =
+            new HashMap<UtilityCounter,CounterTransport>();
+
+    private CounterTransport wrapListener(UtilityCounter utilityCounter) {
+        if (utilityCounter == null) return null;
+        synchronized (mCounter) {
+            CounterTransport transport = mCounter.get(utilityCounter);
+            if (transport == null) {
+                transport = new CounterTransport(utilityCounter);
+            }
+            mCounter.put(utilityCounter, transport);
+            return transport;
+        }
+    }
+
+    private class CounterTransport extends IUtilityCounter.Stub {
+        private UtilityCounter mUtilityCounter;
+
+        CounterTransport(UtilityCounter utilityCounter) {
+            mUtilityCounter = utilityCounter;
+        }
+
+        @Override
+        public int getScore() {
+            return 100;
+        }
+    }
+    /**************/
+
     private void requestLocationUpdates(LocationRequest request, LocationListener listener,
             Looper looper, PendingIntent intent) {
 
+        /**LeaseOS change**/
         String packageName = mContext.getPackageName();
         ActivityManager.RunningTaskInfo info = null;
         info = getActivity();

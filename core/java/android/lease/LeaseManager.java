@@ -21,13 +21,16 @@
 package android.lease;
 
 import android.content.Context;
+import android.location.LocationListener;
+import android.location.LocationManager;
 import android.os.BatteryStats;
 import android.os.RemoteException;
 import android.os.ServiceManager;
 import android.util.Log;
-import android.util.Slog;
 
 import com.android.internal.app.IBatteryStats;
+
+import java.util.HashMap;
 
 /**
  *The manager class for Lease, the wrapper of LeaseManagerServices
@@ -49,6 +52,7 @@ public final class LeaseManager {
 
     private ILeaseManager mService;
     private Context mContext;
+
 
     public LeaseManager(Context context, ILeaseManager service) {
         Log.d(TAG, "Create a lease manager");
@@ -308,8 +312,12 @@ public final class LeaseManager {
     }
 
 
-    public int getSensorScore() {
-       return 100;
+    public void setUtilitCounter(long leaseId, IUtilityCounter counter) {
+        try{
+            mService.registerUtilityCounter(leaseId, counter);
+        } catch (Exception e) {
+            Log.e(TAG, "Fail to register utility counter");
+            return;
+        }
     }
-
 }
