@@ -276,6 +276,7 @@ public class StatHistory {
     }
 
     public void noteRelease() {
+        //TODO：check the release and acquire
         synchronized (mEventList) {
             if (mOpenIndex + 1 >= mEventList.size()) {
                 Slog.d(TAG, "There is no associated event for this release");

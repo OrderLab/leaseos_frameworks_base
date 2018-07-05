@@ -18,6 +18,7 @@ package com.android.internal.os;
 import android.hardware.Sensor;
 import android.hardware.SensorManager;
 import android.os.BatteryStats;
+import android.util.Slog;
 import android.util.SparseArray;
 
 import java.util.List;
@@ -44,14 +45,17 @@ public class SensorPowerCalculator extends PowerCalculator {
             final long sensorTime = timer.getTotalTimeLocked(rawRealtimeUs, statsType) / 1000;
             switch (sensorHandle) {
                 case BatteryStats.Uid.Sensor.GPS:
+                    Slog.d("SensorPowerCalculator", "The uid is " + u.getUid() + ", the GPS time is " + sensorTime + ", the GPS power is " + mGpsPowerOn);
                     app.gpsTimeMs = sensorTime;
                     app.gpsPowerMah = (app.gpsTimeMs * mGpsPowerOn) / (1000*60*60);
                     break;
                 default:
                     final int sensorsCount = mSensors.size();
+                    Slog.d("SensorPowerCalculator", "The size of sensor is " + sensorsCount);
                     for (int i = 0; i < sensorsCount; i++) {
                         final Sensor s = mSensors.get(i);
                         if (s.getHandle() == sensorHandle) {
+                            Slog.d("SensorPowerCalculator", "The uid is " + u.getUid() + ", the sensor time is " + sensorTime + ", the sensor power is " + s.getPower());
                             app.sensorPowerMah += (sensorTime * s.getPower()) / (1000*60*60);
                             break;
                         }

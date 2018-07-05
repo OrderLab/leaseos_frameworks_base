@@ -21,12 +21,15 @@ import android.content.BroadcastReceiver;
 import android.content.Context;
 import android.content.Intent;
 import android.content.IntentFilter;
+import android.lease.IUtilityCounter;
 import android.lease.LeaseDescriptor;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.LeaseProxy;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
+import android.lease.UtilityCounter;
+import android.location.LocationManager;
 import android.os.Handler;
 import android.os.IBinder;
 import android.os.Looper;
@@ -343,6 +346,55 @@ public class SystemSensorManager extends SensorManager {
     }
 
     /****** LeaseOS change ******/
+    protected boolean registerListenerImpl(SensorEventListener listener, Sensor sensor,
+            int delayUs, Handler handler, int maxReportLatencyUs, int reservedFlags, UtilityCounter utilityCounter){
+        registerListenerImpl(listener, sensor, delayUs, null, maxReportLatencyUs, 0);
+        SensorLease lease = (SensorLease) mLeaseProxy.getLease(listener);
+        if (lease == null) {
+            Log.d(TAG, "The lease is not created for this request");
+            return false;
+        }
+        CounterTransport counterTransport;
+        synchronized (mCounter) {
+            counterTransport = mCounter.get(utilityCounter);
+            if (counterTransport == null) {
+                counterTransport = new CounterTransport(utilityCounter);
+            }
+            mCounter.put(utilityCounter, counterTransport);
+        }
+        mLeaseProxy.setUtilitCounter(lease.mLeaseId, counterTransport);
+        return true;
+    }
+
+    // Map from UtilityCounter to their associated ListenerTransport objects
+    private HashMap<UtilityCounter,CounterTransport> mCounter =
+            new HashMap<UtilityCounter,CounterTransport>();
+
+    private CounterTransport wrapListener(UtilityCounter utilityCounter) {
+        if (utilityCounter == null) return null;
+        synchronized (mCounter) {
+            CounterTransport transport = mCounter.get(utilityCounter);
+            if (transport == null) {
+                transport = new CounterTransport(utilityCounter);
+            }
+            mCounter.put(utilityCounter, transport);
+            return transport;
+        }
+    }
+
+    private class CounterTransport extends IUtilityCounter.Stub {
+        private UtilityCounter mUtilityCounter;
+
+        CounterTransport(UtilityCounter utilityCounter) {
+            mUtilityCounter = utilityCounter;
+        }
+
+        @Override
+        public int getScore() {
+            return 100;
+        }
+    }
+
     public ActivityManager.RunningTaskInfo getActivity() {
         ActivityManager manager = (ActivityManager) mContext.getSystemService(
                 Context.ACTIVITY_SERVICE);

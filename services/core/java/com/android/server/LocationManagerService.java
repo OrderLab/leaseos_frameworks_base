@@ -53,7 +53,6 @@ import android.location.ILocationListener;
 import android.location.ILocationManager;
 import android.location.INetInitiatedListener;
 import android.location.Location;
-import android.location.LocationListener;
 import android.location.LocationManager;
 import android.location.LocationProvider;
 import android.location.LocationRequest;
@@ -1758,6 +1757,7 @@ public class LocationManagerService extends ILocationManager.Stub {
                 if (lease == null) {
                     lease = (LocationLease) mLeaseProxy.createLease(receiver, uid,
                             ResourceType.Location);
+                    //TODO：CHECK THE DEAD APP IN ALL requests
                     if (lease != null) {
                         // hold the internal data structure in case we need it later
                         lease.mLeaseValue = receiver;
@@ -1769,7 +1769,7 @@ public class LocationManagerService extends ILocationManager.Stub {
                                 lease.mRequest.getSmallestDisplacement(),
                                 lease.mRequest.getQuality(), lease.mLeaseId);
                         if (!activityName.contains(packageName)) {
-                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.BACKGROUDAPP);
+                            mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.BACKGROUNDAPP);
                         }
                     }
                 }

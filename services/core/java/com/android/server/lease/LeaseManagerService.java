@@ -32,9 +32,6 @@ import android.lease.LeaseSettings;
 import android.lease.LeaseSettingsUtils;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
-import android.lease.UtilityCounter;
-import android.location.ILocationListener;
-import android.location.LocationListener;
 import android.location.LocationRequest;
 import android.net.Uri;
 import android.os.Binder;
@@ -347,7 +344,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 Slog.d(TAG, "Note release sensor event for lease " + leaseId);
                 statHistory.noteRelease();
                 break;
-            case BACKGROUDAPP:
+            case BACKGROUNDAPP:
                 Slog.d(TAG, "Note leak location for lease " + leaseId);
                 statHistory.setLeak();
                 break;
@@ -410,7 +407,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
 
     public void noteTouchEvent(int uid) {
         synchronized (this) {
-            //Slog.d(TAG, "Note touch for uid " + uid);
+            Slog.d(TAG, "Note touch for uid " + uid);
             int toucnEvent;
             if (mTouchEventTable.get(uid) != null) {
                 toucnEvent = mTouchEventTable.get(uid) + 1;
@@ -418,7 +415,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 toucnEvent = 1;
             }
             mTouchEventTable.put(uid, toucnEvent);
-            // Slog.d(TAG,"The number of Exceptions are " + exceptions + ", for uid " + uid + " for " + this + " for address " + mExceptionTable);
+             //Slog.d(TAG,"The number of Exceptions are " + exceptions + ", for uid " + uid + " for " + this + " for address " + mExceptionTable);
         }
     }
 

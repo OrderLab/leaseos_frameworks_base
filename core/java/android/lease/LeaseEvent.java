@@ -34,7 +34,7 @@ public enum LeaseEvent implements Parcelable {
     LOCATION_CHANGE,
     SENSOR_ACQUIRE,
     SENSOR_RELEASE,
-    BACKGROUDAPP;
+    BACKGROUNDAPP;
 
 
     private static LeaseEvent[] VALUES = LeaseEvent.values();

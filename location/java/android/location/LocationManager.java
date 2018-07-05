@@ -908,20 +908,18 @@ public class LocationManager {
      */
     @RequiresPermission(anyOf = {ACCESS_COARSE_LOCATION, ACCESS_FINE_LOCATION})
     public void requestLocationUpdates(String provider, long minTime, float minDistance,
-            LocationListener listener, Looper looper, UtilityCounter utilityCounter) {
+            LocationListener listener, UtilityCounter utilityCounter) {
         checkProvider(provider);
         checkListener(listener);
 
         LocationRequest request = LocationRequest.createFromDeprecatedProvider(
                 provider, minTime, minDistance, false);
-
-        /**LeaseOS change**/
         String packageName = mContext.getPackageName();
         ActivityManager.RunningTaskInfo info = null;
         info = getActivity();
 
         // wrap the listener class
-        ListenerTransport transport = wrapListener(listener, looper);
+        ListenerTransport transport = wrapListener(listener, null);
         CounterTransport counterTransport;
         synchronized (mCounter) {
             counterTransport = mCounter.get(utilityCounter);

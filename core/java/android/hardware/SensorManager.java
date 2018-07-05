@@ -17,6 +17,7 @@
 package android.hardware;
 
 import android.annotation.SystemApi;
+import android.lease.UtilityCounter;
 import android.os.Build;
 import android.os.Handler;
 import android.util.Log;
@@ -849,11 +850,22 @@ public abstract class SensorManager {
         return registerListenerImpl(listener, sensor, delayUs, handler, maxReportLatencyUs, 0);
     }
 
+    /*****LeaseOS change******/
+    public boolean registerListener(SensorEventListener listener, Sensor sensor,
+            int samplingPeriodUs, int maxReportLatencyUs, UtilityCounter utilityCounter) {
+        int delay = getDelay(samplingPeriodUs);
+        return registerListenerImpl(listener, sensor, delay, null, maxReportLatencyUs, 0, utilityCounter);
+    }
+
+    /**************************/
+
+
     /** @hide */
     protected abstract boolean registerListenerImpl(SensorEventListener listener, Sensor sensor,
             int delayUs, Handler handler, int maxReportLatencyUs, int reservedFlags);
 
-
+    protected abstract boolean registerListenerImpl(SensorEventListener listener, Sensor sensor,
+            int delayUs, Handler handler, int maxReportLatencyUs, int reservedFlags, UtilityCounter utilityCounter);
     /**
      * Flushes the FIFO of all the sensors registered for this listener. If there are events
      * in the FIFO of the sensor, they are returned as if the maxReportLantecy of the FIFO has
