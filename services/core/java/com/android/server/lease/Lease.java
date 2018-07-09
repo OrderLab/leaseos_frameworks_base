@@ -38,7 +38,7 @@ import java.util.List;
 /**
  * The struct of lease.
  *
- * TODO: finish the workflow of use wakelock -> check -> policy -> renew part
+ *
  */
 public class Lease {
     private static final String TAG = "Lease";

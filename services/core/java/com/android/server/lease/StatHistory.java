@@ -49,6 +49,7 @@ public class StatHistory {
     public String mActivityName;
     public ResourceType mType;
     public LeaseManagerService mLeaseManagerService;
+    public boolean canWeak;
 
     public StatHistory(ResourceType type, LeaseManagerService leaseManagerService) {
         mStats = new LinkedList<>();
@@ -58,6 +59,7 @@ public class StatHistory {
         frequencyCount = 0;
         mType = type;
         mLeaseManagerService = leaseManagerService;
+        canWeak = true;
     }
 
     public ResourceStat getCurrentStat() {
@@ -172,7 +174,7 @@ public class StatHistory {
                                 ((LocationStat)resourceStat).setLocationLeak();
                             }
                         }
-                        if(e.changeTime == 0 || SystemClock.elapsedRealtime() - e.changeTime > 3 * TimeUtils.MILLIS_PER_MINUTE) {
+                        if(e.changeTime == 0 || SystemClock.elapsedRealtime() - e.changeTime > 5 * TimeUtils.MILLIS_PER_MINUTE) {
                             if (resourceStat instanceof LocationStat) {
                                 ((LocationStat)resourceStat).setLocationWeak();
                             }
@@ -265,7 +267,12 @@ public class StatHistory {
 
     public void noteAcquire(String activityName) {
         synchronized (mEventList) {
+            Event lastevent = mEventList.getLast();
             Event e = new Event(SystemClock.elapsedRealtime());
+            if (lastevent != null || lastevent.acquireTime == lastevent.releaseTime) {
+                Slog.d(TAG, "The resource has not release yet, do not record the acquire event");
+                return;
+            }
             mEventList.add(e);
             if (mType == ResourceType.Location || mType == ResourceType.Sensor) {
                e.activityName = activityName;
@@ -276,7 +283,6 @@ public class StatHistory {
     }
 
     public void noteRelease() {
-        //TODO：check the release and acquire
         synchronized (mEventList) {
             if (mOpenIndex + 1 >= mEventList.size()) {
                 Slog.d(TAG, "There is no associated event for this release");

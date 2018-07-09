@@ -1788,8 +1788,14 @@ public class LocationManagerService extends ILocationManager.Stub {
                     lease.mLeaseValue = receiver;
                     lease.mRequest = request;
                     lease.mActivityName = activityName;
-                    mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
-                            activityName);
+                    if (lease.mRequest.getProvider() == LocationManager.GPS_PROVIDER) {
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_ACQUIRE,
+                                activityName);
+                    } else {
+                        mLeaseProxy.noteEvent(lease.mLeaseId, LeaseEvent.LOCATION_NETWORK_ACQUIRE,
+                                activityName);
+                    }
+
                     if (!mLeaseProxy.check(lease.mLeaseId)) {
                         removeUpdatesLocked(lease.mLeaseValue, true);
                         Slog.d(TAG, uid + " has been disruptive to lease manager service,"

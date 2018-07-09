@@ -336,8 +336,12 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 Slog.d(TAG, "Note release location event for lease " + leaseId);
                 statHistory.noteRelease();
                 break;
+            case LOCATION_NETWORK_ACQUIRE:
+                Slog.d(TAG, "Note network change for lease " + leaseId);
+                statHistory.noteAcquire(null);
+                break;
             case LOCATION_CHANGE:
-                Slog.d(TAG, "Note location change for lease" + leaseId);
+                Slog.d(TAG, "Note location change for lease " + leaseId);
                 statHistory.notechange();
                 break;
             case SENSOR_RELEASE:
