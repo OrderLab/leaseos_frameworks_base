@@ -405,7 +405,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
         int exceptions = mExceptionTable.get(uid);
         mExceptionTable.remove(uid);
-        //Slog.d(TAG, "The number of exceptions are " + exceptions + " for uid " + uid);
+        Slog.d(TAG, "The number of exceptions are " + exceptions + " for uid " + uid);
         return exceptions;
     }
 

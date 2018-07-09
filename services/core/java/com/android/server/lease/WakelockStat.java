@@ -73,10 +73,8 @@ public class WakelockStat extends ResourceStat {
             return;
         }
         int exceptions = mLeaseManagerService.getAndCleanException(mUid);
-        //Slog.d(TAG, "The number of exceptions are " + exceptions + " for process " + mOwnerId);
         int touchEvent = mLeaseManagerService.getAndCleanTouchEvent(mUid);
-        //Slog.d(TAG, "The number of touch events are " + touchEvent + " for process " + mOwnerId);
-        double utility = exceptions - touchEvent;
+        double utility = touchEvent - exceptions * 0.1;
         mHoldingTime = holdingTime;
         mFrequency = frequency;
         mCurCPUTime = bm.getCPUTime(mUid);
@@ -85,7 +83,7 @@ public class WakelockStat extends ResourceStat {
         if (lastUtility == 0 && utility == 0) {
             mUtility = 0;
         } else {
-            mUtility = lastUtility + 0.1 - utility;
+            mUtility = lastUtility + 0.1 + utility;
         }
         Slog.d(TAG, "For process " + mUid + ", the Holding time is " + mHoldingTime
                 + ", the CPU usage time is " + mUsageTime + ", the utility is " + mUtility);
@@ -140,6 +138,12 @@ public class WakelockStat extends ResourceStat {
     public void judge() {
 
         if (mIsScoreSet && mScore < 50) {
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
+            mBehaviorType = BehaviorType.LowUtility;
+            return;
+        }
+
+        if (!mIsScoreSet && mUtility < -2) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
             mBehaviorType = BehaviorType.LowUtility;
             return;
