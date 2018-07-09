@@ -19,7 +19,11 @@ package android.os;
 import android.annotation.SdkConstant;
 import android.annotation.SystemApi;
 import android.content.Context;
+import android.lease.IUtilityCounter;
+import android.lease.UtilityCounter;
 import android.util.Log;
+
+import java.util.HashMap;
 
 /**
  * This class gives you control of the power state of the device.
@@ -559,6 +563,51 @@ public final class PowerManager {
         validateWakeLockParameters(levelAndFlags, tag);
         return new WakeLock(levelAndFlags, tag, mContext.getOpPackageName());
     }
+
+    /***LeaseOS change **/
+    public WakeLock newWakeLock(int levelAndFlags, String tag, UtilityCounter utilityCounter) {
+        validateWakeLockParameters(levelAndFlags, tag);
+        CounterTransport counterTransport;
+        synchronized (mCounter) {
+            counterTransport = mCounter.get(utilityCounter);
+            if (counterTransport == null) {
+                counterTransport = new CounterTransport(utilityCounter);
+            }
+            mCounter.put(utilityCounter, counterTransport);
+        }
+        return new WakeLock(levelAndFlags, tag, mContext.getOpPackageName(), counterTransport);
+    }
+
+    // Map from UtilityCounter to their associated ListenerTransport objects
+    private HashMap<UtilityCounter,CounterTransport> mCounter =
+            new HashMap<UtilityCounter,CounterTransport>();
+
+    private CounterTransport wrapListener(UtilityCounter utilityCounter) {
+        if (utilityCounter == null) return null;
+        synchronized (mCounter) {
+            CounterTransport transport = mCounter.get(utilityCounter);
+            if (transport == null) {
+                transport = new CounterTransport(utilityCounter);
+            }
+            mCounter.put(utilityCounter, transport);
+            return transport;
+        }
+    }
+
+    private class CounterTransport extends IUtilityCounter.Stub {
+        private UtilityCounter mUtilityCounter;
+
+        CounterTransport(UtilityCounter utilityCounter) {
+            mUtilityCounter = utilityCounter;
+        }
+
+        @Override
+        public int getScore() {
+            return 100;
+        }
+    }
+    /**************/
+
 
     /** @hide */
     public static void validateWakeLockParameters(int levelAndFlags, String tag) {
@@ -1159,6 +1208,7 @@ public final class PowerManager {
         private WorkSource mWorkSource;
         private String mHistoryTag;
         private final String mTraceName;
+        private IUtilityCounter mIUtilityCounter;
 
         private final Runnable mReleaser = new Runnable() {
             public void run() {
@@ -1172,6 +1222,16 @@ public final class PowerManager {
             mPackageName = packageName;
             mToken = new Binder();
             mTraceName = "WakeLock (" + mTag + ")";
+            mIUtilityCounter = null;
+        }
+
+        WakeLock (int flags, String tag, String packageName, IUtilityCounter utilityCounter) {
+            mFlags = flags;
+            mTag = tag;
+            mPackageName = packageName;
+            mToken = new Binder();
+            mTraceName = "WakeLock (" + mTag + ")";
+            mIUtilityCounter = utilityCounter;
         }
 
         @Override
@@ -1249,8 +1309,13 @@ public final class PowerManager {
                 mHandler.removeCallbacks(mReleaser);
                 Trace.asyncTraceBegin(Trace.TRACE_TAG_POWER, mTraceName, 0);
                 try {
-                    mService.acquireWakeLock(mToken, mFlags, mTag, mPackageName, mWorkSource,
-                            mHistoryTag);
+                    if (mIUtilityCounter != null) {
+                        mService.acquireWakeLockUtility(mToken, mFlags, mTag, mPackageName, mWorkSource,
+                                mHistoryTag, mIUtilityCounter);
+                    } else {
+                        mService.acquireWakeLock(mToken, mFlags, mTag, mPackageName, mWorkSource,
+                                mHistoryTag);
+                    }
                 } catch (RemoteException e) {
                     throw e.rethrowFromSystemServer();
                 }

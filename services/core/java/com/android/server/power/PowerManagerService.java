@@ -37,6 +37,7 @@ import android.hardware.SensorManager;
 import android.hardware.SystemSensorManager;
 import android.hardware.display.DisplayManagerInternal;
 import android.hardware.display.DisplayManagerInternal.DisplayPowerRequest;
+import android.lease.IUtilityCounter;
 import android.lease.LeaseDescriptor;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
@@ -3613,6 +3614,20 @@ public final class PowerManagerService extends SystemService
                         false);
             } finally {
                 Binder.restoreCallingIdentity(ident);
+            }
+        }
+
+        /*********LeaseOS change *************/
+        @Override // Binder call
+        public void acquireWakeLockUtility(IBinder lock, int flags, String tag, String packageName,
+                WorkSource ws, String historyTag, IUtilityCounter utilityCounter) {
+            acquireWakeLock(lock, flags, tag, packageName, ws, historyTag);
+            int index = findWakeLockIndexLocked(lock);
+            if (index > 0) {
+                WakelockLease lease = (WakelockLease) mLeaseProxy.getLease(lock);
+                if (lease != null) {
+                    mLeaseProxy.setUtilitCounter(lease.mLeaseId, utilityCounter);
+                }
             }
         }
 
