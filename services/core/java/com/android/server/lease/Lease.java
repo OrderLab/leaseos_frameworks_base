@@ -247,10 +247,8 @@ public class Lease {
         mHandler = handler;
     }
 
-    public void setCounter (IUtilityCounter counter) {
-        if (mType == ResourceType.Location || mType == ResourceType.Sensor) {
+    public void setCounter(IUtilityCounter counter) {
             mCounter = counter;
-        }
     }
 
     public static void setDefaultParameter(long leaseTerm, long delayInterval) {
@@ -444,7 +442,6 @@ public class Lease {
             } catch (RemoteException e) {
                 Slog.wtf(TAG, "Failed to get score");
             }
-
         }
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {

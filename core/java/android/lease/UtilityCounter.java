@@ -25,5 +25,5 @@ package android.lease;
  */
 public interface UtilityCounter {
 
-    public int getScore();
+    int getScore();
 }

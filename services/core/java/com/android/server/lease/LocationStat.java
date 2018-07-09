@@ -164,6 +164,7 @@ public class LocationStat extends ResourceStat {
             return;
         }
 
+        Slog.d(TAG, "For process " + mUid + ", this lease term has a Normal behavior");
         mBehaviorType = BehaviorType.Normal;
     }
 }
