@@ -40,10 +40,10 @@ import dalvik.system.VMRuntime;
 
 import org.apache.harmony.luni.internal.util.TimezoneGetter;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.lang.reflect.Method;
 import java.lang.reflect.Modifier;
-import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.Hashtable;
 import java.util.TimeZone;
 import java.util.logging.LogManager;
@@ -130,58 +130,23 @@ public class RuntimeInit {
     }
 
     private static class NoteHandler implements Thread.ExceptionNoteHandler {
-        public static final int FIRST_APPLICATION_UID = 10000;
-        public static final int LAST_APPLICATION_UID = 19999;
         private Hashtable<Integer, Integer> mExceptionTable = new Hashtable<>();
-        private ArrayList<Integer> mExemptTable = new ArrayList<>(Arrays.asList(10008, 10081, 10037,
-                10036, 10003, 10019, 10077, 10084, 10041, 10012, 10016, 10059, 10025, 10013, 10083,
-                10078, 10010, 10026, 10066, 10051, 10004, 10007, 10049, 10035, 10022, 10054,
-                10013, 10001, 10071, 10031, 10005, 10073, 10088, 10074, 10029, 10030, 10000,
-                10076, 10044, 10086, 10087, 10024, 10063, 10070, 10006, 10055, 10057, 10056,
-                10072, 10047, 10052, 10075, 10011, 10020, 10058, 10015, 10021, 10027, 10028,
-                10061, 10017, 10068, 10048, 10023, 10067, 10080, 10039, 10062, 10034, 10032,
-                10065, 10046, 10042, 10043, 10079, 10009, 10053, 10038, 10060, 10064, 10014,
-                10033, 10045, 10085, 10069, 10082, 10002, 10050, 10040, 10018));
-        /*
-                public void exceptionNote(int uid, Throwable e) {
-                    String processName = ActivityThread.currentProcessName();
-                    if (!isExempt(uid)) {
-                        Slog.d(TAG,
-                                "The process is " + processName + " for " + uid + ", for exception " + e);
-                        try {
-                            IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
-                            ILeaseManager service = ILeaseManager.Stub.asInterface(b);
-                            service.noteException(uid);
-                        } catch (RemoteException re) {
-                            re.printStackTrace();
-                        }
-                        return;
-                    }
-
-                }
-        */
-        public boolean isExempt(int uid) {
-            //Slog.d(TAG, "Check the exempt");
-            synchronized (this) {
-                if (uid < FIRST_APPLICATION_UID || uid > LAST_APPLICATION_UID) {
-                    return true;
-                }
-
-                //Slog.d(TAG, "This is " + this + ", The table is " + mExemptTable + ", The length of exempt tables are  " + mExemptTable.size());
-                return mExemptTable.contains(uid);
-            }
-        }
 
 
         public void exceptionNote(int uid, Throwable e) {
-            if (!isExempt(uid)) {
-                String processName = ActivityThread.currentProcessName();
-                Slog.d(TAG,
-                        "uid is " + uid +",for exception " + e);
+            String processName = ActivityThread.currentProcessName();
+            Slog.d(TAG,
+                    "The process is " + processName + " for " + uid + ", for exception " + e);
+
+            try {
+                IBinder b = ServiceManager.getService(Context.LEASE_SERVICE);
+                ILeaseManager service = ILeaseManager.Stub.asInterface(b);
+                service.noteException(uid, e.toString());
+            } catch (RemoteException re) {
+                re.printStackTrace();
             }
         }
     }
-
 
 
     private static final void commonInit() {

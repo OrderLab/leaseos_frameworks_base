@@ -41,6 +41,7 @@ public class AppStatsDBHelper extends SQLiteOpenHelper{
                     + AppStatsRecordSchema._ID + " INTEGER PRIMARY KEY,"
                     + AppStatsRecordSchema.COLUMN_TIME + " INTEGER,"
                     + AppStatsRecordSchema.COLUMN_UID + " INTEGER,"
+                    + AppStatsRecordSchema.COLUMN_PACKAGENAME + " TEXT,"
                     + AppStatsRecordSchema.COLUMN_TOTALPOWER + " TEXT,"
                     + AppStatsRecordSchema.COLUMN_USAGETIME + " LONG,"
                     + AppStatsRecordSchema.COLUMN_USAGEPOWER + " TEXT, "
@@ -112,4 +113,6 @@ public class AppStatsDBHelper extends SQLiteOpenHelper{
         onCreate(db);
         Log.d(TAG, "AppStats table upgraded");
     }
+
+
 }

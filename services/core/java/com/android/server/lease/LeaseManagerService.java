@@ -49,6 +49,8 @@ import android.util.LongSparseArray;
 import android.util.Slog;
 import android.util.SparseArray;
 
+import java.io.File;
+import java.io.FileWriter;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.HashSet;
@@ -385,9 +387,9 @@ public class LeaseManagerService extends ILeaseManager.Stub {
         }
     }
 
-    public void noteException(int uid) {
+    public void noteException(int uid, String exception) {
         synchronized (this) {
-            //Slog.d(TAG, "Note exception for uid " + uid);
+            Slog.d(TAG, "Note exception for uid " + uid);
             int exceptions;
             if (mExceptionTable.get(uid) != null) {
                 exceptions = mExceptionTable.get(uid) + 1;
@@ -395,7 +397,19 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 exceptions = 1;
             }
             mExceptionTable.put(uid, exceptions);
-           // Slog.d(TAG,"The number of Exceptions are " + exceptions + ", for uid " + uid + " for " + this + " for address " + mExceptionTable);
+            String fileName = "/data/system/exceptiontracer.txt";
+            try {
+                String name = mContext.getPackageManager().getNameForUid(uid);
+                File file = new File(fileName);
+                FileWriter writer = new FileWriter(file, true);
+                file.setReadable(true, false);
+                writer.write(" " + uid + " " + name  +  " " + exception + "\n");
+                writer.close();
+            } catch (Exception ex) {
+                Slog.d(TAG, "An exception ");
+                ex.printStackTrace();
+            }
+                Slog.d(TAG,"The number of Exceptions are " + exceptions + ", for uid " + uid + " for " + this + " for address " + mExceptionTable);
         }
     }
 

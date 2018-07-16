@@ -58,7 +58,7 @@ interface ILeaseManager {
     /* unregister a lease proxy with the lease manager service */
     boolean unregisterProxy(ILeaseProxy proxy);
 
-    void noteException(int uid);
+    void noteException(int uid, String exception);
 
     void noteTouchEvent(int uid);
 

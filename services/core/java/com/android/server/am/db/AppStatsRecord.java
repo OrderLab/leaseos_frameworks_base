@@ -33,6 +33,7 @@ public class AppStatsRecord {
      * Generic usage time in milliseconds.
      */
     public long usageTimeMs;
+    public String packageName;
 
     /**
      * Generic power usage in mAh.
@@ -69,6 +70,7 @@ public class AppStatsRecord {
         ContentValues values = new ContentValues();
         values.put(AppStatsRecordSchema.COLUMN_TIME, System.currentTimeMillis());
         values.put(AppStatsRecordSchema.COLUMN_UID, uid);
+        values.put(AppStatsRecordSchema.COLUMN_PACKAGENAME, packageName);
         values.put(AppStatsRecordSchema.COLUMN_TOTALPOWER, totalPowerMah);
         values.put(AppStatsRecordSchema.COLUMN_USAGETIME, usageTimeMs);
         values.put(AppStatsRecordSchema.COLUMN_USAGEPOWER, usagePowerMah);

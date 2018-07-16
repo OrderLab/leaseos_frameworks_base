@@ -31,7 +31,7 @@ public class LeaseSettings implements Parcelable {
 
     private static final int MILLIS_PER_MINUTE = 60 * 1000;
 
-    public static final boolean SERVICE_ENABLED_DEFAULT = true;
+    public static final boolean SERVICE_ENABLED_DEFAULT = false;
     public static final String WHITE_LIST_DEFAULT = "android,com.android.phone,com.quicin.trepn";
     public static final long LEASE_TERM_DEFAULT = (long)0.5 * MILLIS_PER_MINUTE; // 30 seconds
     public static final long DELAY_INTERVAL_DEFAULT = (long)0.5 * MILLIS_PER_MINUTE; // 10 minutes

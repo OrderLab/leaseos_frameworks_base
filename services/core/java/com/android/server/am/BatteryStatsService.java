@@ -385,8 +385,6 @@ public final class BatteryStatsService extends IBatteryStats.Stub
 /******LeaseOS change*******/
     public void refreshStatic() {
         Slog.d(TAG, "refersh the static");
-       // long baseTime = SystemClock.elapsedRealtimeNanos();
-       // Slog.d(TAG, "Begin to refersh the static" + baseTime);
         if (mHelper == null) {
             mHelper = new BatteryStatsHelper(mContext, false, false);
             mHelper.create(mStats);
@@ -402,13 +400,12 @@ public final class BatteryStatsService extends IBatteryStats.Stub
                 AppStatsDBHelper.getInstance(mContext).insert(record);
             }
         }
-       // long currtime = SystemClock.elapsedRealtimeNanos();
-       // Slog.d(TAG, "The time to get UID is " + (currtime - baseTime)/1000 );
     }
 
     public AppStatsRecord createRecord(BatterySipper bs) {
         AppStatsRecord record = new AppStatsRecord();
         record.uid = bs.getUid();
+        record.packageName = mContext.getPackageManager().getNameForUid(record.uid);
         record.totalPowerMah = BatteryStatsHelper.makemAh(bs.totalPowerMah);
         record.usageTimeMs = bs.usageTimeMs;
         record.usagePowerMah = BatteryStatsHelper.makemAh(bs.usagePowerMah);

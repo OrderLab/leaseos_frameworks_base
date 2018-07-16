@@ -38,6 +38,8 @@ public class AppStatsRecordSchema implements BaseColumns {
 
     public static final String COLUMN_UID = "uid";
 
+    public static final String COLUMN_PACKAGENAME = "packageName";
+
     public static final String COLUMN_TOTALPOWER = "totalPowerMah";
 
 
@@ -84,6 +86,7 @@ public class AppStatsRecordSchema implements BaseColumns {
             AppStatsRecordSchema._ID,
             AppStatsRecordSchema.COLUMN_TIME,
             AppStatsRecordSchema.COLUMN_UID,
+            AppStatsRecordSchema.COLUMN_PACKAGENAME,
             AppStatsRecordSchema.COLUMN_TOTALPOWER,
             AppStatsRecordSchema.COLUMN_USAGETIME,
             AppStatsRecordSchema.COLUMN_USAGEPOWER,

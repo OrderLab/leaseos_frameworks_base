@@ -3618,6 +3618,7 @@ public final class PowerManagerService extends SystemService
         }
 
         /*********LeaseOS change *************/
+/*
         @Override // Binder call
         public void acquireWakeLockUtility(IBinder lock, int flags, String tag, String packageName,
                 WorkSource ws, String historyTag, IUtilityCounter utilityCounter) {
@@ -3630,6 +3631,7 @@ public final class PowerManagerService extends SystemService
                 }
             }
         }
+        /*********/
 
         @Override // Binder call
         public void releaseWakeLock(IBinder lock, int flags) {
@@ -4067,25 +4069,6 @@ public final class PowerManagerService extends SystemService
                 Binder.restoreCallingIdentity(ident);
             }
         }
-
-        /*
-        public void denyRequest(long leaseId, long timeInterval) {
-            WakeLock wakeLock;
-
-            IBinder lock = mReverseLeasetable.get(leaseId);
-            if (lock != null) {
-                int index = findWakeLockIndexLocked(lock);
-                if (index >= 0) {
-                    wakeLock = mWakeLocks.get(index);
-                    releaseWakeLockInternal(wakeLock.mLock, wakeLock.mFlags, false);
-                }
-                RequestFreezer<IBinder> lockFreezer = new RequestFreezer<IBinder>(timeInterval,
-                200);
-                mFreezerTable.put(lock, lockFreezer);
-                lockFreezer.addToFreezer(lock);
-            }
-        }
-        */
     }
 
     private final class LocalService extends PowerManagerInternal {

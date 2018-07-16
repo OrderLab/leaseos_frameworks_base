@@ -1309,13 +1309,8 @@ public final class PowerManager {
                 mHandler.removeCallbacks(mReleaser);
                 Trace.asyncTraceBegin(Trace.TRACE_TAG_POWER, mTraceName, 0);
                 try {
-                    if (mIUtilityCounter != null) {
-                        mService.acquireWakeLockUtility(mToken, mFlags, mTag, mPackageName, mWorkSource,
-                                mHistoryTag, mIUtilityCounter);
-                    } else {
-                        mService.acquireWakeLock(mToken, mFlags, mTag, mPackageName, mWorkSource,
-                                mHistoryTag);
-                    }
+                    mService.acquireWakeLock(mToken, mFlags, mTag, mPackageName, mWorkSource,
+                            mHistoryTag);
                 } catch (RemoteException e) {
                     throw e.rethrowFromSystemServer();
                 }
