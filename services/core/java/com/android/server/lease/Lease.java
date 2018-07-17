@@ -443,6 +443,7 @@ public class Lease {
                 Slog.wtf(TAG, "Failed to get score");
             }
         }
+        mEndTime = SystemClock.elapsedRealtime();
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
             Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
@@ -471,7 +472,7 @@ public class Lease {
             case REACTIVATE:
                 Slog.d(TAG, "Start renew action for decision " + decision.mBehaviorType);
                 mNormal++;
-                if (mNormal > 12 || mNormal < 12 * 10) {
+                if (mNormal > 12 && mNormal < 12 * 10) {
                     mLength =  12 * DEFAULT_LEASE_TERM_MS; // extend the lease term to 1 min if the lease are normal in the past 12 terms.
                 } else if (mNormal > 12 * 10) {
                     mLength = 5 * 12 * DEFAULT_LEASE_TERM_MS; // extend the lease term to 5 mins if the lease are normal in the past 120 terms.

@@ -89,8 +89,8 @@ public class WakelockStat extends ResourceStat {
                 + ", the CPU usage time is " + mUsageTime + ", the utility is " + mUtility);
         judge();
         // TODO: uncomment inserting db to make it work
-        LeaseStatsRecord record = createRecord(mUid);
-        LeaseStatsDBHelper.getInstance(context).insert(record);
+       // LeaseStatsRecord record = createRecord(mUid);
+       // LeaseStatsDBHelper.getInstance(context).insert(record);
     }
 
     public LeaseStatsRecord createRecord(int uid) {
@@ -152,16 +152,18 @@ public class WakelockStat extends ResourceStat {
         if ((float) mUsageTime / mHoldingTime < 0.1 && mHoldingTime > 100) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a LongHolding behavior");
             mBehaviorType = BehaviorType.LongHolding;
+            return;
         }
 
         if ((float) mUsageTime / (mHoldingTime * mFrequency)
                 < 0.1 && mHoldingTime > 100) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");
             mBehaviorType = BehaviorType.HighDamage;
+            return;
         }
 
         Slog.d(TAG, "For process " + mUid + ", this lease term has a Normal behavior");
-        mBehaviorType = BehaviorType.Normal;
+        mBehaviorType = BehaviorType.LowUtility;
 
     }
 }

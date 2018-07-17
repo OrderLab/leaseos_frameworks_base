@@ -267,11 +267,13 @@ public class StatHistory {
 
     public void noteAcquire(String activityName) {
         synchronized (mEventList) {
-            Event lastevent = mEventList.getLast();
             Event e = new Event(SystemClock.elapsedRealtime());
-            if (lastevent != null || lastevent.acquireTime == lastevent.releaseTime) {
-                Slog.d(TAG, "The resource has not release yet, do not record the acquire event");
-                return;
+            if (mEventList.size() != 0) {
+                Event lastevent = mEventList.getLast();
+                if (lastevent != null && lastevent.acquireTime == lastevent.releaseTime) {
+                    Slog.d(TAG, "The resource has not release yet, do not record the acquire event");
+                    return;
+                }
             }
             mEventList.add(e);
             if (mType == ResourceType.Location || mType == ResourceType.Sensor) {
