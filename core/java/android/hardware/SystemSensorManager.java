@@ -201,12 +201,13 @@ public class SystemSensorManager extends SensorManager {
 
                 ActivityManager.RunningTaskInfo info = null;
                 info = getActivity();
-                String packageName = info.topActivity.getPackageName();
-                String activityName = info.topActivity.getClassName();
-                int uid = Libcore.os.getuid();
-             //   Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid+ "]requires sensor " + sensor + ", fromproxy " + fromProxy);
-               // Log.d(TAG, "The listener is " + listener);
-                if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                if (info != null && info.topActivity != null && mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+                    String packageName = info.topActivity.getPackageName();
+                    String activityName = info.topActivity.getClassName();
+                    // Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid+ "]requires sensor " + sensor + ", fromproxy " + fromProxy);
+                    // Log.d(TAG, "The listener is " + listener);
+                    int uid = Libcore.os.getuid();
+
                     SensorLease lease;
                     if (mLeaseProxy.exempt(packageName, uid)) {
                        // Log.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
@@ -292,21 +293,22 @@ public class SystemSensorManager extends SensorManager {
     @Override
     protected void unregisterListenerImpl(SensorEventListener listener, Sensor sensor) {
         // Trigger Sensors should use the cancelTriggerSensor call.
-        ActivityManager.RunningTaskInfo info = null;
-        info = getActivity();
-
-        String packageName = info.topActivity.getPackageName();
-        String activityName = info.topActivity.getClassName();
-
-        int uid = Libcore.os.getuid();
-        Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]"
-                + "unregister sensor " + sensor);
         if (sensor != null && sensor.getReportingMode() == Sensor.REPORTING_MODE_ONE_SHOT) {
             return;
         }
 
         /***LeaseOS changes***/
-        if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+        ActivityManager.RunningTaskInfo info = null;
+        info = getActivity();
+
+        if (info != null && info.topActivity != null && mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
+            String packageName = info.topActivity.getPackageName();
+            String activityName = info.topActivity.getClassName();
+
+            int uid = Libcore.os.getuid();
+            Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid + "]"
+                + "unregister sensor " + sensor);
+
             SensorLease lease = (SensorLease) mLeaseProxy.getLease(listener);
             if (lease != null) {
                 Log.i(TAG, "Release called on the lease " + lease.mLeaseId);
