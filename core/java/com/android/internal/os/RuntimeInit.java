@@ -48,6 +48,8 @@ import java.util.Hashtable;
 import java.util.TimeZone;
 import java.util.logging.LogManager;
 
+import static android.os.Process.FIRST_APPLICATION_UID;
+
 /**
  * Main entry point for runtime initialization.  Not for
  * public consumption.
@@ -134,6 +136,9 @@ public class RuntimeInit {
 
 
         public void exceptionNote(int uid, Throwable e) {
+            if (uid < FIRST_APPLICATION_UID) {
+                return;
+            }
             String processName = ActivityThread.currentProcessName();
             Slog.d(TAG,
                     "The process is " + processName + " for " + uid + ", for exception " + e);
