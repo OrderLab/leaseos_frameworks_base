@@ -198,19 +198,18 @@ public class SystemSensorManager extends SensorManager {
                 mSensorListeners.put(listener, queue);
 
                 /*** LeaseOS changes ***/
+
                 ActivityManager.RunningTaskInfo info = null;
                 info = getActivity();
                 String packageName = info.topActivity.getPackageName();
                 String activityName = info.topActivity.getClassName();
                 int uid = Libcore.os.getuid();
-                Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid
-                        + "]requires sensor " + sensor + ", fromproxy " + fromProxy);
-                Log.d(TAG, "The listener is " + listener);
+             //   Log.d(TAG, "Activity " + activityName + "[package " + packageName + ", uid " + uid+ "]requires sensor " + sensor + ", fromproxy " + fromProxy);
+               // Log.d(TAG, "The listener is " + listener);
                 if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
                     SensorLease lease;
                     if (mLeaseProxy.exempt(packageName, uid)) {
-                        Log.d(TAG,
-                                "Exempt UID " + uid + " " + packageName + " from lease mechanism");
+                       // Log.d(TAG, "Exempt UID " + uid + " " + packageName + " from lease mechanism");
                         return true;
                     }
 
@@ -264,6 +263,7 @@ public class SystemSensorManager extends SensorManager {
                 /*********************/
                 return true;
             } else {
+
                 if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
                     SensorLease lease = null;
                     //Update the information of listener
@@ -281,7 +281,6 @@ public class SystemSensorManager extends SensorManager {
                                     lease.mMaxBatchReportLatencyUs, lease.mLeaseId);
                         }
                     }
-
                 }
                 return queue.addSensor(sensor, delayUs, maxBatchReportLatencyUs);
             }

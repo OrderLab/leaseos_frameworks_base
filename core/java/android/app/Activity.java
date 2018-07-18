@@ -694,7 +694,7 @@ public class Activity extends ContextThemeWrapper
         OnCreateContextMenuListener, ComponentCallbacks2,
         Window.OnWindowDismissedCallback, WindowControllerCallback {
     private static final String TAG = "Activity";
-    private static final boolean DEBUG_LIFECYCLE = true;
+    private static final boolean DEBUG_LIFECYCLE = false;
 
     /** Standard activity result: operation canceled. */
     public static final int RESULT_CANCELED    = 0;

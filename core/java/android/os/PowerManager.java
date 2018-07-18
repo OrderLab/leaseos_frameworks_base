@@ -564,51 +564,6 @@ public final class PowerManager {
         return new WakeLock(levelAndFlags, tag, mContext.getOpPackageName());
     }
 
-    /***LeaseOS change **/
-    public WakeLock newWakeLock(int levelAndFlags, String tag, UtilityCounter utilityCounter) {
-        validateWakeLockParameters(levelAndFlags, tag);
-        CounterTransport counterTransport;
-        synchronized (mCounter) {
-            counterTransport = mCounter.get(utilityCounter);
-            if (counterTransport == null) {
-                counterTransport = new CounterTransport(utilityCounter);
-            }
-            mCounter.put(utilityCounter, counterTransport);
-        }
-        return new WakeLock(levelAndFlags, tag, mContext.getOpPackageName(), counterTransport);
-    }
-
-    // Map from UtilityCounter to their associated ListenerTransport objects
-    private HashMap<UtilityCounter,CounterTransport> mCounter =
-            new HashMap<UtilityCounter,CounterTransport>();
-
-    private CounterTransport wrapListener(UtilityCounter utilityCounter) {
-        if (utilityCounter == null) return null;
-        synchronized (mCounter) {
-            CounterTransport transport = mCounter.get(utilityCounter);
-            if (transport == null) {
-                transport = new CounterTransport(utilityCounter);
-            }
-            mCounter.put(utilityCounter, transport);
-            return transport;
-        }
-    }
-
-    private class CounterTransport extends IUtilityCounter.Stub {
-        private UtilityCounter mUtilityCounter;
-
-        CounterTransport(UtilityCounter utilityCounter) {
-            mUtilityCounter = utilityCounter;
-        }
-
-        @Override
-        public int getScore() {
-            return 100;
-        }
-    }
-    /**************/
-
-
     /** @hide */
     public static void validateWakeLockParameters(int levelAndFlags, String tag) {
         switch (levelAndFlags & WAKE_LOCK_LEVEL_MASK) {
@@ -1208,7 +1163,6 @@ public final class PowerManager {
         private WorkSource mWorkSource;
         private String mHistoryTag;
         private final String mTraceName;
-        private IUtilityCounter mIUtilityCounter;
 
         private final Runnable mReleaser = new Runnable() {
             public void run() {
@@ -1222,16 +1176,7 @@ public final class PowerManager {
             mPackageName = packageName;
             mToken = new Binder();
             mTraceName = "WakeLock (" + mTag + ")";
-            mIUtilityCounter = null;
-        }
 
-        WakeLock (int flags, String tag, String packageName, IUtilityCounter utilityCounter) {
-            mFlags = flags;
-            mTag = tag;
-            mPackageName = packageName;
-            mToken = new Binder();
-            mTraceName = "WakeLock (" + mTag + ")";
-            mIUtilityCounter = utilityCounter;
         }
 
         @Override

@@ -163,7 +163,7 @@ public class WakelockStat extends ResourceStat {
         }
 
         Slog.d(TAG, "For process " + mUid + ", this lease term has a Normal behavior");
-        mBehaviorType = BehaviorType.LowUtility;
+        mBehaviorType = BehaviorType.Normal;
 
     }
 }
