@@ -26,6 +26,7 @@ public class BatterySipper implements Comparable<BatterySipper> {
     public double totalPowerMah;
     public DrainType drainType;
 
+
     /**
      * Generic usage time in milliseconds.
      */
@@ -37,6 +38,7 @@ public class BatterySipper implements Comparable<BatterySipper> {
     public double usagePowerMah;
 
     // Subsystem usage times.
+    public long sensorTime;
     public long cpuTimeMs;
     public long gpsTimeMs;
     public long wifiRunningTimeMs;

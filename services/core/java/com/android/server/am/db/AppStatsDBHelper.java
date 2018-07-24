@@ -44,7 +44,7 @@ public class AppStatsDBHelper extends SQLiteOpenHelper{
                     + AppStatsRecordSchema.COLUMN_PACKAGENAME + " TEXT,"
                     + AppStatsRecordSchema.COLUMN_TOTALPOWER + " TEXT,"
                     + AppStatsRecordSchema.COLUMN_USAGETIME + " LONG,"
-                    + AppStatsRecordSchema.COLUMN_USAGEPOWER + " TEXT, "
+                    + AppStatsRecordSchema.COLUMN_USAGEPOWER + " TEXT,"
                     + AppStatsRecordSchema.COLUMN_CPUTIME + " LONG,"
                     + AppStatsRecordSchema.COLUMN_GPSTIME + " LONG,"
                     + AppStatsRecordSchema.COLUMN_WIFIRUNNINGTIME + " LONG,"

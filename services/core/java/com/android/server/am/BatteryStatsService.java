@@ -362,9 +362,9 @@ public final class BatteryStatsService extends IBatteryStats.Stub
     }
 
     public ParcelFileDescriptor getStatisticsStream() {
-        mContext.enforceCallingOrSelfPermission(
-                Manifest.permission.BATTERY_STATS, null);
-        Slog.i("foo", "SENDING BATTERY INFO:");
+        mContext.enforceCallingPermission(
+                android.Manifest.permission.BATTERY_STATS, null);
+       // Slog.i("foo", "SENDING BATTERY INFO:");
         //mStats.dumpLocked(new LogPrinter(Log.INFO, "foo", Log.LOG_ID_SYSTEM));
         Parcel out = Parcel.obtain();
         updateExternalStatsSync("get-stats", BatteryStatsImpl.ExternalStatsSync.UPDATE_ALL);

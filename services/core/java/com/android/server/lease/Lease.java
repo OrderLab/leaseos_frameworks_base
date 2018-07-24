@@ -76,6 +76,9 @@ public class Lease {
 
     public boolean isMatch;
 
+    private final int wakelock_lease = 5 * TimeUtils.MILLIS_PER_MINUTE;
+    private final int wsensor_lease = 10* TimeUtils.MILLIS_PER_MINUTE;
+
     private final int DEFAULT_LEASE_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
     private int DEFAULT_DELAY_MS = DEFAULT_LEASE_TERM_MS * mRatio;
 
