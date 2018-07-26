@@ -77,7 +77,7 @@ public class Lease {
     public boolean isMatch;
 
     private final int wakelock_lease = 5 * TimeUtils.MILLIS_PER_MINUTE;
-    private final int wsensor_lease = 10* TimeUtils.MILLIS_PER_MINUTE;
+    private final int sensor_lease = 10* TimeUtils.MILLIS_PER_MINUTE;
 
     private final int DEFAULT_LEASE_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
     private int DEFAULT_DELAY_MS = DEFAULT_LEASE_TERM_MS * mRatio;
@@ -106,6 +106,11 @@ public class Lease {
         mLeaseId = lid;
         mOwnerId = Oid;
         mType = type;
+        if (mType == ResourceType.Wakelock) {
+            mLength = wakelock_lease;
+        } else {
+            mLength = sensor_lease;
+        }
         mStatus = LeaseStatus.ACTIVE;
         mRStatManager = RStatManager;
         mProxy = proxy;
@@ -122,7 +127,7 @@ public class Lease {
     public void create(long now) {
         mNormal = 0;
         mStatus = LeaseStatus.ACTIVE;
-        mLength = DEFAULT_LEASE_TERM_MS;
+        //mLength = DEFAULT_LEASE_TERM_MS;
         mRatio = mLeaseManagerService.getRatio();
         mDelayInterval = DEFAULT_DELAY_MS;
 
@@ -450,11 +455,13 @@ public class Lease {
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
         if (isCharging == true || mBatteryMonitor.isCharging()) {
             Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
-            renew(true);
+           // renew(true);
             return;
         }
         mStatus = LeaseStatus.EXPIRED;
-
+        expire();
+        return;
+        /*
         StatHistory statHistory = getStatHistory();
         if (statHistory == null) {
             Slog.d(TAG, "The lease does not have a stat history");
@@ -463,7 +470,7 @@ public class Lease {
                 lastNormal = SystemClock.elapsedRealtime();
             }
         }
-        RenewDescison();
+        RenewDescison();*/
     }
 
     public boolean RenewDescison() {

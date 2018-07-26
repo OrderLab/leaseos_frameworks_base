@@ -2218,7 +2218,7 @@ public class WifiManager {
     }
 
     /*** LeaseOS changes ***/
-/*
+    /*
     private class WakelockLease extends LeaseDescriptor<IBinder> implements IBinder.DeathRecipient {
         public WifiLock mLeaseValue;
         public String mPackageName;
@@ -2253,6 +2253,11 @@ public class WifiManager {
                 throw new IllegalArgumentException("Wake lock is already dead.");
             }
             return lease;
+        }
+
+        @Override
+        public void weakExpire(long leaseId) throws RemoteException {
+            onExpire(leaseId);
         }
 
         @Override
