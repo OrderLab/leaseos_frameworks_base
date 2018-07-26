@@ -106,7 +106,7 @@ public final class PowerManagerService extends SystemService
         implements Watchdog.Monitor {
     private static final String TAG = "PowerManagerService";
 
-    private static final boolean DEBUG = true;
+    private static final boolean DEBUG = false;
     private static final boolean DEBUG_SPEW = DEBUG && true;
 
     // Message: Sent when a user activity timeout occurs to update the power state.
@@ -954,8 +954,8 @@ public final class PowerManagerService extends SystemService
             if (mLeaseProxy != null && mLeaseProxy.mLeaseServiceEnabled) {
                 WakelockLease lease;
                 if (mLeaseProxy.exempt(packageName, uid)) {
-                    Slog.d(TAG, "Exempt UID " + uid + " " + packageName
-                            + " from lease mechanism");
+                   // Slog.d(TAG, "Exempt UID " + uid + " " + packageName
+                   //         + " from lease mechanism");
                     return;
                 }
 

@@ -395,7 +395,7 @@ public final class BatteryStatsService extends IBatteryStats.Stub
             for (int i = 0; i < sippers.size(); i++) {
                 final BatterySipper bs = sippers.get(i);
                 int uid = bs.getUid();
-                Slog.d(TAG, "Get the static of uid " + uid);
+                //Slog.d(TAG, "Get the static of uid " + uid);
                 AppStatsRecord record = createRecord(bs);
                 AppStatsDBHelper.getInstance(mContext).insert(record);
             }

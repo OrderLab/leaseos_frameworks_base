@@ -55,10 +55,24 @@ public class SensorPowerCalculator extends PowerCalculator {
                     for (int i = 0; i < sensorsCount; i++) {
                         final Sensor s = mSensors.get(i);
                         if (s.getHandle() == sensorHandle) {
-                            //Slog.d("SensorPowerCalculator", "The uid is " + u.getUid() + ", the sensor time is " + sensorTime + ", the sensor power is " + s.getPower());
-                            app.sensorTime += sensorTime;
-                            app.sensorPowerMah += (sensorTime * s.getPower()) / (1000*60*60);
-                            break;
+                            Slog.d("SensorPowerCalculator", "The uid is " + u.getUid() + ", the sensor time is " + sensorTime + ", the sensor type is " + s.getType());
+                            switch (s.getType()) {
+                                case Sensor.TYPE_ACCELEROMETER:
+                                    app.sensorPowerMah += (sensorTime * 0.3) / (1000*60*60);
+                                    Slog.d("SensorPowerCalculator","sensorpower " + app.sensorPowerMah);
+                                    break;
+                                case Sensor.TYPE_ORIENTATION:
+                                    app.sensorPowerMah += (sensorTime * 11.8) / (1000*60*60);
+                                    Slog.d("SensorPowerCalculator","sensorpower " + app.sensorPowerMah);
+                                    break;
+                                case  Sensor.TYPE_PROXIMITY:
+                                    app.sensorPowerMah += (sensorTime * 12.657) / (1000*60*60);
+                                    Slog.d("SensorPowerCalculator","sensorpower " + app.sensorPowerMah);
+                                    break;
+                                default:
+                                    app.sensorPowerMah += (sensorTime * s.getPower()) / (1000*60*60);
+                                    break;
+                            }
                         }
                     }
                     break;

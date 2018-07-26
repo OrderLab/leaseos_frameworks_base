@@ -132,12 +132,13 @@ public class SystemSensorManager extends SensorManager {
         }
 
         /*** LeaseOS changes ***/
-
-        mLeaseProxy = new SensorLeaseProxy(mContext);
-        if (!mLeaseProxy.start()) {
-            Log.e(TAG, "Failed to start SensorLeaseProxy");
-        } else {
-            Log.i(TAG, "SensorLeaseProxy started");
+        if (mLeaseProxy.mLeaseServiceEnabled) {
+            mLeaseProxy = new SensorLeaseProxy(mContext);
+            if (!mLeaseProxy.start()) {
+                Log.e(TAG, "Failed to start SensorLeaseProxy");
+            } else {
+                Log.i(TAG, "SensorLeaseProxy started");
+            }
         }
         /**********************/
     }

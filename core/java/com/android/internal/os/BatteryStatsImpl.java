@@ -97,9 +97,9 @@ import java.util.concurrent.locks.ReentrantLock;
 public class BatteryStatsImpl extends BatteryStats {
     public static String TAG = "BatteryStatsImpl";
     private static final boolean DEBUG = false;
-    public static final boolean DEBUG_ENERGY = true;
+    public static final boolean DEBUG_ENERGY = false;
     private static final boolean DEBUG_ENERGY_CPU = DEBUG_ENERGY;
-    private static final boolean DEBUG_HISTORY = true;
+    private static final boolean DEBUG_HISTORY = false;
     private static final boolean USE_OLD_HISTORY = false;   // for debugging.
 
     // TODO: remove "tcp" from network methods, since we measure total stats.
