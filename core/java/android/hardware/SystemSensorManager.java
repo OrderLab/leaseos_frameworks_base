@@ -26,6 +26,7 @@ import android.lease.LeaseDescriptor;
 import android.lease.LeaseEvent;
 import android.lease.LeaseManager;
 import android.lease.LeaseProxy;
+import android.lease.LeaseSettings;
 import android.lease.LeaseStatus;
 import android.lease.ResourceType;
 import android.lease.UtilityCounter;
@@ -132,7 +133,7 @@ public class SystemSensorManager extends SensorManager {
         }
 
         /*** LeaseOS changes ***/
-        if (mLeaseProxy.mLeaseServiceEnabled) {
+        if ( LeaseSettings.getDefaultSettings().serviceEnabled) {
             mLeaseProxy = new SensorLeaseProxy(mContext);
             if (!mLeaseProxy.start()) {
                 Log.e(TAG, "Failed to start SensorLeaseProxy");
@@ -393,7 +394,7 @@ public class SystemSensorManager extends SensorManager {
 
         @Override
         public int getScore() {
-            return 100;
+            return mUtilityCounter.getScore();
         }
     }
 

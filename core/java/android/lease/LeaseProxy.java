@@ -218,6 +218,9 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
      */
     public boolean exempt(String pkg, int uid) {
         // ignore any non-app process
+        //if (uid == 1041) {
+       //     return false;
+       // }
         if (uid < android.os.Process.FIRST_APPLICATION_UID ||
                 uid > android.os.Process.LAST_APPLICATION_UID)
             return true;
@@ -296,6 +299,8 @@ public abstract class LeaseProxy<S> extends ILeaseProxy.Stub {
             }
             if (mLeaseManager == null && mContext != null) {
                 mLeaseManager = (LeaseManager) mContext.getSystemService(Context.LEASE_SERVICE);
+                int uid = Libcore.os.getuid();
+                mLeaseManager.registerProxy(mType, mName, this, uid);
             }
             updateSettingsLocked(settings); // update settings
             mLeaseServiceEnabled = true;

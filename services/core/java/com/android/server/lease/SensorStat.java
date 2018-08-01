@@ -138,11 +138,18 @@ public class SensorStat extends ResourceStat {
             return;
         }
 
+        if (mIsScoreSet && mScore < 50) {
+            Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
+            mBehaviorType = BehaviorType.LowUtility;
+            return;
+        }
+
         if (!mIsMatch) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a Low Utility behavior");
             mBehaviorType = BehaviorType.LowUtility;
             return;
         }
+
 
         if (mFrequency > 2) {
             Slog.d(TAG, "For process " + mUid + ", this lease term has a High Damage behavior");

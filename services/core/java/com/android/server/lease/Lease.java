@@ -31,8 +31,15 @@ import android.lease.ResourceType;
 import android.lease.TimeUtils;
 import android.os.RemoteException;
 import android.os.SystemClock;
+import android.text.TextUtils;
 import android.util.Slog;
 
+import libcore.io.Libcore;
+
+import java.io.BufferedReader;
+import java.io.File;
+import java.io.FileReader;
+import java.io.FileWriter;
 import java.util.List;
 
 /**
@@ -76,8 +83,8 @@ public class Lease {
 
     public boolean isMatch;
 
-    private final int wakelock_lease = 5 * TimeUtils.MILLIS_PER_MINUTE;
-    private final int sensor_lease = 10* TimeUtils.MILLIS_PER_MINUTE;
+    private final int wakelock_lease = 1 * TimeUtils.MILLIS_PER_MINUTE;
+    private final int sensor_lease = 1* TimeUtils.MILLIS_PER_MINUTE;
 
     private final int DEFAULT_LEASE_TERM_MS = 5 * TimeUtils.MILLIS_PER_SECOND;
     private int DEFAULT_DELAY_MS = DEFAULT_LEASE_TERM_MS * mRatio;
@@ -106,11 +113,12 @@ public class Lease {
         mLeaseId = lid;
         mOwnerId = Oid;
         mType = type;
+        /*
         if (mType == ResourceType.Wakelock) {
             mLength = wakelock_lease;
         } else {
             mLength = sensor_lease;
-        }
+        }*/
         mStatus = LeaseStatus.ACTIVE;
         mRStatManager = RStatManager;
         mProxy = proxy;
@@ -127,10 +135,9 @@ public class Lease {
     public void create(long now) {
         mNormal = 0;
         mStatus = LeaseStatus.ACTIVE;
-        //mLength = DEFAULT_LEASE_TERM_MS;
+        mLength = DEFAULT_LEASE_TERM_MS;
         mRatio = mLeaseManagerService.getRatio();
         mDelayInterval = DEFAULT_DELAY_MS;
-
         isCharging = mBatteryMonitor.isCharging();
         mBeginTime = now;
         mLeaseManagerService.getAndCleanException(mOwnerId);
@@ -441,11 +448,38 @@ public class Lease {
      * One lease term has come to an end. We need to update the statistics usage of this lease
      * term to resource stat manager and decide the next state of this lease
      */
+    private static final String sProcFile = "/proc/uid_cputime/show_uid_stat";
+
     public void endTerm() {
         // update the stats for this lease term
+        /*
+        long userTimeUs = 0;
+        long systemTimeUs = 0;
+        long basesysTime = 0;
+        long currentsysTime = 0;
+        try (BufferedReader reader = new BufferedReader(new FileReader(sProcFile))) {
+            TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(' ');
+            String line;
+            while ((line = reader.readLine()) != null) {
+                splitter.setString(line);
+                String uidStr = splitter.next();
+                int uid = Integer.parseInt(uidStr.substring(0, uidStr.length() - 1), 10);
+                if (uid == 1000) {
+                    userTimeUs = Long.parseLong(splitter.next(), 10);
+                    systemTimeUs = Long.parseLong(splitter.next(), 10);
+                    basesysTime = userTimeUs + systemTimeUs;
+                    break;
+                }
+            }
+        } catch (Exception e) {
+        }
+        long baseTime = SystemClock.elapsedRealtime();
+*/
         if (mCounter != null) {
             try {
+                Slog.d(TAG, "Get the score for " + mOwnerId);
                 int score = mCounter.getScore();
+                Slog.d(TAG, "The score is " + score);
                 mRStatManager.setScore(mLeaseId, score);
             } catch (RemoteException e) {
                 Slog.wtf(TAG, "Failed to get score");
@@ -453,15 +487,13 @@ public class Lease {
         }
         mEndTime = SystemClock.elapsedRealtime();
         mRStatManager.update(mLeaseId, mBeginTime, mEndTime, mOwnerId);
+
         if (isCharging == true || mBatteryMonitor.isCharging()) {
             Slog.d(TAG, "The phone is in charging, immediately renew for lease " + mLeaseId);
-           // renew(true);
+            renew(true);
             return;
         }
         mStatus = LeaseStatus.EXPIRED;
-        expire();
-        return;
-        /*
         StatHistory statHistory = getStatHistory();
         if (statHistory == null) {
             Slog.d(TAG, "The lease does not have a stat history");
@@ -470,7 +502,48 @@ public class Lease {
                 lastNormal = SystemClock.elapsedRealtime();
             }
         }
-        RenewDescison();*/
+        RenewDescison();
+        /*
+        long currtime = SystemClock.elapsedRealtime();
+
+        Slog.d(TAG, "The uid is " + Libcore.os.getuid());
+        String fileName = "/data/system/leaseupdate.txt";
+        try {
+            File file = new File(fileName);
+            FileWriter writer = new FileWriter(file, true);
+            file.setReadable(true, false);
+            writer.write("The update latency is " + (currtime-baseTime) + "ms\n");
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+
+        try (BufferedReader reader = new BufferedReader(new FileReader(sProcFile))) {
+            TextUtils.SimpleStringSplitter splitter = new TextUtils.SimpleStringSplitter(' ');
+            String line;
+            while ((line = reader.readLine()) != null) {
+                splitter.setString(line);
+                String uidStr = splitter.next();
+                int uid = Integer.parseInt(uidStr.substring(0, uidStr.length() - 1), 10);
+                if (uid == 1000) {
+                    userTimeUs = Long.parseLong(splitter.next(), 10);
+                    systemTimeUs = Long.parseLong(splitter.next(), 10);
+                    currentsysTime = userTimeUs + systemTimeUs;
+                    break;
+                }
+            }
+        } catch (Exception e) {
+        }
+
+        try {
+            File file = new File(fileName);
+            FileWriter writer = new FileWriter(file, true);
+            file.setReadable(true, false);
+            writer.write("The cpu usage is " + (currentsysTime-basesysTime)/10 + "ms\n");
+            writer.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }*/
     }
 
     public boolean RenewDescison() {

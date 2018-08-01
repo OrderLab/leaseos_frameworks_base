@@ -21,6 +21,7 @@ import android.hardware.Sensor;
 import android.hardware.SensorEvent;
 import android.hardware.SensorEventListener;
 import android.hardware.SensorManager;
+import android.lease.UtilityCounter;
 import android.util.Log;
 
 import libcore.io.Libcore;
@@ -94,6 +95,19 @@ public abstract class OrientationEventListener {
             if (localLOGV) Log.d(TAG, "OrientationEventListener enabled");
             Log.d(TAG, "The uid is " + Libcore.os.getuid() + ", the rate is " + mRate);
             mSensorManager.registerListener(mSensorEventListener, mSensor, mRate);
+            mEnabled = true;
+        }
+    }
+
+    public void enable(UtilityCounter utilityCounter) {
+        if (mSensor == null) {
+            Log.w(TAG, "Cannot detect sensors. Not enabled");
+            return;
+        }
+        if (mEnabled == false) {
+            if (localLOGV) Log.d(TAG, "OrientationEventListener enabled");
+            Log.d(TAG, "The uid is " + Libcore.os.getuid() + ", the rate is " + mRate);
+            mSensorManager.registerListener(mSensorEventListener, mSensor, mRate, 0,utilityCounter);
             mEnabled = true;
         }
     }

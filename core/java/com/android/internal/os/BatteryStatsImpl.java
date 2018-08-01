@@ -95,7 +95,7 @@ import java.util.concurrent.locks.ReentrantLock;
  * otherwise.
  */
 public class BatteryStatsImpl extends BatteryStats {
-    public static String TAG = "BatteryStatsImpl";
+    private static final String TAG = "BatteryStatsImpl";
     private static final boolean DEBUG = false;
     public static final boolean DEBUG_ENERGY = false;
     private static final boolean DEBUG_ENERGY_CPU = DEBUG_ENERGY;
@@ -7221,8 +7221,6 @@ public class BatteryStatsImpl extends BatteryStats {
                     val -= mLoadedUserTime;
                 } else if (which == STATS_SINCE_UNPLUGGED) {
                     val -= mUnpluggedUserTime;
-                } else if (which == STATS_ABSOLUTE) {
-                    val = mUserTime;
                 }
                 return val;
             }
@@ -7234,8 +7232,6 @@ public class BatteryStatsImpl extends BatteryStats {
                     val -= mLoadedSystemTime;
                 } else if (which == STATS_SINCE_UNPLUGGED) {
                     val -= mUnpluggedSystemTime;
-                }else if (which == STATS_ABSOLUTE) {
-                    val = mSystemTime;
                 }
                 return val;
             }
@@ -9343,7 +9339,7 @@ public class BatteryStatsImpl extends BatteryStats {
      */
     public void updateCpuTimeLocked() {
         if (mPowerProfile == null) {
-            Slog.d(TAG, "return because mPowerProfile is null");
+
             return;
         }
 
@@ -9390,7 +9386,7 @@ public class BatteryStatsImpl extends BatteryStats {
         // we read, we get a delta. If we are to distribute the cpu time, then do so. Otherwise
         // we just ignore the data.
         final long startTimeMs = mClocks.elapsedRealtime();
-        Slog.d(TAG,"The mOnBatteryInternal is " + mOnBatteryInternal);
+       // Slog.d(TAG,"The mOnBatteryInternal is " + mOnBatteryInternal);
         mKernelUidCpuTimeReader.readDelta(!mOnBatteryInternal ? null :
                 new KernelUidCpuTimeReader.Callback() {
                     @Override
@@ -10180,7 +10176,7 @@ public class BatteryStatsImpl extends BatteryStats {
     public Uid getUidStatsLocked(int uid) {
         Uid u = mUidStats.get(uid);
         if (u == null) {
-            Slog.d(TAG, "Create a new Uid for process " + uid);
+            //Slog.d(TAG, "Create a new Uid for process " + uid);
             u = new Uid(this, uid);
             mUidStats.put(uid, u);
         }

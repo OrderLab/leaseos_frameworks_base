@@ -169,7 +169,6 @@ public class BatteryMonitor {
                         systemTimeUs = Long.parseLong(splitter.next(), 10);
                         mcpuTable.put(uid, userTimeUs + systemTimeUs);
                     }
-
                 }
             } catch (Exception e) {
             }

@@ -16,7 +16,6 @@
 
 package com.android.server.am;
 
-import android.Manifest;
 import android.annotation.Nullable;
 import android.bluetooth.BluetoothActivityEnergyInfo;
 import android.bluetooth.BluetoothAdapter;
@@ -50,10 +49,8 @@ import android.telephony.DataConnectionRealTimeInfo;
 import android.telephony.ModemActivityInfo;
 import android.telephony.SignalStrength;
 import android.telephony.TelephonyManager;
-import android.text.TextUtils;
 import android.util.IntArray;
 import android.util.Slog;
-import android.util.SparseLongArray;
 import android.util.TimeUtils;
 
 import com.android.internal.annotations.GuardedBy;
@@ -67,10 +64,8 @@ import com.android.server.ServiceThread;
 import com.android.server.am.db.AppStatsDBHelper;
 import com.android.server.am.db.AppStatsRecord;
 
-import java.io.BufferedReader;
 import java.io.File;
 import java.io.FileDescriptor;
-import java.io.FileReader;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.nio.ByteBuffer;

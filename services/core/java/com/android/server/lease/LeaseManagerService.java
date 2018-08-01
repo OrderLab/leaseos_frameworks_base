@@ -397,6 +397,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 exceptions = 1;
             }
             mExceptionTable.put(uid, exceptions);
+            /*
             String fileName = "/data/system/exceptiontracer.txt";
             try {
                 String name = mContext.getPackageManager().getNameForUid(uid);
@@ -409,7 +410,7 @@ public class LeaseManagerService extends ILeaseManager.Stub {
                 Slog.d(TAG, "An exception ");
                 ex.printStackTrace();
             }
-                Slog.d(TAG,"The number of Exceptions are " + exceptions + ", for uid " + uid + " for " + this + " for address " + mExceptionTable);
+                Slog.d(TAG,"The number of Exceptions are " + exceptions + ", for uid " + uid + " for " + this + " for address " + mExceptionTable);*/
         }
     }
 

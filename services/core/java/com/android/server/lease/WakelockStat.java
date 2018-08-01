@@ -78,7 +78,7 @@ public class WakelockStat extends ResourceStat {
         mHoldingTime = holdingTime;
         mFrequency = frequency;
         mCurCPUTime = bm.getCPUTime(mUid);
-        Slog.d(TAG, "The current time is " + mCurCPUTime + ", for uid " + mUid);
+        //Slog.d(TAG, "The current time is " + mCurCPUTime + ", for uid " + mUid);
         mUsageTime = mCurCPUTime - mBaseCPUTime;
         if (lastUtility == 0 && utility == 0) {
             mUtility = 0;
